@@ -1,13 +1,13 @@
-import { Suspense } from "react";
+import { Suspense, lazy } from "react";
 import { Route, Routes } from "react-router-dom";
 
 import IndexPage from "@/pages/indexPage";
-import SettingsPage from "@/pages/settingPage";
+const SettingsPage = lazy(() => import("@/pages/settingPage"));
 
 /** 页面级加载占位符 */
 const PageLoader = () => (
   <div className="flex items-center justify-center h-full w-full">
-    <div className="text-sm text-default-400">加载中...</div>
+    <div className="text-sm text-muted-foreground">加载中...</div>
   </div>
 );
 

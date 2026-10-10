@@ -5,7 +5,7 @@ import type { AIRouteType } from "@/store/useOpenAIConfigStore";
  *
  * 原实现把品牌色以 hex 硬编码散落各处（#00C9A7 / #3D5AFE / ...），
  * 暗色模式下对比度差。这里集中管理：每条线路保留一组「主题色」用于
- * 卡片渐变与开关高亮，文本统一改用 HeroUI 语义色（text-default-900/500），
+ * 卡片渐变与开关高亮，文本统一改用 shadcn/ui 语义色（text-foreground/500），
  * 既保留线路的视觉区分度，又能在明/暗模式下自适应。
  */
 
@@ -23,12 +23,7 @@ export const ROUTE_BRAND: Record<AIRouteType, RouteBrand> = {
   custom: { color: "#E91E63", to: "#D81B60" },
 };
 
-export const ROUTE_LABEL: Record<AIRouteType, string> = {
-  default: "免费线路",
-  ssooai: "SSOOAI",
-  utools: "uTools AI",
-  custom: "私有线路",
-};
+export { AI_ROUTE_LABELS as ROUTE_LABEL } from "@/services/aiModelSelection";
 
 export const ROUTE_ICON: Record<AIRouteType, string> = {
   default: "solar:chat-round-dots-bold-duotone",

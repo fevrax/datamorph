@@ -1,0 +1,237 @@
+.workspace-welcome,
+.welcome-main,
+.welcome-content,
+.welcome-input,
+.welcome-editor {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.workspace-welcome {
+  height: 100%;
+}
+
+.workspace-welcome [hidden] {
+  display: none;
+}
+
+.workspace-welcome.is-active {
+  display: grid;
+  grid-template-columns: 184px minmax(0, 1fr);
+  background: var(--background);
+}
+
+.welcome-shortcuts {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  min-height: 0;
+  padding: 28px 14px 22px;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.welcome-section-label {
+  margin: 0 10px 9px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.welcome-document + .welcome-section-label {
+  margin-top: 25px;
+}
+
+.welcome-document {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 38px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  color: var(--primary);
+  background: var(--accent);
+  text-align: left;
+  font-size: 12px;
+}
+
+.welcome-document > span:first-of-type {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.welcome-document svg,
+.welcome-help svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.welcome-document-dot {
+  width: 5px;
+  height: 5px;
+  flex-shrink: 0;
+  margin-left: auto;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.welcome-shortcuts > button:not(.welcome-document) {
+  justify-content: flex-start;
+  font-size: 12px;
+}
+
+.welcome-sidebar-note {
+  margin: auto 10px 0;
+  padding-top: 28px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.9;
+}
+
+.is-active > .welcome-main {
+  overflow: auto;
+  padding: clamp(28px, 6vh, 72px) clamp(24px, 5vw, 80px);
+}
+
+.is-active .welcome-content {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 760px;
+  margin: auto;
+}
+
+.welcome-eyebrow {
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+}
+
+.welcome-heading h2 {
+  margin: 13px 0 12px;
+  font-size: clamp(25px, 2.6vw, 34px);
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.04em;
+}
+
+.welcome-heading p {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.is-active .welcome-input {
+  flex: none;
+  margin-top: 28px;
+  overflow: hidden;
+  border: 1px solid var(--input);
+  border-radius: 11px;
+  background: var(--background);
+}
+
+.is-active .welcome-input:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.welcome-input-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+
+.welcome-input-label > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.welcome-input-label kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--background);
+  font-family: inherit;
+}
+
+.is-active .welcome-editor {
+  flex: none;
+  height: clamp(144px, 23vh, 220px);
+}
+
+.welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.welcome-actions > button {
+  min-height: 36px;
+}
+
+.welcome-actions .welcome-mobile-import {
+  display: none;
+}
+
+.welcome-help {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.welcome-help > span,
+.welcome-help > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.welcome-help > button:hover {
+  color: var(--primary);
+}
+
+@media (max-width: 900px) {
+  .workspace-welcome.is-active {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .welcome-shortcuts {
+    display: none;
+  }
+
+  .welcome-actions .welcome-mobile-import {
+    display: inline-flex;
+  }
+}
+
+@media (max-height: 600px) {
+  .is-active > .welcome-main {
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
+
+  .welcome-shortcuts {
+    overflow: auto;
+  }
+}

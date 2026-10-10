@@ -39,8 +39,8 @@ assert(
   "files larger than 1,000,000 chars should be large",
 );
 assert(
-  !shouldRunInlineDecorations(largeByChars),
-  "large files should skip inline decorations",
+  shouldRunInlineDecorations(largeByChars),
+  "large files retain visible-range decorations",
 );
 assert(
   getValidationDelay(largeByChars) === 1500,
@@ -88,8 +88,8 @@ scheduleInlineDecorationUpdate({
 
 assert(!scheduled, "large files should not schedule inline decoration work");
 assert(
-  timeoutRef.current === null,
-  "large files should leave timeout ref empty",
+  timeoutRef.current !== null,
+  "large files schedule bounded visible-range work",
 );
 
 scheduleInlineDecorationUpdate({

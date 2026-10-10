@@ -1,4 +1,4 @@
-import { Switch } from "@heroui/react";
+import { Switch } from "@/components/ui";
 
 import {
   ControlSlot,
@@ -11,17 +11,6 @@ import {
 
 import toast from "@/utils/toast";
 import { useSettingsStore } from "@/store/useSettingsStore";
-import {
-  setBase64DecorationEnabled,
-  setBase64ProviderEnabled,
-} from "@/components/monacoEditor/decorations/base64Decoration";
-import { setUnicodeDecorationEnabled } from "@/components/monacoEditor/decorations/unicodeDecoration";
-import { setTimestampDecorationEnabled } from "@/components/monacoEditor/decorations/timestampDecoration";
-import {
-  setUrlDecorationEnabled,
-  setUrlProviderEnabled,
-} from "@/components/monacoEditor/decorations/urlDecoration";
-
 /** 单个解码器行 */
 interface DecoderItem {
   id: string;
@@ -32,6 +21,13 @@ interface DecoderItem {
 }
 
 const DECODERS: DecoderItem[] = [
+  {
+    id: "image",
+    title: "图片预览",
+    description: "识别图片链接，按需打开预览",
+    icon: "image",
+    tone: "neutral",
+  },
   {
     id: "timestamp",
     title: "时间戳解码器",
@@ -80,25 +76,22 @@ export function DecoderSettings() {
 
   const handleToggle = (id: string, value: boolean) => {
     switch (id) {
+      case "image":
+        useSettingsStore.getState().setImageDecoderEnabled(value);
+        break;
       case "timestamp":
-        setTimestampDecorationEnabled(value);
         setTimestampDecoderEnabled(value);
         toast.success(`时间戳解码器已${value ? "启用" : "禁用"}`);
         break;
       case "base64":
-        setBase64DecorationEnabled(value);
-        setBase64ProviderEnabled(value);
         setBase64DecoderEnabled(value);
         toast.success(`Base64解码器已${value ? "启用" : "禁用"}`);
         break;
       case "unicode":
-        setUnicodeDecorationEnabled(value);
         setUnicodeDecoderEnabled(value);
         toast.success(`Unicode解码器已${value ? "启用" : "禁用"}`);
         break;
       case "url":
-        setUrlDecorationEnabled(value);
-        setUrlProviderEnabled(value);
         setUrlDecoderEnabled(value);
         toast.success(`URL解码器已${value ? "启用" : "禁用"}`);
         break;
@@ -106,6 +99,7 @@ export function DecoderSettings() {
   };
 
   const enabledMap: Record<string, boolean> = {
+    image: useSettingsStore((s) => s.imageDecoderEnabled),
     timestamp: timestampDecoderEnabled,
     base64: base64DecoderEnabled,
     unicode: unicodeDecoderEnabled,
@@ -131,6 +125,7 @@ export function DecoderSettings() {
             <ControlSlot>
               <Switch
                 color="success"
+                aria-label={d.title}
                 isSelected={enabledMap[d.id]}
                 size="lg"
                 onValueChange={(value) => handleToggle(d.id, value)}

@@ -1,4 +1,4 @@
-import { Icon } from "@iconify/react";
+import { Icon } from "@/components/ui/icon";
 
 import { GroupLabel, SectionCard, SectionHeader } from "../settingPrimitives";
 
@@ -47,19 +47,19 @@ export function AboutContent() {
       <SectionCard className="mb-5">
         <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-default-100">
+            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary">
               <img alt="JSON Tools Logo" className="h-8 w-8" src="./logo.png" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-base font-semibold text-default-900">
+              <h3 className="text-base font-semibold text-foreground">
                 JSON Tools
               </h3>
-              <p className="text-[12px] text-default-500">
+              <p className="text-[12px] text-muted-foreground">
                 强大的 JSON 处理工具集，一站式 JSON 开发者工具箱
               </p>
             </div>
           </div>
-          <span className="w-fit rounded-full border border-default-200 px-2.5 py-1 text-xs font-medium text-default-600">
+          <span className="w-fit rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground">
             {APP_VERSION}
           </span>
         </div>
@@ -78,7 +78,7 @@ export function AboutContent() {
                 <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-success text-white">
                   <Icon icon={f.icon} width={18} />
                 </div>
-                <span className="text-[13px] font-medium text-default-900">
+                <span className="text-[13px] font-medium text-foreground">
                   {f.label}
                 </span>
               </div>
@@ -93,19 +93,19 @@ export function AboutContent() {
               <ExternalLink
                 key={l.label}
                 showUrl
-                className="flex items-center gap-3 px-3 py-3 transition-colors hover:bg-default-50/80 sm:px-4"
+                className="flex items-center gap-3 px-3 py-3 transition-colors hover:bg-muted/80 sm:px-4"
                 href={l.href}
               >
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-default-100 text-default-700">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-secondary text-foreground">
                   <Icon icon={l.icon} width={18} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <span className="block text-[13px] font-medium text-default-900">
+                  <span className="block text-[13px] font-medium text-foreground">
                     {l.label}
                   </span>
                 </div>
                 <Icon
-                  className="flex-shrink-0 text-default-400"
+                  className="flex-shrink-0 text-muted-foreground"
                   icon="solar:arrow-right-linear"
                   width={16}
                 />
@@ -115,9 +115,9 @@ export function AboutContent() {
         </div>
       </div>
 
-      <p className="mt-6 text-center text-[12px] text-default-400">
+      <p className="mt-6 text-center text-[12px] text-muted-foreground">
         © {new Date().getFullYear()} JSON Tools · 基于 React、TypeScript 和
-        HeroUI 构建
+        shadcn/ui 构建
       </p>
     </div>
   );

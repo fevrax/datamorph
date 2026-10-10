@@ -1,8 +1,10 @@
+import { useToolAI } from "@/components/workspace/useToolAI";
+import { useBackgroundTask } from "@/components/workspace/useBackgroundTask";
+import { createToolStateHook } from "@/components/workspace/ToolContext";
 import { useRef, useState, useEffect } from "react";
-import { Button, Card, CardBody, Spinner, Chip } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { Button, Card, CardBody, Spinner, Chip } from "@/components/ui";
+import { Icon } from "@/components/ui/icon";
 import { useTheme } from "next-themes";
-import { jsonrepair } from "jsonrepair";
 
 import toast from "@/utils/toast";
 import MonacoDiffEditor, {
@@ -17,8 +19,10 @@ import ToolboxPageTemplate from "@/layouts/toolboxPageTemplate";
 import { openAIService } from "@/services/openAIService.ts";
 import { parseJson, stringifyJson } from "@/utils/json";
 
+const useToolState = createToolStateHook("jsonAIRepair");
+
 export default function JsonAIRepairPage() {
-  const { theme } = useTheme();
+  const { resolvedTheme: theme } = useTheme();
 
   const editorRef = useRef<MonacoDiffEditorRef>(null);
   const operationBarRef = useRef<MonacoDiffOperationBarRef>(null);
@@ -27,8 +31,8 @@ export default function JsonAIRepairPage() {
   const { syncConfig } = useOpenAIConfigStore();
 
   // 编辑器内容状态
-  const [originalValue, setOriginalValue] = useState<string>("");
-  const [fixedValue, setFixedValue] = useState<string>("");
+  const [originalValue, setOriginalValue] = useToolState("originalValue", "");
+  const [fixedValue, setFixedValue] = useToolState("fixedValue", "");
 
   // 处理状态
   const [isBasicProcessing, setIsBasicProcessing] = useState<boolean>(false);
@@ -43,8 +47,10 @@ export default function JsonAIRepairPage() {
     openAIService.syncConfig();
   }, [syncConfig]);
 
+  const task = useBackgroundTask(originalValue);
+  const ai = useToolAI(originalValue);
   // 基本 JSON 修复函数
-  const basicJsonFix = () => {
+  const basicJsonFix = async () => {
     setIsBasicProcessing(true);
     setProcessingStep("正在处理 JSON...");
     try {
@@ -53,13 +59,17 @@ export default function JsonAIRepairPage() {
 
         return false;
       }
-      const repaired = jsonrepair(originalValue);
+      const repaired =
+        (await task.run({ action: "repair", content: originalValue }))
+          .content || "";
+      setFixedValue(repaired);
 
       editorRef.current?.updateModifiedValue(repaired);
       toast.success("修复成功");
 
       return true;
     } catch (e) {
+      if ((e as Error).name === "AbortError") return false;
       console.error("repairJson", e);
       toast.error("修复失败，可能不是有效的 Json 数据");
 
@@ -108,57 +118,54 @@ ${originalValue}
     }
 
     // 使用封装的OpenAI服务发送请求
-    await openAIService.createChatCompletion(
-      [{ role: "user", content: promptText }],
-      {
-        onStart: () => {
-          // 已在外部设置了处理状态
-        },
-        onProcessing: (step) => {
-          setProcessingStep(step);
-        },
-        onChunk: (_, accumulated) => {
-          // 清理结果，移除markdown格式标记
-          const cleanedJson = accumulated
+    await ai.run([{ role: "user", content: promptText }], {
+      onStart: () => {
+        // 已在外部设置了处理状态
+      },
+      onProcessing: (step) => {
+        setProcessingStep(step);
+      },
+      onChunk: (_, accumulated) => {
+        // 清理结果，移除markdown格式标记
+        const cleanedJson = accumulated
+          .replace(/^```json\s*/i, "")
+          .replace(/```\s*$/i, "")
+          .trim();
+
+        // 使用每个块立即更新编辑器
+        editorRef.current?.updateModifiedValue(cleanedJson);
+      },
+      onComplete: (final) => {
+        try {
+          // 如果存在 markdown 标记则清理
+          let finalJson = final
             .replace(/^```json\s*/i, "")
             .replace(/```\s*$/i, "")
             .trim();
 
-          // 使用每个块立即更新编辑器
+          // 如果是有效的 JSON 则格式化
+          const parsedJson = parseJson(finalJson);
+          const formattedJson = stringifyJson(parsedJson, 2);
+
+          editorRef.current?.updateModifiedValue(formattedJson);
+          setFixedValue(formattedJson);
+        } catch {
+          // 如果无法解析最终结果，则保留清理后的版本
+          const cleanedJson = final
+            .replace(/^```json\s*/i, "")
+            .replace(/```\s*$/i, "")
+            .trim();
+
           editorRef.current?.updateModifiedValue(cleanedJson);
-        },
-        onComplete: (final) => {
-          try {
-            // 如果存在 markdown 标记则清理
-            let finalJson = final
-              .replace(/^```json\s*/i, "")
-              .replace(/```\s*$/i, "")
-              .trim();
-
-            // 如果是有效的 JSON 则格式化
-            const parsedJson = parseJson(finalJson);
-            const formattedJson = stringifyJson(parsedJson, 2);
-
-            editorRef.current?.updateModifiedValue(formattedJson);
-            setFixedValue(formattedJson);
-          } catch {
-            // 如果无法解析最终结果，则保留清理后的版本
-            const cleanedJson = final
-              .replace(/^```json\s*/i, "")
-              .replace(/```\s*$/i, "")
-              .trim();
-
-            editorRef.current?.updateModifiedValue(cleanedJson);
-            setFixedValue(cleanedJson);
-            setProcessingStep("修复成功 (有警告)");
-          }
-        },
-        onError: () => {
-          // 错误处理已在服务中完成
-          setProcessingStep("");
-        },
+          setFixedValue(cleanedJson);
+          setProcessingStep("修复成功 (有警告)");
+        }
       },
-    );
+      onError: () => {
+        // 错误处理已在服务中完成
+        setProcessingStep("");
+      },
+    });
 
     setIsStreaming(false);
     setIsAiProcessing(false);

@@ -40,7 +40,7 @@ export function getEditorWorkload(
 }
 
 export function shouldRunInlineDecorations(workload: EditorWorkload): boolean {
-  return !workload.isLarge;
+  return workload.lines > 0;
 }
 
 export function getValidationDelay(workload: EditorWorkload): 500 | 1500 {

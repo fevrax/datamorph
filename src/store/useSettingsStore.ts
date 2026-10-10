@@ -1,3 +1,4 @@
+import toast from "@/utils/toast";
 // useSettingsStore.ts
 import { create } from "zustand";
 import { devtools, subscribeWithSelector } from "zustand/middleware";
@@ -30,6 +31,7 @@ export interface SettingsState {
   base64DecoderEnabled: boolean;
   unicodeDecoderEnabled: boolean;
   urlDecoderEnabled: boolean;
+  imageDecoderEnabled: boolean;
   // 编辑器默认设置
   defaultIndentSize: number;
   // 快捷键设置
@@ -46,6 +48,7 @@ export interface SettingsState {
   setTimestampDecoderEnabled: (value: boolean) => void;
   setBase64DecoderEnabled: (value: boolean) => void;
   setUnicodeDecoderEnabled: (value: boolean) => void;
+  setImageDecoderEnabled: (value: boolean) => void;
   setUrlDecoderEnabled: (value: boolean) => void;
   setDefaultIndentSize: (value: number) => void;
   setNewTabShortcut: (value: string) => void;
@@ -60,7 +63,7 @@ export const useSettingsStore = create<SettingsState>()(
     devtools(
       (set) => ({
         // 初始状态
-        expandSidebar: false,
+        expandSidebar: true,
         monacoEditorCDN: "local",
         chatStyle: "bubble",
         fontSize: "medium",
@@ -68,6 +71,7 @@ export const useSettingsStore = create<SettingsState>()(
         base64DecoderEnabled: true,
         unicodeDecoderEnabled: true,
         urlDecoderEnabled: true,
+        imageDecoderEnabled: true,
         defaultIndentSize: 4,
         newTabShortcut: "Ctrl+Shift+T",
         closeTabShortcut: "Ctrl+Shift+W",
@@ -85,6 +89,8 @@ export const useSettingsStore = create<SettingsState>()(
           set({ base64DecoderEnabled: value }),
         setUnicodeDecoderEnabled: (value: boolean) =>
           set({ unicodeDecoderEnabled: value }),
+        setImageDecoderEnabled: (value: boolean) =>
+          set({ imageDecoderEnabled: value }),
         setUrlDecoderEnabled: (value: boolean) =>
           set({ urlDecoderEnabled: value }),
         setDefaultIndentSize: (value: number) =>
@@ -124,6 +130,7 @@ const getPersistedSettings = (settings: SettingsState) => ({
   base64DecoderEnabled: settings.base64DecoderEnabled,
   unicodeDecoderEnabled: settings.unicodeDecoderEnabled,
   urlDecoderEnabled: settings.urlDecoderEnabled,
+  imageDecoderEnabled: settings.imageDecoderEnabled,
   defaultIndentSize: settings.defaultIndentSize,
   newTabShortcut: settings.newTabShortcut,
   closeTabShortcut: settings.closeTabShortcut,
@@ -142,8 +149,14 @@ useSettingsStore.subscribe(
   (state) => state,
   (settings) => {
     clearTimeout(settingsSaveTimeout);
-    settingsSaveTimeout = setTimeout(async () => {
-      await persistSettings(settings);
+    settingsSaveTimeout = setTimeout(() => {
+      void persistSettings(settings).catch((error) => {
+        console.error("Settings save failed", error);
+        toast.error(
+          "设置未能保存到本地",
+          "当前设置仍在本窗口生效，请检查可用存储空间。",
+        );
+      });
     }, timeout);
   },
 );

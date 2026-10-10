@@ -1,127 +1,55 @@
-import { FC } from "react";
-import { VisuallyHidden } from "@react-aria/visually-hidden";
-import { SwitchProps, useSwitch } from "@heroui/switch";
-import clsx from "clsx";
-import { Button, cn } from "@heroui/react";
-import { Icon } from "@iconify/react";
 import { useTheme } from "next-themes";
-
-export interface ThemeSwitchProps {
-  className?: string;
-  classNames?: SwitchProps["classNames"];
-  isCollapsed?: boolean;
-  onToggle?: (theme: string) => void;
-}
-
-export const ThemeSwitch: FC<ThemeSwitchProps> = ({
+import { Moon, Sun, Monitor } from "lucide-react";
+import {
+  Button,
+  Dropdown,
+  DropdownMenu,
+  DropdownItem,
+  DropdownTrigger,
+} from "@/components/ui";
+export function ThemeSwitch({
   className,
-  classNames,
   isCollapsed,
   onToggle,
-}) => {
+}: {
+  className?: string;
+  isCollapsed?: boolean;
+  onToggle?: (theme: string) => void;
+  classNames?: Record<string, string>;
+}) {
   const { theme, setTheme } = useTheme();
-
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-
-    setTheme(newTheme);
-    onToggle && onToggle(newTheme);
-  };
-
-  const { Component, isSelected, getBaseProps, getInputProps } = useSwitch({
-    isSelected: theme === "light",
-    "aria-label": `Switch to ${theme === "light" ? "dark" : "light"} mode`,
-    onChange: toggleTheme,
-  });
-
+  const Icon = theme === "system" ? Monitor : theme === "dark" ? Moon : Sun;
   return (
-    <Component
-      {...getBaseProps({
-        className: clsx(
-          "px-px transition-opacity hover:opacity-80 cursor-pointer w-full",
-          className,
-          classNames?.base,
-        ),
-      })}
-    >
-      <VisuallyHidden>
-        <input {...getInputProps()} />
-      </VisuallyHidden>
-      <div className={"w-60"}>
-        {!isSelected ? (
-          <Button
-            aria-label="日间模式"
-            className={cn(
-              "justify-start text-default-500 data-[hover=true]:text-foreground w-full",
-              {
-                "justify-center": isCollapsed,
-              },
-            )}
-            isIconOnly={isCollapsed}
-            startContent={
-              isCollapsed ? null : (
-                <Icon
-                  icon="solar:sun-linear"
-                  width={18}
-                  onClick={(e) => {
-                    e.preventDefault();
-                  }}
-                />
-              )
-            }
-            variant="light"
-            onPress={toggleTheme}
+    <Dropdown>
+      <DropdownTrigger>
+        <Button
+          variant="ghost"
+          className={className}
+          aria-label="界面主题"
+          isIconOnly={isCollapsed}
+        >
+          <Icon />
+          {!isCollapsed && "界面主题"}
+        </Button>
+      </DropdownTrigger>
+      <DropdownMenu>
+        {[
+          ["system", "跟随系统"],
+          ["light", "浅色"],
+          ["dark", "深色"],
+        ].map(([value, label]) => (
+          <DropdownItem
+            key={value}
+            onPress={() => {
+              setTheme(value);
+              onToggle?.(value);
+            }}
           >
-            {isCollapsed ? (
-              <Icon
-                icon="solar:sun-linear"
-                width={18}
-                onClick={(e) => {
-                  e.preventDefault();
-                }}
-              />
-            ) : (
-              "日间模式"
-            )}
-          </Button>
-        ) : (
-          <Button
-            aria-label="夜间模式"
-            className={cn(
-              "justify-start text-default-500 data-[hover=true]:text-foreground w-full",
-              {
-                "justify-center": isCollapsed,
-              },
-            )}
-            isIconOnly={isCollapsed}
-            startContent={
-              isCollapsed ? null : (
-                <Icon
-                  icon="solar:moon-stars-linear"
-                  width={20}
-                  onClick={(e) => {
-                    e.preventDefault();
-                  }}
-                />
-              )
-            }
-            variant="light"
-            onPress={toggleTheme}
-          >
-            {isCollapsed ? (
-              <Icon
-                icon="solar:moon-stars-linear"
-                width={20}
-                onClick={(e) => {
-                  e.preventDefault();
-                }}
-              />
-            ) : (
-              "夜间模式"
-            )}
-          </Button>
-        )}
-      </div>
-    </Component>
+            {label}
+            {theme === value ? " ✓" : ""}
+          </DropdownItem>
+        ))}
+      </DropdownMenu>
+    </Dropdown>
   );
-};
+}

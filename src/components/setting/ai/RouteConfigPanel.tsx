@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
-import { Button, Input } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { Button, Input } from "@/components/ui";
+import { Icon } from "@/components/ui/icon";
 
 import { ROUTE_LABEL } from "./aiRoutes";
 import { ModelListTable } from "./ModelListTable";
@@ -33,9 +33,7 @@ interface RouteConfigPanelProps {
   onConfigureUtoolsModel: (model: string) => void;
   onRefreshSsooaiModels: () => void;
   onRefreshCustomModels: () => void;
-  onAddModel: (mode: "ssooai" | "custom") => void;
-  onRemoveSsooaiModel: (value: string) => void;
-  onRemoveCustomModel: (value: string) => void;
+  onRefreshDefaultModels: () => void;
   onClose: () => void;
 }
 
@@ -73,6 +71,7 @@ export function RouteConfigPanel(props: RouteConfigPanelProps) {
           testResult={testResult}
           testing={testing}
           onTest={() => onTest("default")}
+          onRefresh={props.onRefreshDefaultModels}
         />
       )}
       {routeType === "ssooai" && <SsooaiRouteConfig {...props} />}
@@ -97,7 +96,7 @@ function PromoBanner() {
           SSOOAI API 服务
         </span>
       </div>
-      <p className="mt-2 text-xs text-default-700">
+      <p className="mt-2 text-xs text-foreground">
         SSOOAI 提供更稳定的 API 服务和多种先进模型。 访问{" "}
         <ExternalLink
           className="font-medium text-primary hover:underline"
@@ -112,30 +111,32 @@ function PromoBanner() {
 }
 
 function DefaultRouteConfig({
+  onRefresh,
   onTest,
   testing,
   testResult,
 }: {
   onTest: () => void;
+  onRefresh: () => void;
   testing: boolean;
   testResult: TestResult | null;
 }) {
-  const { defaultRoute, updateDefaultRouteConfig } = useOpenAIConfigStore();
+  const { defaultRoute, defaultModels, updateDefaultRouteConfig } =
+    useOpenAIConfigStore();
 
   return (
     <ConfigSection>
-      <div className="mb-3 flex flex-wrap items-center gap-2 text-sm text-default-600">
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
         <Icon className="text-primary" icon="solar:star-bold" width={18} />
-        此线路由站点管理员提供。如连接失败，请联系管理员或配置私有线路。
+        此线路由站点管理员提供。如连接失败，请联系管理员或配置私有API。
       </div>
       <FormField icon="solar:layers-bold" id="site-model" label="模型名称">
-        <Input
+        <SearchableSelect
           id="site-model"
-          placeholder="输入站点支持的模型名称"
-          size="sm"
-          value={defaultRoute.model}
-          variant="bordered"
-          onValueChange={(model) => updateDefaultRouteConfig({ model })}
+          items={defaultModels}
+          placeholder="选择 API 返回的模型"
+          selectedValue={defaultRoute.model}
+          onChange={(model) => updateDefaultRouteConfig({ model })}
         />
       </FormField>
       <TestConnectionBar
@@ -144,6 +145,7 @@ function DefaultRouteConfig({
         testing={testing}
         onTest={onTest}
       />
+      <ModelListTable models={defaultModels} onRefresh={onRefresh} />
     </ConfigSection>
   );
 }
@@ -158,8 +160,6 @@ function SsooaiRouteConfig(props: RouteConfigPanelProps) {
     onTest,
     onConfigureApiKey,
     onRefreshSsooaiModels,
-    onAddModel,
-    onRemoveSsooaiModel,
   } = props;
 
   return (
@@ -194,12 +194,7 @@ function SsooaiRouteConfig(props: RouteConfigPanelProps) {
         />
       </TestConnectionBar>
 
-      <ModelListTable
-        models={ssooaiModels}
-        onAdd={() => onAddModel("ssooai")}
-        onRefresh={onRefreshSsooaiModels}
-        onRemove={onRemoveSsooaiModel}
-      />
+      <ModelListTable models={ssooaiModels} onRefresh={onRefreshSsooaiModels} />
     </ConfigSection>
   );
 }
@@ -244,7 +239,7 @@ function UtoolsRouteConfig(props: RouteConfigPanelProps) {
         />
       </TestConnectionBar>
 
-      <div className="rounded-lg border border-warning/20 bg-warning/10 p-3 text-xs text-default-700">
+      <div className="rounded-lg border border-warning/20 bg-warning/10 p-3 text-xs text-foreground">
         <div className="flex items-center gap-2">
           <Icon
             className="text-warning"
@@ -273,8 +268,6 @@ function CustomRouteConfig(props: RouteConfigPanelProps) {
     onConfigureApiKey,
     onConfigureProxyUrl,
     onRefreshCustomModels,
-    onAddModel,
-    onRemoveCustomModel,
   } = props;
 
   return (
@@ -288,8 +281,8 @@ function CustomRouteConfig(props: RouteConfigPanelProps) {
           />
           <span className="font-medium">SSOOAI API</span>
         </div>
-        <p className="mt-2 text-xs text-default-700">
-          推荐使用 SSOOAI API 作为私有线路，填入 API 地址：
+        <p className="mt-2 text-xs text-foreground">
+          推荐使用 SSOOAI API 作为私有API，填入 API 地址：
           <InlineCode>https://api.ssooai.com/v1</InlineCode>
           ，注册即可获得免费额度。高稳定性、低延迟、更实惠的价格。
         </p>
@@ -340,12 +333,7 @@ function CustomRouteConfig(props: RouteConfigPanelProps) {
         />
       </TestConnectionBar>
 
-      <ModelListTable
-        models={customModels}
-        onAdd={() => onAddModel("custom")}
-        onRefresh={onRefreshCustomModels}
-        onRemove={onRemoveCustomModel}
-      />
+      <ModelListTable models={customModels} onRefresh={onRefreshCustomModels} />
     </ConfigSection>
   );
 }

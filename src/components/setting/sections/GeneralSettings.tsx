@@ -1,5 +1,7 @@
 import {
   Button,
+  Select,
+  SelectItem,
   Modal,
   ModalBody,
   ModalContent,
@@ -9,8 +11,8 @@ import {
   Switch,
   Tooltip,
   useDisclosure,
-} from "@heroui/react";
-import { Icon } from "@iconify/react";
+} from "@/components/ui";
+import { Icon } from "@/components/ui/icon";
 import { useState } from "react";
 import { useTheme } from "next-themes";
 
@@ -49,6 +51,7 @@ export function GeneralSettings() {
     onClose: onConfirmClose,
   } = useDisclosure();
   const [pendingValue, setPendingValue] = useState<boolean | null>(null);
+  const [resetOpen, setResetOpen] = useState(false);
 
   const handlePersistenceChange = (value: boolean) => {
     if (!value) {
@@ -63,8 +66,7 @@ export function GeneralSettings() {
   const handleConfirmDisablePersistence = () => {
     if (pendingValue !== null) {
       setPersistentDataEnabled(pendingValue);
-      useTabStore.getState().clearUserData();
-      toast.success("已关闭本地存储，所有用户数据已清除");
+      toast.success("已暂停本地保存，已有数据已保留");
       setPendingValue(null);
       onConfirmClose();
     }
@@ -75,10 +77,14 @@ export function GeneralSettings() {
     toast.success(`默认缩进大小已设置为 ${value} 个空格`);
   };
 
-  const removeStore = () => {
-    storage.clear();
+  const removeStore = async () => {
+    await useTabStore.getState().clearUserData();
+    await storage.clear();
     useSettingsStore.setState({
-      expandSidebar: false,
+      expandSidebar: true,
+      imageDecoderEnabled: true,
+      persistentDataEnabled: true,
+      fontSize: "medium",
       monacoEditorCDN: "local",
       chatStyle: "bubble",
       timestampDecoderEnabled: true,
@@ -90,6 +96,8 @@ export function GeneralSettings() {
       closeTabShortcut: "Ctrl+Shift+W",
     });
     useOpenAIConfigStore.getState().resetConfig();
+    setTheme("system");
+    setResetOpen(false);
     toast.success("所有设置已重置，请重新加载或刷新页面");
   };
 
@@ -100,24 +108,27 @@ export function GeneralSettings() {
       <GroupLabel>外观</GroupLabel>
       <SectionCard divided>
         <SettingRow
-          description="切换深色主题以保护眼睛"
+          description="浅色、深色或跟随系统外观"
           icon="solar:moon-bold"
-          title="深色模式"
+          title="界面主题"
           tone="primary"
         >
           <ControlSlot>
-            <Switch
-              color="success"
-              isSelected={theme === "dark"}
-              size="lg"
-              onValueChange={(value) => setTheme(value ? "dark" : "light")}
-            />
+            <Select
+              aria-label="界面主题"
+              selectedKeys={[theme || "system"]}
+              onChange={(event) => setTheme(event.target.value)}
+            >
+              <SelectItem key="system">跟随系统</SelectItem>
+              <SelectItem key="light">浅色</SelectItem>
+              <SelectItem key="dark">深色</SelectItem>
+            </Select>
           </ControlSlot>
         </SettingRow>
         <SettingRow
           description="应用启动时默认展开侧边栏"
           icon="solar:square-top-down-bold"
-          title="展开 Tab 栏"
+          title="展开侧边栏"
           tone="info"
         >
           <ControlSlot>
@@ -140,7 +151,7 @@ export function GeneralSettings() {
           tone="warning"
         >
           <ControlSlot className="sm:min-w-[220px]" align="stretch">
-            <span className="w-5 text-center text-sm font-medium tabular-nums text-default-600">
+            <span className="w-5 text-center text-sm font-medium tabular-nums text-muted-foreground">
               {defaultIndentSize}
             </span>
             <Slider
@@ -196,7 +207,7 @@ export function GeneralSettings() {
                 size="sm"
                 startContent={<Icon icon="solar:refresh-bold" width={16} />}
                 variant="flat"
-                onPress={removeStore}
+                onPress={() => setResetOpen(true)}
               >
                 重置…
               </Button>
@@ -205,6 +216,21 @@ export function GeneralSettings() {
         </SettingRow>
       </SectionCard>
 
+      <Modal isOpen={resetOpen} onClose={() => setResetOpen(false)}>
+        <ModalContent>
+          <ModalHeader>重置全部数据？</ModalHeader>
+          <ModalBody>
+            这将删除全部文档、历史记录、工具数据和 AI
+            配置，并恢复默认设置。此操作无法撤销，请先下载需要保留的内容。
+          </ModalBody>
+          <ModalFooter>
+            <Button onPress={() => setResetOpen(false)}>取消</Button>
+            <Button color="danger" onPress={() => void removeStore()}>
+              删除全部数据并重置
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
       {/* 确认关闭本地存储对话框 */}
       <Modal isOpen={isConfirmOpen} onClose={onConfirmClose}>
         <ModalContent>
@@ -212,7 +238,7 @@ export function GeneralSettings() {
           <ModalBody>
             <p>关闭后，您的所有用户数据（标签页、输入内容等）将不再保存。</p>
             <p className="mt-2 text-warning">
-              ⚠️ 此操作将立即清除已有数据，且无法恢复。
+              已有本地快照会保留，关闭期间的更改只保留在当前窗口。
             </p>
           </ModalBody>
           <ModalFooter>

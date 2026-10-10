@@ -19,7 +19,11 @@ test("site route sends no browser credential and only uses the current origin", 
     });
 
     return new Response(
-      JSON.stringify({ choices: [{ message: { content: "ok" } }] }),
+      JSON.stringify(
+        String(input).endsWith("/models")
+          ? { data: [{ id: "api-model" }] }
+          : { choices: [{ message: { content: "ok" } }] },
+      ),
       {
         headers: { "content-type": "application/json" },
       },
@@ -32,6 +36,9 @@ test("site route sends no browser credential and only uses the current origin", 
   const { useOpenAIConfigStore } = await import(
     "../store/useOpenAIConfigStore"
   );
+  const { storage } = await import("../lib/indexedDBStore");
+  const originalSave = storage.setItem;
+  storage.setItem = async (_key, value) => value;
   const originalState = useOpenAIConfigStore.getState();
 
   try {
@@ -40,6 +47,7 @@ test("site route sends no browser credential and only uses the current origin", 
 
     await service.chat({ messages: [{ role: "user", content: "test" }] });
     assert.deepEqual(requests, [
+      { url: "/api/ai/v1/models", authorization: null },
       {
         url: "https://json-tools.example/api/ai/v1/chat/completions",
         authorization: null,
@@ -57,7 +65,7 @@ test("site route sends no browser credential and only uses the current origin", 
     });
     service.updateConfig({ routeType: "custom", model: "test" });
     await service.chat({ model: "test", messages: [] });
-    assert.deepEqual(requests[1], {
+    assert.deepEqual(requests[2], {
       url: "https://private.example/v1/chat/completions",
       authorization: "Bearer user-test-key",
     });
@@ -76,6 +84,7 @@ test("site route sends no browser credential and only uses the current origin", 
       assert.equal(useOpenAIConfigStore.getState().getCurrentApiKey(), "");
     }
   } finally {
+    storage.setItem = originalSave;
     globalThis.fetch = originalFetch;
     if (originalWindow)
       Object.defineProperty(globalThis, "window", originalWindow);

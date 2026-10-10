@@ -1,3 +1,6 @@
+import { runJsonTask, cancelJsonTask } from "@/workers/client";
+import { readClipboardText } from "@/utils/clipboard";
+import { parseDocument, cancelParse } from "@/workers/parseCache";
 import React, {
   useCallback,
   useRef,
@@ -6,8 +9,8 @@ import React, {
   useImperativeHandle,
   useMemo,
 } from "react";
-import { Icon } from "@iconify/react";
-import { Button } from "@heroui/react";
+import { Icon } from "@/components/ui/icon";
+import { Button } from "@/components/ui";
 import { isLosslessNumber } from "lossless-json";
 
 import JsonTableOperationBar, {
@@ -16,8 +19,8 @@ import JsonTableOperationBar, {
 import JsonTable from "@/components/jsonTable/JsonTable.tsx";
 import toast from "@/utils/toast";
 import clipboard from "@/utils/clipboard";
-import { useSidebarStore } from "@/store/useSidebarStore";
-import { SidebarKeys } from "@/components/sidebar/Items.tsx";
+import { useTabStore } from "@/store/useTabStore";
+import { useToolState } from "@/components/workspace/ToolContext";
 import { parseJson } from "@/utils/json";
 import {
   convertToCSV,
@@ -49,11 +52,21 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
   onMount,
   ref,
 }) => {
+  const documentKey = useTabStore((s) => s.activeTabKey);
   const operationBarRef = useRef<JsonTableOperationBarRef>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
-  const [hideEmpty, setHideEmpty] = useState(false);
-  const [hideNull, setHideNull] = useState(false);
+  const [expanded, setExpanded] = useToolState<string[]>("table:expanded", []);
+  const expandedPaths = useMemo(() => new Set(expanded), [expanded]);
+  const setExpandedPaths = useCallback(
+    (next: Set<string> | ((current: Set<string>) => Set<string>)) => {
+      setExpanded((current) =>
+        Array.from(typeof next === "function" ? next(new Set(current)) : next),
+      );
+    },
+    [setExpanded],
+  );
+  const [hideEmpty, setHideEmpty] = useToolState("table:hideEmpty", false);
+  const [hideNull, setHideNull] = useToolState("table:hideNull", false);
   const [jsonData, setJsonData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPasting, setIsPasting] = useState(false);
@@ -61,17 +74,22 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
   const [lastValidJsonData, setLastValidJsonData] = useState<any>(null);
   const [previousRenderedView, setPreviousRenderedView] =
     useState<React.ReactNode | null>(null);
-  const sidebarStore = useSidebarStore();
   const [shouldShowEmpty, setShouldShowEmpty] = useState(false);
   const emptyStateTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [selectedPath, setSelectedPath] = useToolState<string | null>(
+    "table:path",
+    null,
+  );
 
   // 筛选相关状态
-  const [isFilterActive, setIsFilterActive] = useState(false);
-  const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>(
-    {},
+  const [isFilterActive, setIsFilterActive] = useToolState(
+    "table:filterActive",
+    false,
   );
-  const [globalFilter, setGlobalFilter] = useState("");
+  const [columnFilters, setColumnFilters] = useToolState<
+    Record<string, string[]>
+  >("table:columnFilters", {});
+  const [globalFilter, setGlobalFilter] = useToolState("table:search", "");
 
   // 计算表格模式
   const tableMode = useMemo<
@@ -97,12 +115,6 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
     return "object";
   }, [jsonData]);
 
-  // JSON 数据变化时重置筛选状态
-  useEffect(() => {
-    setColumnFilters({});
-    setGlobalFilter("");
-  }, [jsonData]);
-
   useEffect(() => {
     const handlePasteAction = async () => {
       try {
@@ -116,7 +128,7 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
         let text;
 
         if (clipboard.isSupported()) {
-          text = await navigator.clipboard.readText();
+          text = await readClipboardText();
         } else {
           text = await clipboard.read(
             "无法读取剪贴板内容, 请从文本编辑器中粘贴。",
@@ -209,21 +221,26 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
       return;
     }
 
-    try {
-      const parsed = parseJson(data);
-
-      setJsonData(parsed);
-      setLastValidJsonData(parsed);
-      setError(null);
-      setShouldShowEmpty(false);
-    } catch (err) {
-      setJsonData(null);
-      if (!isSwitchingEditor) {
-        setError((err as Error).message || "JSON解析错误");
+    let disposed = false;
+    void parseDocument(documentKey, data)
+      .then((parsed) => {
+        if (disposed) return;
+        setJsonData(parsed);
+        setLastValidJsonData(parsed);
+        setError(null);
         setShouldShowEmpty(false);
-      }
-    }
-  }, [data, isSwitchingEditor]);
+      })
+      .catch((err) => {
+        if (disposed || err.name === "AbortError") return;
+        setJsonData(null);
+        setError(err.message || "JSON 解析错误");
+        setShouldShowEmpty(false);
+      });
+    return () => {
+      disposed = true;
+      cancelParse(documentKey);
+    };
+  }, [data, isSwitchingEditor, documentKey]);
 
   const handleToggleExpand = useCallback((path: string) => {
     setExpandedPaths((prev) => {
@@ -328,13 +345,14 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
     setIsSwitchingEditor(true);
 
     setTimeout(() => {
-      sidebarStore.updateClickSwitchKey(SidebarKeys.textView);
+      const store = useTabStore.getState();
+      store.setView(store.activeTabKey, "code");
     }, 50);
-  }, [sidebarStore, jsonData, error, expandedPaths, hideEmpty, hideNull]);
+  }, [jsonData, error, expandedPaths, hideEmpty, hideNull]);
 
   const renderEmptyState = () => {
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-default-50 dark:bg-vscode-dark p-4 sm:p-6">
+      <div className="h-full flex flex-col items-center justify-center bg-muted dark:bg-vscode-dark p-4 sm:p-6">
         <div className="w-full max-w-md mx-auto flex flex-col items-center gap-4 sm:gap-5">
           <div className="p-3 sm:p-4 rounded-2xl bg-primary/15">
             <Icon
@@ -344,23 +362,23 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
           </div>
 
           <div className="text-center space-y-1.5 sm:space-y-2">
-            <h3 className="text-lg sm:text-xl font-bold text-default-900">
+            <h3 className="text-lg sm:text-xl font-bold text-foreground">
               JSON 表格视图
             </h3>
-            <p className="text-sm text-default-500 max-w-xs mx-auto leading-relaxed">
+            <p className="text-sm text-muted-foreground max-w-xs mx-auto leading-relaxed">
               粘贴您的 JSON 数据以表格形式浏览
             </p>
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-default-100 rounded-lg">
-            <kbd className="px-1.5 py-0.5 bg-default-50 dark:bg-default-200/50 rounded border border-default-200 font-mono text-xs text-default-600">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary rounded-lg">
+            <kbd className="px-1.5 py-0.5 bg-muted dark:bg-border/50 rounded border border-border font-mono text-xs text-muted-foreground">
               Ctrl
             </kbd>
-            <span className="text-default-300 text-xs">+</span>
-            <kbd className="px-1.5 py-0.5 bg-default-50 dark:bg-default-200/50 rounded border border-default-200 font-mono text-xs text-default-600">
+            <span className="text-input text-xs">+</span>
+            <kbd className="px-1.5 py-0.5 bg-muted dark:bg-border/50 rounded border border-border font-mono text-xs text-muted-foreground">
               V
             </kbd>
-            <span className="text-default-400 text-xs ml-1">快速粘贴</span>
+            <span className="text-muted-foreground text-xs ml-1">快速粘贴</span>
           </div>
 
           <Button
@@ -385,7 +403,7 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
             {isPasting ? "处理中..." : "从剪贴板粘贴"}
           </Button>
 
-          <p className="text-xs text-default-400 text-center">
+          <p className="text-xs text-muted-foreground text-center">
             支持标准 JSON 格式 · 自动解析并显示为表格
           </p>
         </div>
@@ -395,7 +413,7 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
 
   const renderErrorState = () => {
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-default-50 dark:bg-vscode-dark p-4 sm:p-6">
+      <div className="h-full flex flex-col items-center justify-center bg-muted dark:bg-vscode-dark p-4 sm:p-6">
         <div className="w-full max-w-md mx-auto flex flex-col items-center gap-4 sm:gap-5">
           <div className="p-3 sm:p-4 rounded-2xl bg-danger/15">
             <Icon
@@ -408,7 +426,9 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
             <h3 className="text-lg sm:text-xl font-bold text-danger">
               JSON 解析失败
             </h3>
-            <p className="text-sm text-default-500">请检查数据格式后重试</p>
+            <p className="text-sm text-muted-foreground">
+              请检查数据格式后重试
+            </p>
           </div>
 
           <div className="w-full bg-danger/10 border border-danger/20 rounded-xl p-3 sm:p-4 overflow-auto max-h-28 sm:max-h-32">
@@ -417,14 +437,14 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
             </pre>
           </div>
 
-          <div className="w-full p-3 rounded-xl bg-default-100 border border-default-200">
+          <div className="w-full p-3 rounded-xl bg-secondary border border-border">
             <div className="flex items-start gap-2.5">
               <Icon
-                className="text-default-400 mt-0.5 flex-shrink-0"
+                className="text-muted-foreground mt-0.5 flex-shrink-0"
                 icon="solar:info-circle-bold"
                 width={16}
               />
-              <ul className="text-xs text-default-500 space-y-1">
+              <ul className="text-xs text-muted-foreground space-y-1">
                 <li>
                   确保所有括号 <code className="text-danger">{"{ } [ ]"}</code>{" "}
                   正确配对
@@ -686,18 +706,34 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
     }
   }, [data, selectedPath]);
 
+  const [exporting, setExporting] = useState(false);
+  const exportScope = "table-export:" + documentKey;
+  useEffect(
+    () => () => cancelJsonTask(exportScope),
+    [exportScope, data, selectedPath],
+  );
   const handleExport = useCallback(
-    (format: "csv" | "xlsx") => {
-      const content = format === "csv" ? exportCSV() : exportExcel();
-
-      if (content === null) return;
+    async (format: "csv" | "xlsx") => {
+      setExporting(true);
       try {
-        downloadTableExport(content, format);
+        const result = await runJsonTask(exportScope, {
+          action: "export",
+          content: data,
+          format,
+          path: selectedPath,
+        });
+        downloadTableExport(
+          format === "csv" ? result.content! : result.buffer!,
+          format,
+        );
       } catch (error) {
-        toast.error("下载失败：" + (error as Error).message);
+        if ((error as Error).name !== "AbortError")
+          toast.error("导出失败：" + (error as Error).message);
+      } finally {
+        setExporting(false);
       }
     },
-    [exportCSV, exportExcel],
+    [data, selectedPath, exportScope],
   );
 
   useImperativeHandle(ref, () => ({
@@ -750,6 +786,21 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
       ref={containerRef}
       className={`h-full flex flex-col ${isSwitchingEditor ? "editor-fade-exit editor-fade-exit-active" : ""}`}
     >
+      {exporting && (
+        <div
+          role="status"
+          className="flex items-center justify-between border-b bg-accent px-3 py-1"
+        >
+          正在后台导出…
+          <Button
+            size="sm"
+            variant="ghost"
+            onPress={() => cancelJsonTask(exportScope)}
+          >
+            取消导出
+          </Button>
+        </div>
+      )}
       <JsonTableOperationBar
         ref={operationBarRef}
         globalFilterValue={globalFilter}
@@ -764,7 +815,7 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
         onFilterToggle={handleFilterToggle}
         onGlobalFilterChange={handleGlobalFilterChange}
       />
-      <div className="flex-grow overflow-hidden border border-default-200 bg-white dark:bg-vscode-dark">
+      <div className="flex-grow overflow-hidden border border-border bg-white dark:bg-vscode-dark">
         {currentContent}
       </div>
     </div>

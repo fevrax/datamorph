@@ -5,3 +5,7 @@ docker-compose*.yaml
 node_modules
 .pnpm-store
 dist
+
+# Runtime API credentials
+.env
+.env.*

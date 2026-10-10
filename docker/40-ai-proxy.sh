@@ -11,7 +11,7 @@ write_disabled_config() {
 location ^~ /api/ai/ {
     default_type application/json;
     add_header Cache-Control "no-store" always;
-    return 503 '{"error":{"message":"站点 AI 线路未配置，请使用私有线路或联系管理员"}}';
+    return 503 '{"error":{"message":"站点 AI 线路未配置，请使用私有API或联系管理员"}}';
 }
 NGINX
 }
@@ -24,7 +24,11 @@ if [ -z "$api_key" ]; then
   exit 0
 fi
 
-base_url=${OPENAI_BASE_URL:-https://api.ssooai.com/v1}
+base_url=${OPENAI_BASE_URL:-}
+if [ -z "$base_url" ]; then
+  echo "OPENAI_BASE_URL is required when OPENAI_API_KEY is set" >&2
+  exit 1
+fi
 case "$base_url" in
   https://*) upstream=${base_url#https://} ;;
   *) echo "OPENAI_BASE_URL must be an HTTPS URL" >&2; exit 1 ;;

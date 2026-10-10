@@ -16,7 +16,9 @@ dist-ssr
 /.superpowers/
 
 # Superpowers 生成的工作笔记 / 规格文档（非项目源码）
-docs/
+docs/*
+!docs/redesign/
+!docs/jsonpath.md
 
 # Editor directories and files
 .vscode/*
@@ -33,3 +35,14 @@ docs/
 yarn.lock
 package-lock.json
 bun.lockb
+
+.pnpm-store/
+# Generated verification reports, screenshots, and traces
+/artifacts/
+/playwright-report/
+/test-results/
+
+# Runtime API credentials
+.env
+.env.*
+!.env.example

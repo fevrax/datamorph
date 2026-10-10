@@ -1,1026 +1,820 @@
-// useTabStore.ts
+import type { EncodingType, EncodingOptions } from "@/utils/encodingConverter";
+import type { NamingFormat } from "@/utils/keyNamingConverter";
 import { create } from "zustand";
-import { devtools, subscribeWithSelector } from "zustand/middleware";
-import { Content, Mode, JSONContent, TextContent } from "vanilla-jsoneditor-cn";
-
+import localforage from "localforage";
 import { useSettingsStore } from "./useSettingsStore";
 import type { Tool } from "./useToolboxStore";
-
-import { StorageManager } from "@/lib/storage/StorageManager";
-import { getSyncManager } from "@/lib/storage/MultiWindowSyncManager";
 import {
-  getHistoryContentHash,
-  isHistoryContentTooLarge,
-} from "@/components/monacoEditor/editorPerformance";
-import { parseJson, stringifyJson, convertLosslessToNative } from "@/utils/json";
+  retainHistory,
+  snapshotBytes,
+  HISTORY_BYTE_BUDGET,
+  type DocumentSnapshot,
+} from "./documentHistory";
 import { generateUUID } from "@/utils/uuid";
-
-/**
- * Tab 历史记录项
- */
-export interface TabHistoryItem {
-  key: string; // 历史记录唯一标识
-  timestamp: number; // 时间戳
-  title: string; // 标题快照
-  content: string; // 内容快照
-  monacoVersion: number; // 版本号
-  vanilla?: Content; // vanilla 内容快照（可选）
-  truncated?: boolean; // 内容过大时不保存完整快照
-  contentLength?: number; // 原始内容长度
-  contentHash?: string; // 截断内容的轻量指纹，用于去重
+export interface TextChange {
+  rangeOffset: number;
+  rangeLength: number;
+  text: string;
+}
+export type TabHistoryItem = DocumentSnapshot;
+export type DocumentView = "code" | "tree" | "table" | "diff";
+export type ToolId =
+  | "jsonPath"
+  | "jsonAIRepair"
+  | "jsonTypeConverter"
+  | "dataFormatConverter"
+  | "jwtParse"
+  | "jsonKeyNaming"
+  | "encodingConverter";
+export type ToolStateValue =
+  | string
+  | number
+  | boolean
+  | null
+  | Record<string, unknown>
+  | unknown[];
+export interface ToolStateById {
+  jsonPath: { inputValue: string };
+  jsonAIRepair: { originalValue: string; fixedValue: string };
+  jsonTypeConverter: {
+    inputValue: string;
+    outputValue: string;
+    targetLanguage: string;
+  };
+  dataFormatConverter: {
+    inputValue: string;
+    outputValue: string;
+    inputFormat: string;
+    outputFormat: string;
+  };
+  jwtParse: {
+    jwtToken: string;
+    headerJson: string;
+    payloadJson: string;
+    encodeHeaderJson: string;
+    encodePayloadJson: string;
+    secret: string;
+    isTokenValid: boolean | null;
+    validationMessage: string;
+    selectedAlgorithm: string;
+  };
+  jsonKeyNaming: {
+    inputValue: string;
+    outputValue: string;
+    activeFormat: NamingFormat | null;
+  };
+  encodingConverter: {
+    encodingType: EncodingType;
+    options: EncodingOptions;
+    plainText: string;
+    encodedText: string;
+  };
 }
 
-export type TabKind = "json" | "toolbox" | "tool";
-
-export interface ToolTabExtraData extends Record<string, any> {
-  toolId: string;
-  toolIcon: string;
-  toolPath: string;
+export interface EditorSettings {
+  fontSize: number;
+  language: string;
+  indentSize: number;
+  timestampDecoratorsEnabled?: boolean;
+  base64DecoratorsEnabled?: boolean;
+  unicodeDecoratorsEnabled?: boolean;
+  urlDecoratorsEnabled?: boolean;
+  imageDecoratorsEnabled?: boolean;
 }
-
-// 存储管理器实例 - 使用共享的 syncManager
-const syncManager = getSyncManager();
-const storageManager = new StorageManager(syncManager);
-
-export interface TabItem {
-  kind: TabKind;
+interface TabBase {
   key: string;
-  uuid: string; // Tab 的唯一标识符
+  uuid: string;
   title: string;
   content: string;
-  diffModifiedValue?: string; // diff 右边比较值
-  monacoVersion: number; // 乐观锁
-  vanilla?: Content;
-  vanillaVersion: number;
-  vanillaMode: Mode;
-  closable?: boolean;
-  history: TabHistoryItem[]; // Tab 历史记录
-  editorSettings: {
-    fontSize: number;
-    language: string;
-    indentSize: number; // 缩进大小
-    timestampDecoratorsEnabled?: boolean; // 添加时间戳装饰器设置
-    base64DecoratorsEnabled?: boolean; // Base64装饰器设置
-    unicodeDecoratorsEnabled?: boolean; // Unicode装饰器设置
-    urlDecoratorsEnabled?: boolean; // URL装饰器设置
-    imageDecoratorsEnabled?: boolean; // 图片装饰器设置
-  };
-  extraData?: Record<string, any>;
+  byteLength: number;
+  revision: number;
+  diffModifiedValue?: string;
+  diffRevision?: number;
+  view: DocumentView;
+  closable: boolean;
+  history: TabHistoryItem[];
+  editorSettings: EditorSettings;
+  extraData?: Record<string, unknown>;
+  updatedAt: number;
+  toolState: Record<string, ToolStateValue>;
+  source?: { key: string; revision: number; title: string };
 }
-
+export type TabItem = TabBase &
+  ({ kind: "json" } | { kind: "toolbox" } | { kind: "tool"; toolId: ToolId });
+export type TabKind = TabItem["kind"];
 interface TabStore {
   tabs: TabItem[];
   activeTabKey: string;
   nextKey: number;
+  hydrated: boolean;
+  saveStatus: "saved" | "saving" | "error";
+  storageError: string | null;
   activeTab: () => TabItem;
   getTabByKey: (key: string) => TabItem | undefined;
   initTab: () => void;
   addTab: (
-    title: string | undefined,
-    content: string | undefined,
-    extraData?: Record<string, any>,
+    title?: string,
+    content?: string,
+    extraData?: Record<string, unknown>,
   ) => void;
   openToolboxTab: () => string;
   addToolTab: (tool: Tool) => string;
   setTabContent: (key: string, content: string) => void;
-  updateTabContent: (key: string, content: string) => void;
+  updateTabContent: (
+    key: string,
+    content: string,
+    changes?: readonly TextChange[],
+  ) => void;
   setTabModifiedValue: (key: string, content: string) => void;
-  setTabVanillaContent: (key: string, content: Content) => void;
-  setTabVanillaMode: (key: string, mode: Mode) => void;
-  setMonacoVersion: (key: string, version: number) => void;
-  setVanillaVersion: (key: string, version: number) => void;
+  setView: (key: string, view: DocumentView) => void;
+  setToolState: (key: string, name: string, value: ToolStateValue) => void;
   syncTabStore: () => Promise<void>;
-  closeTab: (keyToRemove: string) => void;
+  closeTab: (key: string) => void;
   setActiveTab: (key: string) => void;
-  renameTab: (key: string, newTitle: string) => void;
-  closeOtherTabs: (currentKey: string) => Array<string>;
-  closeLeftTabs: (currentKey: string) => Array<string>;
-  closeRightTabs: (currentKey: string) => Array<string>;
-  closeAllTabs: () => Array<string>;
-  vanilla2JsonContent: (key: string) => void;
-  jsonContent2VanillaContent: (key: string) => void;
+  renameTab: (key: string, title: string) => void;
+  closeOtherTabs: (key: string) => string[];
+  closeLeftTabs: (key: string) => string[];
+  closeRightTabs: (key: string) => string[];
+  closeAllTabs: () => string[];
   updateEditorSettings: (
     key: string,
-    settings: TabItem["editorSettings"],
+    settings: Partial<EditorSettings>,
   ) => void;
-  // 历史记录相关方法
   addTabHistory: (key: string) => void;
-  restoreTabHistory: (tabKey: string, historyKey: string) => void;
-  deleteTabHistory: (tabKey: string, historyKey: string) => void;
-  clearTabHistory: (tabKey: string) => void;
+  restoreTabHistory: (key: string, historyKey: string) => void;
+  deleteTabHistory: (key: string, historyKey: string) => void;
+  clearTabHistory: (key: string) => void;
   clearUserData: () => Promise<void>;
 }
-
-export const useTabStore = create<TabStore>()(
-  subscribeWithSelector(
-    devtools(
-      (set, get) => ({
-        tabs: [],
-        activeTabKey: "1",
-        nextKey: 2,
-        activeTab: () => {
-          const activeTab = get().tabs.find(
-            (tab) => tab.key === get().activeTabKey,
-          );
-
-          return activeTab || get().tabs[0];
-        },
-        getTabByKey: (key: string) => get().tabs.find((tab) => tab.key === key),
-        addTab: (
-          title: string | undefined,
-          content: string | undefined,
-          extraData?: Record<string, any>,
-        ) =>
-          set((state) => {
-            const settings = useSettingsStore.getState();
-            const newTabKey = `${state.nextKey}`;
-            const uuid = generateUUID();
-            const newTab: TabItem = {
-              kind: "json",
-              key: `${state.nextKey}`,
-              uuid,
-              title: title ? title : `New Tab ${newTabKey}`,
-              content: content ? content : ``,
-              vanillaMode: Mode.tree,
-              closable: true,
-              vanillaVersion: 0,
-              monacoVersion: 1,
-              history: [],
-              extraData: extraData,
-              editorSettings: {
-                fontSize: 14,
-                language: "json",
-                indentSize: settings.defaultIndentSize,
-                timestampDecoratorsEnabled: true,
-                base64DecoratorsEnabled: true,
-                unicodeDecoratorsEnabled: true,
-                urlDecoratorsEnabled: true,
-                imageDecoratorsEnabled: true,
-              },
-            };
-
-            return {
-              tabs: [...state.tabs, newTab],
-              activeTabKey: newTabKey,
-              nextKey: state.nextKey + 1,
-            };
-          }),
-        initTab: () => {
-          set((state) => {
-            const settings = useSettingsStore.getState();
-            const defaultTab = {
-              kind: "json" as const,
-              key: "1",
-              uuid: generateUUID(),
-              title: "New Tab 1",
-              content: ``,
-              closable: true,
-              vanillaMode: Mode.text,
-              vanillaVersion: 0,
-              monacoVersion: 0,
-              history: [],
-              editorSettings: {
-                fontSize: 14,
-                language: "json",
-                indentSize: settings.defaultIndentSize,
-                timestampDecoratorsEnabled: true,
-                base64DecoratorsEnabled: true,
-                unicodeDecoratorsEnabled: true,
-                urlDecoratorsEnabled: true,
-                imageDecoratorsEnabled: true,
-              },
-            };
-            const tabs = [defaultTab];
-
-            return {
-              ...state,
-              tabs,
-            };
-          });
-        },
-        openToolboxTab: () => {
-          const existingTab = get().tabs.find((tab) => tab.kind === "toolbox");
-
-          if (existingTab) {
-            set({ activeTabKey: existingTab.key });
-
-            return existingTab.key;
-          }
-
-          const newTabKey = `${get().nextKey}`;
-
-          set((state) => {
-            const settings = useSettingsStore.getState();
-            const toolboxTab: TabItem = {
-              kind: "toolbox",
-              key: newTabKey,
-              uuid: generateUUID(),
-              title: "工具箱",
-              content: "",
-              vanillaMode: Mode.tree,
-              closable: true,
-              vanillaVersion: 0,
-              monacoVersion: 0,
-              history: [],
-              editorSettings: {
-                fontSize: 14,
-                language: "json",
-                indentSize: settings.defaultIndentSize,
-                timestampDecoratorsEnabled: true,
-                base64DecoratorsEnabled: true,
-                unicodeDecoratorsEnabled: true,
-                urlDecoratorsEnabled: true,
-                imageDecoratorsEnabled: true,
-              },
-            };
-
-            return {
-              tabs: [...state.tabs, toolboxTab],
-              activeTabKey: newTabKey,
-              nextKey: state.nextKey + 1,
-            };
-          });
-
-          return newTabKey;
-        },
-        addToolTab: (tool: Tool) => {
-          const newTabKey = `${get().nextKey}`;
-
-          set((state) => {
-            const settings = useSettingsStore.getState();
-            const toolTab: TabItem = {
-              kind: "tool",
-              key: newTabKey,
-              uuid: generateUUID(),
-              title: tool.name,
-              content: "",
-              vanillaMode: Mode.tree,
-              closable: true,
-              vanillaVersion: 0,
-              monacoVersion: 0,
-              history: [],
-              extraData: {
-                toolId: tool.id,
-                toolIcon: tool.icon,
-                toolPath: tool.path,
-              } satisfies ToolTabExtraData,
-              editorSettings: {
-                fontSize: 14,
-                language: "json",
-                indentSize: settings.defaultIndentSize,
-                timestampDecoratorsEnabled: true,
-                base64DecoratorsEnabled: true,
-                unicodeDecoratorsEnabled: true,
-                urlDecoratorsEnabled: true,
-                imageDecoratorsEnabled: true,
-              },
-            };
-
-            return {
-              tabs: [...state.tabs, toolTab],
-              activeTabKey: newTabKey,
-              nextKey: state.nextKey + 1,
-            };
-          });
-
-          return newTabKey;
-        },
-        setMonacoVersion: (key: string, version: number) =>
-          set((state) => {
-            const updatedTabs = state.tabs.map((tab) =>
-              tab.key === key
-                ? {
-                    ...tab,
-                    monacoVersion: version,
-                  }
-                : tab,
-            );
-
-            return { tabs: updatedTabs };
-          }),
-        setVanillaVersion: (key: string, version: number) =>
-          set((state) => {
-            const updatedTabs = state.tabs.map((tab) =>
-              tab.key === key
-                ? {
-                    ...tab,
-                    vanillaVersion: version,
-                  }
-                : tab,
-            );
-
-            return { tabs: updatedTabs };
-          }),
-        setTabContent: (key, content) =>
-          set((state) => {
-            const updatedTabs = state.tabs.map((tab) => {
-              if (tab.key === key) {
-                const updatedTab = {
-                  ...tab,
-                  content,
-                  monacoVersion: tab.monacoVersion + 1,
-                };
-
-                // 触发历史记录（不阻塞状态更新）
-                setTimeout(() => recordTabHistory(updatedTab), 0);
-
-                return updatedTab;
-              }
-              return tab;
-            });
-
-            return { tabs: updatedTabs };
-          }),
-        updateTabContent: (key, content) =>
-          set((state) => {
-            const updatedTabs = state.tabs.map((tab) => {
-              if (tab.key === key) {
-                const updatedTab = {
-                  ...tab,
-                  content,
-                  monacoVersion: tab.monacoVersion + 1,
-                };
-
-                // 触发历史记录（不阻塞状态更新）
-                setTimeout(() => recordTabHistory(updatedTab), 0);
-
-                return updatedTab;
-              }
-              return tab;
-            });
-
-            return { tabs: updatedTabs };
-          }),
-        setTabModifiedValue: (key, content) =>
-          set((state) => {
-            const updatedTabs = state.tabs.map((tab) =>
-              tab.key === key
-                ? {
-                    ...tab,
-                    diffModifiedValue: content,
-                    monacoVersion: ++tab.monacoVersion,
-                  }
-                : tab,
-            );
-
-            return { tabs: updatedTabs };
-          }),
-        setTabVanillaContent: (key: string, content: Content) =>
-          set((state) => {
-            const updatedTabs = state.tabs.map((tab) => {
-              if (tab.key === key) {
-                const updatedTab = {
-                  ...tab,
-                  vanilla: content,
-                  vanillaVersion: tab.vanillaVersion + 1,
-                };
-
-                // 触发历史记录（不阻塞状态更新）
-                setTimeout(() => recordTabHistory(updatedTab), 0);
-
-                return updatedTab;
-              }
-              return tab;
-            });
-
-            return { tabs: updatedTabs };
-          }),
-        setTabVanillaMode: (key: string, mode: Mode) =>
-          set((state) => {
-            const updatedTabs = state.tabs.map((tab) =>
-              tab.key === key ? { ...tab, vanillaMode: mode } : tab,
-            );
-
-            return { tabs: updatedTabs };
-          }),
-        // 从存储同步数据
-        syncTabStore: async () => {
-          // 检查是否启用了数据持久化
-          const settings = useSettingsStore.getState();
-          if (!settings.persistentDataEnabled) {
-            // 如果禁用了持久化，初始化干净的标签页
-            get().initTab();
-            return;
-          }
-
-          const tabs = await storageManager.get<TabItem[]>('tabs');
-          const activeTabKey = await storageManager.get<string>('tabs_active_key');
-          const nextKey = await storageManager.get<number>('tabs_next_key');
-          const data: Record<string, any> = {};
-
-          if (tabs) {
-            data.tabs = tabs.map(normalizePersistedTab);
-          } else {
-            get().initTab();
-          }
-          if (activeTabKey) {
-            data.activeTabKey = activeTabKey;
-          }
-          if (nextKey) {
-            data.nextKey = nextKey;
-          }
-          set({
-            ...data,
-          });
-        },
-        renameTab: (key: string, newTitle: string) =>
-          set((state) => {
-            // 不允许重命名为空
-            if (!newTitle.trim()) return state;
-
-            const updatedTabs = state.tabs.map((tab) =>
-              tab.key === key ? { ...tab, title: newTitle.trim() } : tab,
-            );
-
-            return { tabs: updatedTabs };
-          }),
-        closeTab: (keyToRemove) => {
-          if (get().tabs.length === 1) {
-            get().closeAllTabs();
-
-            return;
-          }
-
-          set((state) => {
-            const tabIndex = state.tabs.findIndex(
-              (tab) => tab.key === keyToRemove,
-            );
-
-            const updatedTabs = state.tabs.filter(
-              (tab) => tab.key !== keyToRemove,
-            );
-
-            let newActiveTab = state.activeTabKey;
-
-            if (keyToRemove === state.activeTabKey && state.tabs.length > 1) {
-              if (tabIndex - 1 < 0) {
-                newActiveTab = state.tabs[tabIndex + 1].key;
-              } else {
-                newActiveTab = state.tabs[tabIndex - 1].key;
-              }
-            }
-
-            return { tabs: updatedTabs, activeTabKey: newActiveTab };
-          });
-        },
-        setActiveTab: (key) => set({ activeTabKey: key }),
-        // 关闭其他标签页
-        closeOtherTabs: (currentKey): Array<string> => {
-          const currentTab = get().tabs.find((tab) => tab.key === currentKey);
-          // 将被关闭的key 保存
-          const closedTabs = get().tabs.filter((tab) => tab.key !== currentKey);
-
-          const closedKeys = closedTabs.map((tab) => tab.key);
-
-          set(() => {
-            return {
-              tabs: currentTab ? [currentTab] : [],
-              activeTabKey: currentKey,
-            };
-          });
-
-          return closedKeys;
-        },
-
-        // 关闭左侧标签页
-        closeLeftTabs: (currentKey): Array<string> => {
-          const tabs = get().tabs;
-          const currentIndex = tabs.findIndex((tab) => tab.key === currentKey);
-          // 将被关闭的key 保存
-          const closedTabs = tabs.slice(0, currentIndex);
-          const closedKeys = closedTabs.map((tab) => tab.key);
-          const updatedTabs = tabs.slice(currentIndex);
-
-          set(() => {
-            return {
-              tabs: updatedTabs,
-              activeTabKey: currentKey,
-            };
-          });
-
-          return closedKeys;
-        },
-
-        // 关闭右侧标签页
-        closeRightTabs: (currentKey): Array<string> => {
-          const tabs = get().tabs;
-          const currentIndex = tabs.findIndex((tab) => tab.key === currentKey);
-          // 将被关闭的key 保存
-          const closedTabs = tabs.slice(currentIndex + 1);
-          const closedKeys = closedTabs.map((tab) => tab.key);
-
-          const updatedTabs = tabs.slice(0, currentIndex + 1);
-
-          set(() => {
-            return {
-              tabs: updatedTabs,
-              activeTabKey: currentKey,
-            };
-          });
-
-          return closedKeys;
-        },
-        // 关闭所有标签页，默认保留第一个标签页
-        closeAllTabs: (): Array<string> => {
-          // 将被关闭的key 保存, 保留key = 1 的标签页
-          const closedTabs = get().tabs.filter((tab) => tab.key !== "1");
-          const closedKeys = closedTabs.map((tab) => tab.key);
-
-          set(() => {
-            const settings = useSettingsStore.getState();
-            const defaultTab = {
-              kind: "json" as const,
-              key: "1",
-              uuid: generateUUID(),
-              title: "New Tab 1",
-              content: "",
-              vanillaMode: Mode.tree,
-              closable: true,
-              monacoVersion: 0,
-              vanillaVersion: 0,
-              history: [],
-              editorSettings: {
-                fontSize: 14,
-                language: "json",
-                indentSize: settings.defaultIndentSize,
-                timestampDecoratorsEnabled: true,
-                base64DecoratorsEnabled: true,
-                unicodeDecoratorsEnabled: true,
-                urlDecoratorsEnabled: true,
-                imageDecoratorsEnabled: true,
-              },
-            };
-
-            return {
-              tabs: [defaultTab],
-              activeTabKey: "1",
-              nextKey: 2,
-            };
-          });
-
-          return closedKeys;
-        },
-        vanilla2JsonContent: (key: string) =>
-          set((state) => {
-            const activeTab = get().getTabByKey(key);
-
-            // 处理空值情况
-            if (!activeTab || !activeTab.vanilla) {
-              return state;
-            }
-
-            const vanilla = activeTab.vanilla;
-
-            // 类型守卫
-            const isJSONContent = (content: any): content is JSONContent => {
-              return "json" in content;
-            };
-
-            const isTextContent = (content: any): content is TextContent => {
-              return "text" in content;
-            };
-
-            try {
-              if (isJSONContent(vanilla)) {
-                const indentSize = activeTab.editorSettings.indentSize || 2;
-
-                activeTab.content = stringifyJson(vanilla.json, indentSize);
-
-                // 处理JSON内容
-                return {
-                  ...state,
-                  tabs: state.tabs.map((tab) =>
-                    tab.key === activeTab.key ? activeTab : tab,
-                  ),
-                };
-              } else if (isTextContent(vanilla)) {
-                activeTab.content = vanilla.text;
-
-                // 处理文本内容
-                return {
-                  ...state,
-                  tabs: state.tabs.map((tab) =>
-                    tab.key === activeTab.key ? activeTab : tab,
-                  ),
-                };
-              }
-
-              // 处理未知类型
-              console.error("Unknown content type:", vanilla);
-
-              return { ...state, content: "" };
-            } catch (error) {
-              // 错误处理
-              console.error("Error converting content:", error);
-
-              return state;
-            }
-          }),
-        jsonContent2VanillaContent: (key: string) =>
-          set((state) => {
-            const activeTab = get().getTabByKey(key);
-
-            // 处理空内容情况
-            if (!activeTab) {
-              return state;
-            }
-
-            try {
-              // 尝试解析 JSON
-              const parsedJson = parseJson(activeTab.content);
-
-              activeTab.vanilla = { json: convertLosslessToNative(parsedJson) };
-              activeTab.vanillaMode = Mode.tree;
-
-              return {
-                ...state,
-                tabs: state.tabs.map((tab) =>
-                  tab.key === activeTab.key ? activeTab : tab,
-                ),
-              };
-            } catch (error) {
-              // 解析失败的错误处理
-              console.log("jsonContent2VanillaContent 解析失败", error);
-
-              // 可以根据需要返回原状态或者特定的错误状态
-              activeTab.vanilla = { text: activeTab.content };
-              activeTab.vanillaMode = Mode.text;
-
-              return {
-                ...state,
-                tabs: state.tabs.map((tab) =>
-                  tab.key === activeTab.key ? activeTab : tab,
-                ),
-              };
-            }
-          }),
-        updateEditorSettings: (
-          key: string,
-          settings: TabItem["editorSettings"],
-        ) =>
-          set((state) => {
-            const updatedTabs = state.tabs.map((tab) =>
-              tab.key === key
-                ? {
-                    ...tab,
-                    editorSettings: {
-                      ...tab.editorSettings,
-                      ...settings,
-                    },
-                  }
-                : tab,
-            );
-
-            return { tabs: updatedTabs };
-          }),
-        // 添加历史记录（手动触发）
-        addTabHistory: (key: string) => {
-          const tab = get().getTabByKey(key);
-          if (!tab) return;
-
-          recordTabHistory(tab);
-        },
-        // 恢复历史记录
-        restoreTabHistory: (tabKey: string, historyKey: string) => {
-          const tab = get().getTabByKey(tabKey);
-          if (!tab) {
-            console.error('[历史记录] Tab 不存在:', tabKey);
-            return;
-          }
-
-          const historyItem = tab.history.find((h) => h.key === historyKey);
-          if (!historyItem) {
-            console.error('[历史记录] 历史记录不存在:', historyKey);
-            return;
-          }
-
-          console.log('[历史记录] 恢复历史:', {
-            tabKey,
-            historyKey,
-            currentTitle: tab.title,
-            historyTitle: historyItem.title,
-            currentMonacoVersion: tab.monacoVersion,
-            historyMonacoVersion: historyItem.monacoVersion,
-          });
-
-          set((state) => {
-            // 检查是否有重复的 tab.key
-            const duplicateKeys = state.tabs
-              .map(t => t.key)
-              .filter((k, i, arr) => arr.indexOf(k) !== i);
-
-            if (duplicateKeys.length > 0) {
-              console.error('[历史记录] 发现重复的 tab.key:', duplicateKeys);
-            }
-
-            return {
-              tabs: state.tabs.map((t) => {
-                if (t.key === tabKey) {
-                  if (historyItem.truncated) {
-                    console.warn('[历史记录] 历史内容过大，跳过内容恢复:', {
-                      tabKey,
-                      historyKey,
-                      contentLength: historyItem.contentLength,
-                    });
-
-                    return {
-                      ...t,
-                      title: historyItem.title,
-                    };
-                  }
-
-                  // 保持当前版本号，只恢复内容，避免版本号回退导致问题
-                  return {
-                    ...t,
-                    title: historyItem.title,
-                    content: historyItem.content,
-                    // 不恢复 monacoVersion 和 vanillaVersion，保持当前版本号
-                    vanilla: historyItem.vanilla,
-                  };
-                }
-                return t;
-              }),
-            };
-          });
-
-          console.log('[历史记录] 恢复完成，新的 tabs:', get().tabs.map(t => ({ key: t.key, title: t.title })));
-        },
-        // 删除指定历史记录
-        deleteTabHistory: (tabKey: string, historyKey: string) => {
-          set((state) => ({
-            tabs: state.tabs.map((t) => {
-              if (t.key === tabKey) {
-                return {
-                  ...t,
-                  history: t.history.filter((h) => h.key !== historyKey),
-                };
-              }
-              return t;
-            }),
-          }));
-        },
-        // 清空 Tab 的所有历史记录
-        clearTabHistory: (tabKey: string) => {
-          set((state) => ({
-            tabs: state.tabs.map((t) => {
-              if (t.key === tabKey) {
-                return { ...t, history: [] };
-              }
-              return t;
-            }),
-          }));
-        },
-        // 清除用户数据
-        clearUserData: async () => {
-          try {
-            // 清除用户数据相关的存储键
-            await storageManager.remove(DB_TABS);
-            await storageManager.remove(DB_TAB_ACTIVE_KEY);
-            await storageManager.remove(DB_TAB_NEXT_KEY);
-
-            console.log('用户数据已清除');
-          } catch (error) {
-            console.error('清除用户数据失败:', error);
-            throw error;
-          }
-        },
-      }),
-      { name: "tabStore", enabled: true },
-    ),
-  ),
-);
-
-const DB_TABS = "tabs";
-const DB_TAB_ACTIVE_KEY = "tabs_active_key";
-const DB_TAB_NEXT_KEY = "tabs_next_key";
-
-const normalizePersistedTab = (tab: TabItem): TabItem => ({
-  ...tab,
-  kind: tab.kind || "json",
+const db = localforage.createInstance({
+  name: "json-tools",
+  storeName: "workspace_v2",
 });
-
-let tabsSaveTimeout: NodeJS.Timeout;
-let tabActiveSaveTimeout: NodeJS.Timeout;
-const timeout = 2000;
-
-/**
- * 立即持久化最新标签页状态。
- * PWA 更新会在 Service Worker 接管页面后刷新，不能依赖防抖定时器或
- * beforeunload 中无法被浏览器等待的异步任务。
- */
-export async function flushTabStore(): Promise<void> {
-  clearTimeout(tabsSaveTimeout);
-  clearTimeout(tabActiveSaveTimeout);
-
-  if (!useSettingsStore.getState().persistentDataEnabled) {
-    return;
-  }
-
-  const { tabs, activeTabKey, nextKey } = useTabStore.getState();
-
-  await Promise.all([
-    storageManager.set(DB_TABS, tabs),
-    storageManager.set(DB_TAB_ACTIVE_KEY, activeTabKey),
-    storageManager.set(DB_TAB_NEXT_KEY, nextKey),
-  ]);
+const legacy = localforage.createInstance({
+  name: "json-tools",
+  storeName: "store",
+});
+const windowId = generateUUID();
+const channel =
+  typeof window !== "undefined" && typeof BroadcastChannel !== "undefined"
+    ? new BroadcastChannel("json-tools-workspace-v2")
+    : null;
+let hydration: Promise<void> | undefined;
+let remote = false;
+let resetting = false;
+let timer: ReturnType<typeof setTimeout> | undefined;
+let writing: Promise<void> = Promise.resolve();
+const dirty = new Set<string>();
+const removed = new Set<string>();
+const saved = new Map<string, TabItem>();
+const pendingBroadcasts = new Map<
+  string,
+  { tab: TabItem; baseRevision: number }
+>();
+let broadcastTimer: ReturnType<typeof setTimeout> | undefined;
+function flushBroadcasts() {
+  clearTimeout(broadcastTimer);
+  if (useSettingsStore.getState().persistentDataEnabled)
+    for (const { tab, baseRevision } of pendingBroadcasts.values())
+      channel?.postMessage({
+        windowId,
+        type: "update",
+        tab: { ...tab, history: undefined },
+        baseRevision,
+      });
+  pendingBroadcasts.clear();
 }
-
-// 历史记录最大保存数量
-const MAX_HISTORY_COUNT = 50;
-
-// 历史记录防抖
-const historyRecordTimeouts: Record<string, NodeJS.Timeout> = {};
-
-// 记录历史的辅助函数
-const recordTabHistory = (tab: TabItem) => {
-  console.log('[历史记录] 准备记录历史:', tab.key, tab.title);
-
-  // 清除之前的定时器
-  if (historyRecordTimeouts[tab.key]) {
-    clearTimeout(historyRecordTimeouts[tab.key]);
-  }
-
-  // 延迟记录，避免频繁记录
-  historyRecordTimeouts[tab.key] = setTimeout(() => {
-    const currentTab = useTabStore.getState().getTabByKey(tab.key);
-    if (!currentTab) {
-      console.log('[历史记录] Tab 不存在，跳过记录');
-      return;
+function queueBroadcast(tab: TabItem, baseRevision: number) {
+  pendingBroadcasts.set(tab.key, {
+    tab,
+    baseRevision: pendingBroadcasts.get(tab.key)?.baseRevision ?? baseRevision,
+  });
+  clearTimeout(broadcastTimer);
+  broadcastTimer = setTimeout(flushBroadcasts, 250);
+}
+const historyTimers = new Map<string, ReturnType<typeof setTimeout>>();
+function makeTab(
+  title?: string,
+  content = "",
+  extraData?: Record<string, unknown>,
+): TabItem {
+  const id = generateUUID();
+  return {
+    kind: "json",
+    key: id,
+    uuid: id,
+    title: title || "未命名.json",
+    content,
+    byteLength: new TextEncoder().encode(content).byteLength,
+    revision: 1,
+    view: "code",
+    closable: true,
+    history: [],
+    toolState: {},
+    updatedAt: Date.now(),
+    extraData,
+    editorSettings: {
+      fontSize: 14,
+      language: "json",
+      indentSize: useSettingsStore.getState().defaultIndentSize,
+      timestampDecoratorsEnabled: true,
+      base64DecoratorsEnabled: true,
+      unicodeDecoratorsEnabled: true,
+      urlDecoratorsEnabled: true,
+      imageDecoratorsEnabled: true,
+    },
+  };
+}
+function patch(key: string, update: (tab: TabItem) => TabItem) {
+  useTabStore.setState((s) => {
+    const current = s.tabs.find((t) => t.key === key);
+    if (!current) return s;
+    const next = update(current);
+    return next === current
+      ? s
+      : { tabs: s.tabs.map((t) => (t.key === key ? next : t)) };
+  });
+}
+function recordHistory(key: string) {
+  const tab = useTabStore.getState().getTabByKey(key);
+  if (!tab || tab.kind !== "json" || tab.history[0]?.content === tab.content)
+    return;
+  const snapshot = {
+    key: generateUUID(),
+    timestamp: Date.now(),
+    title: tab.title,
+    content: tab.content,
+    revision: tab.revision,
+    monacoVersion: tab.revision,
+  };
+  patch(key, (t) => ({
+    ...t,
+    history: retainHistory([snapshot, ...t.history]),
+  }));
+  const snapshots = useTabStore
+    .getState()
+    .tabs.flatMap((t) => t.history)
+    .sort((a, b) => b.timestamp - a.timestamp);
+  let bytes = 0;
+  const keep = new Set<string>();
+  for (const h of snapshots) {
+    const size = snapshotBytes(h);
+    if (bytes + size <= HISTORY_BYTE_BUDGET) {
+      keep.add(h.key);
+      bytes += size;
     }
-
-    // 检查最新历史记录，避免重复
-    const latestHistory = currentTab.history[0];
-    const contentLength = currentTab.content.length;
-    const truncated = isHistoryContentTooLarge(currentTab.content);
-    const contentHash = truncated
-      ? getHistoryContentHash(currentTab.content)
-      : undefined;
-
-    if (latestHistory) {
-      const contentChanged =
-        truncated || latestHistory.truncated
-          ? latestHistory.contentLength !== contentLength ||
-            latestHistory.contentHash !== contentHash
-          : latestHistory.content !== currentTab.content;
-      const titleChanged = latestHistory.title !== currentTab.title;
-
-      // 如果内容和标题都没变化，不记录
-      if (!contentChanged && !titleChanged) {
-        console.log('[历史记录] 内容未变化，跳过记录');
+  }
+  useTabStore.setState((s) => ({
+    tabs: s.tabs.map((t) =>
+      t.history.some((h) => !keep.has(h.key))
+        ? { ...t, history: t.history.filter((h) => keep.has(h.key)) }
+        : t,
+    ),
+  }));
+}
+function updateContent(
+  key: string,
+  content: string,
+  changes?: readonly TextChange[],
+) {
+  const tab = useTabStore.getState().getTabByKey(key);
+  if (!tab || tab.content === content) return;
+  const encoder = new TextEncoder();
+  // Partial surrogate edits can change UTF-8 width across the edit boundary.
+  const touchesSurrogate = changes?.some((change) =>
+    /[\uD800-\uDFFF]/.test(
+      change.text.slice(0, 1) +
+        change.text.slice(-1) +
+        tab.content.slice(
+          Math.max(0, change.rangeOffset - 1),
+          change.rangeOffset + 1,
+        ) +
+        tab.content.slice(
+          Math.max(0, change.rangeOffset + change.rangeLength - 1),
+          change.rangeOffset + change.rangeLength + 1,
+        ),
+    ),
+  );
+  const byteLength =
+    changes && !touchesSurrogate && tab.byteLength !== undefined
+      ? tab.byteLength +
+        changes.reduce(
+          (delta, change) =>
+            delta +
+            encoder.encode(change.text).byteLength -
+            encoder.encode(
+              tab.content.slice(
+                change.rangeOffset,
+                change.rangeOffset + change.rangeLength,
+              ),
+            ).byteLength,
+          0,
+        )
+      : encoder.encode(content).byteLength;
+  if (!historyTimers.has(key)) recordHistory(key);
+  patch(key, (t) => ({
+    ...t,
+    content,
+    byteLength,
+    revision: t.revision + 1,
+    updatedAt: Date.now(),
+  }));
+  clearTimeout(historyTimers.get(key));
+  historyTimers.set(
+    key,
+    setTimeout(() => {
+      historyTimers.delete(key);
+      recordHistory(key);
+    }, 1000),
+  );
+}
+function closeKeys(keys: string[]) {
+  const store = useTabStore.getState();
+  for (const key of keys) {
+    clearTimeout(historyTimers.get(key));
+    historyTimers.delete(key);
+    if (typeof window !== "undefined")
+      window.dispatchEvent(
+        new CustomEvent("json-tools:close-model", { detail: key }),
+      );
+  }
+  let tabs = store.tabs.filter((t) => !keys.includes(t.key));
+  if (!tabs.length) tabs = [makeTab()];
+  const index = store.tabs.findIndex((t) => t.key === store.activeTabKey);
+  useTabStore.setState({
+    tabs,
+    activeTabKey: tabs.some((t) => t.key === store.activeTabKey)
+      ? store.activeTabKey
+      : tabs[Math.max(0, Math.min(index, tabs.length - 1))].key,
+  });
+  return keys;
+}
+function unwrap<T>(value: unknown): T | null {
+  return value && typeof value === "object" && "data" in value
+    ? (value as { data: T }).data
+    : (value as T | null);
+}
+function normalize(
+  raw: Partial<TabItem> & {
+    monacoVersion?: number;
+    vanilla?: { text?: string };
+    vanillaVersion?: number;
+  },
+): TabItem {
+  const tab = makeTab(
+    raw.title,
+    (raw.vanillaVersion || 0) > (raw.monacoVersion || 0)
+      ? (raw.vanilla?.text ?? raw.content ?? "")
+      : (raw.content ?? raw.vanilla?.text ?? ""),
+    raw.extraData,
+  );
+  const kind =
+    raw.kind === "tool" || raw.kind === "toolbox" ? raw.kind : "json";
+  return {
+    ...tab,
+    kind,
+    diffModifiedValue: raw.diffModifiedValue,
+    diffRevision: raw.diffRevision,
+    source: raw.source,
+    updatedAt: raw.updatedAt || Date.now(),
+    key: raw.key || tab.key,
+    uuid: raw.uuid || tab.uuid,
+    revision: raw.revision || raw.monacoVersion || 1,
+    view: raw.view || "code",
+    toolState: raw.toolState || {},
+    editorSettings: { ...tab.editorSettings, ...raw.editorSettings },
+    history: retainHistory(
+      (raw.history || [])
+        .filter(
+          (h) =>
+            typeof h.content === "string" &&
+            !(h as TabHistoryItem & { truncated?: boolean }).truncated,
+        )
+        .map((h) => ({ ...h, revision: h.revision || h.monacoVersion || 1 })),
+    ),
+    ...(kind === "tool"
+      ? {
+          toolId: (raw.extraData?.toolId ||
+            ("toolId" in raw ? raw.toolId : undefined)) as ToolId,
+        }
+      : {}),
+  } as TabItem;
+}
+export const useTabStore = create<TabStore>((set, get) => ({
+  tabs: [],
+  activeTabKey: "",
+  nextKey: 1,
+  hydrated: false,
+  saveStatus: "saved",
+  storageError: null,
+  activeTab: () => get().getTabByKey(get().activeTabKey) || get().tabs[0],
+  getTabByKey: (key) => get().tabs.find((t) => t.key === key),
+  initTab: () => {
+    const tab = makeTab();
+    set({ tabs: [tab], activeTabKey: tab.key, nextKey: 2 });
+  },
+  addTab: (title, content, extraData) => {
+    const tab = makeTab(title, content, extraData);
+    set((s) => ({
+      tabs: [...s.tabs, tab],
+      activeTabKey: tab.key,
+      nextKey: s.nextKey + 1,
+    }));
+  },
+  openToolboxTab: () => {
+    const source = get().activeTab();
+    const existing = get().tabs.find((t) => t.kind === "toolbox");
+    if (existing) {
+      if (source?.kind === "json")
+        patch(existing.key, (t) => ({
+          ...t,
+          source: {
+            key: source.key,
+            revision: source.revision,
+            title: source.title,
+          },
+          content: source.content,
+        }));
+      set({ activeTabKey: existing.key });
+      return existing.key;
+    }
+    const tab = {
+      ...makeTab("工具箱"),
+      kind: "toolbox" as const,
+      ...(source?.kind === "json"
+        ? {
+            source: {
+              key: source.key,
+              revision: source.revision,
+              title: source.title,
+            },
+            content: source.content,
+          }
+        : {}),
+    };
+    set((s) => ({ tabs: [...s.tabs, tab], activeTabKey: tab.key }));
+    return tab.key;
+  },
+  addToolTab: (tool) => {
+    const active = get().activeTab();
+    const current =
+      active?.kind === "toolbox"
+        ? get().getTabByKey(active.source?.key || "")
+        : active;
+    const source =
+      current?.kind === "json"
+        ? { key: current.key, revision: current.revision, title: current.title }
+        : undefined;
+    const tab: TabItem = {
+      ...makeTab(tool.name, current?.kind === "json" ? current.content : ""),
+      kind: "tool",
+      toolId: tool.id as ToolId,
+      source,
+      extraData: { toolId: tool.id, toolIcon: tool.icon, toolPath: tool.path },
+    };
+    set((s) => ({ tabs: [...s.tabs, tab], activeTabKey: tab.key }));
+    return tab.key;
+  },
+  setTabContent: updateContent,
+  updateTabContent: updateContent,
+  setTabModifiedValue: (key, content) =>
+    patch(key, (t) =>
+      t.diffModifiedValue === content
+        ? t
+        : {
+            ...t,
+            diffModifiedValue: content,
+            diffRevision: (t.diffRevision || 0) + 1,
+            updatedAt: Date.now(),
+          },
+    ),
+  setView: (key, view) =>
+    patch(key, (t) => (t.view === view ? t : { ...t, view })),
+  setToolState: (key, name, value) =>
+    patch(key, (t) =>
+      Object.is(t.toolState[name], value)
+        ? t
+        : { ...t, toolState: { ...t.toolState, [name]: value } },
+    ),
+  setActiveTab: (key) => {
+    if (get().getTabByKey(key)) set({ activeTabKey: key });
+  },
+  renameTab: (key, title) => {
+    if (title.trim()) patch(key, (t) => ({ ...t, title: title.trim() }));
+  },
+  closeTab: (key) => {
+    closeKeys([key]);
+  },
+  closeAllTabs: () => closeKeys(get().tabs.map((t) => t.key)),
+  closeOtherTabs: (key) =>
+    closeKeys(
+      get()
+        .tabs.filter((t) => t.key !== key)
+        .map((t) => t.key),
+    ),
+  closeLeftTabs: (key) =>
+    closeKeys(
+      get()
+        .tabs.slice(
+          0,
+          get().tabs.findIndex((t) => t.key === key),
+        )
+        .map((t) => t.key),
+    ),
+  closeRightTabs: (key) =>
+    closeKeys(
+      get()
+        .tabs.slice(get().tabs.findIndex((t) => t.key === key) + 1)
+        .map((t) => t.key),
+    ),
+  updateEditorSettings: (key, settings) =>
+    patch(key, (t) =>
+      Object.entries(settings).every(
+        ([k, v]) => t.editorSettings[k as keyof EditorSettings] === v,
+      )
+        ? t
+        : { ...t, editorSettings: { ...t.editorSettings, ...settings } },
+    ),
+  addTabHistory: recordHistory,
+  restoreTabHistory: (key, id) => {
+    const h = get()
+      .getTabByKey(key)
+      ?.history.find((h) => h.key === id);
+    if (h && h.content !== get().getTabByKey(key)?.content) {
+      // A restore can happen before the pending edit snapshot is saved.
+      recordHistory(key);
+      updateContent(key, h.content);
+    }
+  },
+  deleteTabHistory: (key, id) =>
+    patch(key, (t) => ({
+      ...t,
+      history: t.history.filter((h) => h.key !== id),
+    })),
+  clearTabHistory: (key) => {
+    clearTimeout(historyTimers.get(key));
+    historyTimers.delete(key);
+    patch(key, (t) => ({ ...t, history: [] }));
+  },
+  clearUserData: async () => {
+    resetting = true;
+    clearTimeout(broadcastTimer);
+    pendingBroadcasts.clear();
+    try {
+      clearTimeout(timer);
+      historyTimers.forEach(clearTimeout);
+      historyTimers.clear();
+      await writing;
+      for (const tab of get().tabs)
+        if (typeof window !== "undefined")
+          window.dispatchEvent(
+            new CustomEvent("json-tools:close-model", { detail: tab.key }),
+          );
+      await db.clear();
+      saved.clear();
+      await Promise.all(
+        ["tabs", "tabs_active_key", "tabs_next_key"].map((k) =>
+          legacy.removeItem(k),
+        ),
+      );
+      dirty.clear();
+      removed.clear();
+      get().initTab();
+    } finally {
+      resetting = false;
+    }
+    dirty.add(get().activeTabKey);
+    await flushTabStore();
+  },
+  syncTabStore: () => {
+    if (hydration) return hydration;
+    hydration = (async () => {
+      try {
+        await useSettingsStore.getState().syncSettingsStore();
+      } catch (error) {
+        console.error("Settings restore failed", error);
+      }
+      if (!useSettingsStore.getState().persistentDataEnabled) {
+        get().initTab();
+        set({ hydrated: true });
         return;
       }
-    }
-
-    console.log('[历史记录] 记录新的历史:', currentTab.key, currentTab.history.length + 1);
-
-    // 创建新的历史记录（使用更精确的时间戳确保唯一性）
-    const timestamp = Date.now();
-    const randomSuffix = Math.random().toString(36).substring(2, 9);
-    const newHistoryItem: TabHistoryItem = {
-      key: `history_${timestamp}_${randomSuffix}_${currentTab.uuid}`,
-      timestamp: timestamp,
-      title: currentTab.title,
-      content: truncated
-        ? `[历史内容过大，已跳过完整快照，原始长度 ${contentLength} 字符]`
-        : currentTab.content,
-      monacoVersion: currentTab.monacoVersion,
-      vanilla: truncated ? undefined : currentTab.vanilla,
-      truncated,
-      contentLength,
-      contentHash,
-    };
-
-    // 更新 tab 的历史记录
-    useTabStore.setState((state) => ({
-      tabs: state.tabs.map((t) => {
-        if (t.key === currentTab.key) {
-          // 限制历史记录数量，最多保存50条
-          const history = [newHistoryItem, ...t.history].slice(0, MAX_HISTORY_COUNT);
-          console.log('[历史记录] 历史记录已保存，总数:', history.length);
-          return { ...t, history };
+      try {
+        let tabs: TabItem[] = [];
+        const keys = await db.keys();
+        for (const key of keys.filter((k) => k.startsWith("document:"))) {
+          const document = await db.getItem<TabItem>(key);
+          const metadata =
+            document &&
+            (await db.getItem<Partial<TabItem>>("metadata:" + document.key));
+          const raw = document && { ...document, ...metadata };
+          if (raw) {
+            const history = await db.getItem<TabHistoryItem[]>(
+              "history:" + raw.key,
+            );
+            tabs.push(normalize({ ...raw, history: history || [] }));
+          }
         }
-        return t;
-      }),
-    }));
-  }, 1000); // 延迟 1 秒记录
-};
-
-useTabStore.subscribe(
-  (state) => state.tabs,
-  (tabs) => {
-    // 如果是远程更新,不重复广播
-    if (isRemoteTabUpdate) return;
-
-    // 检查是否启用了数据持久化
-    const persistentDataEnabled = useSettingsStore.getState().persistentDataEnabled;
-    if (!persistentDataEnabled) {
-      // 如果禁用了持久化，不保存数据
-      return;
-    }
-
-    clearTimeout(tabsSaveTimeout);
-    tabsSaveTimeout = setTimeout(async () => {
-      await storageManager.set(DB_TABS, tabs);
-      // storageManager 内部会自动广播,无需手动调用
-    }, timeout);
-  },
-);
-
-useTabStore.subscribe(
-  (state) => [state.activeTabKey, state.nextKey],
-  (arr) => {
-    // 如果是远程更新,不重复广播
-    if (isRemoteTabUpdate) return;
-
-    // 检查是否启用了数据持久化
-    const persistentDataEnabled = useSettingsStore.getState().persistentDataEnabled;
-    if (!persistentDataEnabled) {
-      // 如果禁用了持久化，不保存数据
-      return;
-    }
-
-    clearTimeout(tabActiveSaveTimeout);
-    tabActiveSaveTimeout = setTimeout(async () => {
-      await storageManager.transaction([
-        { type: 'set', key: DB_TAB_ACTIVE_KEY, value: arr[0] },
-        { type: 'set', key: DB_TAB_NEXT_KEY, value: arr[1] },
-      ]);
-      // storageManager 内部会自动广播,无需手动调用
-    }, timeout);
-  },
-);
-
-// 多窗口同步：监听来自其他窗口的更新
-// 使用标志位防止循环触发
-let isRemoteTabUpdate = false;
-
-syncManager.onUpdate(DB_TABS, (data) => {
-  if (data && Array.isArray(data) && !isRemoteTabUpdate) {
-    isRemoteTabUpdate = true;
-
-    // 合并远程 tabs 时保留活动 tab 的本地内容
-    // 防止远程更新覆盖本地正在编辑的最新输入
-    const localState = useTabStore.getState();
-    const mergedTabs = data.map((remoteTab: TabItem) => {
-      if (remoteTab.key === localState.activeTabKey) {
-        const localTab = localState.getTabByKey(remoteTab.key);
-        if (localTab) {
-          return {
-            ...remoteTab,
-            content: localTab.content,
-            monacoVersion: localTab.monacoVersion,
-            vanillaVersion: localTab.vanillaVersion,
-            vanilla: localTab.vanilla,
-          };
+        const meta = await db.getItem<{
+          activeTabKey: string;
+          order: string[];
+        }>("workspace");
+        if (!keys.includes("schema")) {
+          const old = unwrap<TabItem[]>(await legacy.getItem("tabs"));
+          if (old?.length) tabs = old.map(normalize);
+          if (tabs.length) {
+            for (const t of tabs) {
+              const { history, ...document } = t;
+              await db.setItem("document:" + t.key, document);
+              await db.setItem("history:" + t.key, history);
+            }
+          }
+          await db.setItem("schema", 2);
         }
+        if (!tabs.length) tabs = [makeTab()];
+        if (meta?.order)
+          tabs.sort(
+            (a, b) => meta.order.indexOf(a.key) - meta.order.indexOf(b.key),
+          );
+        set({
+          tabs,
+          activeTabKey: tabs.some((t) => t.key === meta?.activeTabKey)
+            ? meta!.activeTabKey
+            : tabs[0].key,
+          hydrated: true,
+        });
+        for (const tab of tabs) dirty.add(tab.key);
+        await flushTabStore();
+      } catch (error) {
+        if (!get().tabs.length) get().initTab();
+        set({
+          hydrated: true,
+          saveStatus: "error",
+          storageError: "无法恢复本地数据，旧数据已保留。" + String(error),
+        });
       }
-      return remoteTab;
-    });
-
-    useTabStore.setState({ tabs: mergedTabs });
-
-    // 持久化到本地存储
-    storageManager.set(DB_TABS, mergedTabs, { sync: false });
-
-    setTimeout(() => {
-      isRemoteTabUpdate = false;
-    }, 100);
-  }
-});
-
-syncManager.onUpdate('tabs_meta', (data) => {
-  if (data && data.activeTabKey && !isRemoteTabUpdate) {
-    isRemoteTabUpdate = true;
-
-    useTabStore.setState({
-      activeTabKey: data.activeTabKey,
-      nextKey: data.nextKey
-    });
-
-    // 持久化到本地存储
-    storageManager.transaction([
-      { type: 'set', key: DB_TAB_ACTIVE_KEY, value: data.activeTabKey },
-      { type: 'set', key: DB_TAB_NEXT_KEY, value: data.nextKey }
-    ], { sync: false });
-
-    setTimeout(() => {
-      isRemoteTabUpdate = false;
-    }, 100);
-  }
-});
-
-// 页面关闭前强制保存
-if (typeof window !== "undefined") {
-  const persistLatestTabs = () => {
-    void flushTabStore();
+    })();
+    return hydration;
+  },
+}));
+export async function flushTabStore(): Promise<void> {
+  flushBroadcasts();
+  clearTimeout(timer);
+  if (!useSettingsStore.getState().persistentDataEnabled || resetting) return;
+  const state = useTabStore.getState();
+  const keys = [...dirty];
+  const deletes = [...removed];
+  dirty.clear();
+  removed.clear();
+  const tabs = keys
+    .map((key) => state.getTabByKey(key))
+    .filter((t): t is TabItem => !!t);
+  const meta = {
+    activeTabKey: state.activeTabKey,
+    order: state.tabs.map((t) => t.key),
   };
-
-  window.addEventListener("pagehide", persistLatestTabs);
-
-  // 页面隐藏时也保存（移动端友好）
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) {
-      persistLatestTabs();
+  useTabStore.setState({ saveStatus: "saving" });
+  writing = writing.then(async () => {
+    try {
+      for (const tab of tabs) {
+        const previous = saved.get(tab.key);
+        const { history, content, revision, updatedAt, ...metadata } = tab;
+        if (
+          !previous ||
+          previous.content !== content ||
+          previous.revision !== revision
+        )
+          await db.setItem("document:" + tab.key, {
+            key: tab.key,
+            content,
+            revision,
+            updatedAt,
+          });
+        if (!previous || previous.history !== history)
+          await db.setItem("history:" + tab.key, history);
+        await db.setItem("metadata:" + tab.key, metadata);
+        saved.set(tab.key, tab);
+      }
+      for (const key of deletes) {
+        await db.removeItem("document:" + key);
+        await db.removeItem("history:" + key);
+        await db.removeItem("metadata:" + key);
+        saved.delete(key);
+      }
+      await db.setItem("workspace", meta);
+      useTabStore.setState({
+        saveStatus: dirty.size ? "saving" : "saved",
+        storageError: null,
+      });
+    } catch (error) {
+      keys.forEach((k) => dirty.add(k));
+      deletes.forEach((k) => removed.add(k));
+      useTabStore.setState({
+        saveStatus: "error",
+        storageError: String(error),
+      });
     }
   });
+  await writing;
+}
+useTabStore.subscribe((state, previous) => {
+  if (resetting) return;
+  let changed = false;
+  for (const tab of state.tabs) {
+    const old = previous.tabs.find((t) => t.key === tab.key);
+    if (old !== tab) {
+      dirty.add(tab.key);
+      changed = true;
+      if (
+        !remote &&
+        state.hydrated &&
+        useSettingsStore.getState().persistentDataEnabled
+      )
+        queueBroadcast(tab, old?.revision || 0);
+    }
+  }
+  for (const old of previous.tabs) {
+    if (!state.tabs.some((t) => t.key === old.key)) {
+      pendingBroadcasts.delete(old.key);
+      removed.add(old.key);
+      changed = true;
+      if (
+        !remote &&
+        state.hydrated &&
+        useSettingsStore.getState().persistentDataEnabled
+      )
+        channel?.postMessage({ windowId, type: "close", key: old.key });
+    }
+  }
+  if (
+    (changed || state.activeTabKey !== previous.activeTabKey) &&
+    state.hydrated
+  ) {
+    clearTimeout(timer);
+    timer = setTimeout(() => void flushTabStore(), 600);
+  }
+});
+if (channel)
+  channel.onmessage = (event) => {
+    const message = event.data;
+    if (
+      message.windowId === windowId ||
+      !useSettingsStore.getState().persistentDataEnabled
+    )
+      return;
+    remote = true;
+    try {
+      if (message.type === "update") {
+        const incoming = normalize(message.tab);
+        const state = useTabStore.getState();
+        const current = state.getTabByKey(incoming.key);
+        if (
+          current &&
+          current.revision !== message.baseRevision &&
+          current.content !== incoming.content
+        ) {
+          const conflict = {
+            ...incoming,
+            key: generateUUID(),
+            uuid: generateUUID(),
+            title: incoming.title + " · 冲突副本",
+          };
+          useTabStore.setState({ tabs: [...state.tabs, conflict] });
+        } else if (!current)
+          useTabStore.setState({ tabs: [...state.tabs, incoming] });
+        else
+          patch(current.key, () => ({ ...incoming, history: current.history }));
+      } else if (message.type === "close") closeKeys([message.key]);
+    } finally {
+      remote = false;
+    }
+  };
+if (typeof window !== "undefined") {
+  window.addEventListener("pagehide", () => void flushTabStore());
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") void flushTabStore();
+  });
+}
+
+useSettingsStore.subscribe((state, previous) => {
+  if (
+    state.persistentDataEnabled &&
+    !previous.persistentDataEnabled &&
+    useTabStore.getState().hydrated
+  ) {
+    for (const tab of useTabStore.getState().tabs) dirty.add(tab.key);
+    void flushTabStore();
+  }
+});
+export async function downloadRecoveryData() {
+  const data: Record<string, unknown> = {};
+  for (const key of await legacy.keys()) data[key] = await legacy.getItem(key);
+  const url = URL.createObjectURL(
+    new Blob([JSON.stringify(data)], { type: "application/json" }),
+  );
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "json-tools-recovery.json";
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

@@ -1,181 +1,122 @@
 import * as monaco from "monaco-editor";
-import { editor } from "monaco-editor";
-
-import { removeJsonComments, parseJson } from "@/utils/json.ts";
-
-/**
- * 更新代码折叠区域的装饰器，显示折叠区域内包含的元素数量
- * @param editor 编辑器实例
- * @param language 当前语言
- * @param foldingDecorationsRef 折叠装饰器引用
- * @returns void
- */
-export const updateFoldingDecorations = (
-  editor: editor.IStandaloneCodeEditor,
+import type { RefObject } from "react";
+import { indexStructure, type StructureRegion } from "@/workers/structure";
+const cache = new WeakMap<
+  monaco.editor.ITextModel,
+  {
+    version: number;
+    regions: StructureRegion[];
+    worker?: Worker;
+    timer?: ReturnType<typeof setTimeout>;
+    cleanup?: () => void;
+  }
+>();
+export function updateFoldingDecorations(
+  editor: monaco.editor.IStandaloneCodeEditor,
   language: string | undefined,
-  foldingDecorationsRef: React.RefObject<monaco.editor.IEditorDecorationsCollection | null>,
-): void => {
-  if (language !== "json" && language !== "json5") {
+  ref: RefObject<monaco.editor.IEditorDecorationsCollection | null>,
+) {
+  const model = editor.getModel();
+  if (!model || !["json", "json5"].includes(language || "")) {
+    ref.current?.clear();
     return;
   }
-
-  const model = editor.getModel();
-
-  if (!model) return;
-
-  // 获取折叠模型
-  const foldingController = editor.getContribution(
-    "editor.contrib.folding",
-  ) as any;
-
-  if (!foldingController) return;
-
-  try {
-    // 获取当前所有折叠区域
-    const foldingModel = foldingController.hiddenRangeModel;
-
-    if (!foldingModel) return;
-
-    const regions = foldingModel._hiddenRanges;
-
-    if (!regions || !regions.length) return;
-
-    // 获取当前折叠的区域
+  const version = model.getVersionId();
+  let entry = cache.get(model);
+  const render = (regions: StructureRegion[]) => {
+    if (
+      editor.getModel() !== model ||
+      model.isDisposed() ||
+      model.getVersionId() !== version
+    )
+      return;
+    const ranges = editor.getVisibleRanges();
     const decorations: monaco.editor.IModelDeltaDecoration[] = [];
-    const modelLines = model.getLinesContent();
-
-    // 遍历所有折叠区域
-    for (let i = 0; i < regions.length; i++) {
-      const region = regions[i];
-
-      const startLineNumber = region.startLineNumber; // 为折叠内容的首行，不包括{ [
-      const endLineNumber = region.endLineNumber;
-
-      // 计算折叠区域内的元素数量
-      const elementCount = calculateFoldingElementCount(
-        language,
-        modelLines,
-        startLineNumber,
-        endLineNumber,
-      );
-
-      // 创建CSS类名
-      const className = `folding${startLineNumber - 1}`;
-
-      if (elementCount.type == 1) {
-        addFoldingStyles(className, `\\22EF  Object{${elementCount.count}}`);
-      } else {
-        addFoldingStyles(className, `\\22EF  Array{${elementCount.count}}`);
-      }
-
-      // 创建装饰器，显示元素数量
+    for (const region of regions) {
+      if (
+        region.endLine <= region.startLine ||
+        !ranges.some(
+          (r) =>
+            region.startLine >= r.startLineNumber &&
+            region.startLine <= r.endLineNumber,
+        )
+      )
+        continue;
+      const collapsed =
+        editor.getTopForLineNumber(region.startLine + 1) ===
+        editor.getTopForLineNumber(region.endLine + 1);
+      if (!collapsed) continue;
+      const column = model.getLineMaxColumn(region.startLine);
       decorations.push({
-        range: new monaco.Range(startLineNumber - 1, 1, startLineNumber - 1, 1),
+        range: new monaco.Range(
+          region.startLine,
+          column,
+          region.startLine,
+          column,
+        ),
         options: {
-          zIndex: 99999,
-          isWholeLine: false,
-          beforeContentClassName: className,
+          after: {
+            content: `  ${region.type}{${region.count}}`,
+            inlineClassName: "json-fold-count",
+            cursorStops: monaco.editor.InjectedTextCursorStops.None,
+          },
         },
       });
     }
-
-    // 应用装饰器
-    if (decorations.length > 0) {
-      // 清除旧的装饰器
-      if (foldingDecorationsRef.current) {
-        foldingDecorationsRef.current.clear();
-      }
-      // 创建新的装饰器集合
-      foldingDecorationsRef.current =
-        editor.createDecorationsCollection(decorations);
-    }
-  } catch (e) {
-    console.error("更新折叠装饰器失败", e);
+    if (!ref.current) ref.current = editor.createDecorationsCollection();
+    ref.current.set(decorations);
+  };
+  if (entry?.version === version) {
+    if (!entry.worker && !entry.timer) render(entry.regions);
+    return;
   }
-};
-
-// 添加折叠样式
-export function addFoldingStyles(className: string, content: string) {
-  const style = document.createElement("style");
-
-  style.id = className;
-  style.textContent = `
-        .${className} {}
-        .${className} ~ .inline-folded::after {
-          width: 100px !important;
-          content: "${content}" !important;
-        }
-  `;
-  document.head.appendChild(style);
+  entry?.worker?.terminate();
+  clearTimeout(entry?.timer);
+  entry?.cleanup?.();
+  entry = { version, regions: [] };
+  cache.set(model, entry);
+  const current = entry;
+  const cleanup = model.onWillDispose(() => {
+    clearTimeout(current.timer);
+    current.worker?.terminate();
+  });
+  current.cleanup = () => cleanup.dispose();
+  const build = () => {
+    current.timer = undefined;
+    if (model.isDisposed() || model.getVersionId() !== version) return;
+    const worker = new Worker(
+      new URL("../../../workers/structure.worker.ts", import.meta.url),
+      { type: "module" },
+    );
+    current.worker = worker;
+    worker.onmessage = (event) => {
+      worker.terminate();
+      cleanup.dispose();
+      current.worker = undefined;
+      current.regions = event.data.regions;
+      render(current.regions);
+    };
+    worker.onerror = () => {
+      worker.terminate();
+      cleanup.dispose();
+      cache.delete(model);
+    };
+    worker.postMessage({ text: model.getValue(), version });
+  };
+  // Visible hints stay responsive; rebuilding the full structure waits for typing to settle.
+  if (model.getValueLength() > 1_000_000)
+    current.timer = setTimeout(build, 900);
+  else build();
 }
-
-interface ElementCountCount {
-  count: number;
-  type: number; // 1object 2array
-}
-
-// 计算折叠区域内的元素数量
 export function calculateFoldingElementCount(
-  language: string,
-  modelLines: string[],
-  startLineNumber: number,
-  endLineNumber: number,
-): ElementCountCount {
-  const result: ElementCountCount = { count: 0, type: 0 };
-
-  // 获取首行
-  const firstLines = modelLines.slice(startLineNumber - 2, startLineNumber - 1);
-  const firstLine = firstLines[0]?.trim() || "";
-
-  // 获取折叠区域的所有行内容 不包括 [] {}
-  const foldedLines = modelLines.slice(startLineNumber - 1, endLineNumber);
-
-  if (foldedLines.length === 0) return result;
-
-  // 判断JSON结构类型
-  const isObject = firstLine.includes("{");
-  const isArray = firstLine.includes("[");
-
-  if (!isObject && !isArray) return result;
-
-  // 合并所有行以处理
-  const content = foldedLines.join("\n");
-  let cleanContent = content;
-
-  if (language == "json5") {
-    // 移除注释以避免干扰计数
-    cleanContent = removeJsonComments(content);
-  }
-  if (!cleanContent || cleanContent.length == 0) return result;
-  // 根据类型计算元素数量
-  if (isObject) {
-    try {
-      const jsonObj = parseJson(`{${cleanContent}}`);
-
-      result.type = 1;
-      result.count = Object.keys(jsonObj).length;
-
-      return result;
-    } catch (e) {
-      console.error(e);
-
-      return result;
-    }
-  } else if (isArray) {
-    try {
-      const jsonObj = parseJson(`[${cleanContent}]`);
-
-      result.type = 2;
-      result.count = jsonObj.length;
-
-      return result;
-    } catch (e) {
-      console.error(e);
-
-      return result;
-    }
-  }
-
-  return result;
+  _language: string,
+  lines: string[],
+  startLine: number,
+  endLine: number,
+): { count: number; type: number } {
+  const regions = indexStructure(
+    lines.slice(startLine - 2, endLine + 1).join("\n"),
+  );
+  const root = regions[regions.length - 1];
+  return { count: root?.count || 0, type: root?.type === "Object" ? 1 : 0 };
 }
-

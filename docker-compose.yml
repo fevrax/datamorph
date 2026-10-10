@@ -3,8 +3,7 @@ services:
     image: fevrax/json-tools
     container_name: json-tools
     restart: always
-    environment:
-      OPENAI_API_KEY: "" # 在此填写新密钥，留空则关闭站点 AI 线路
-      OPENAI_BASE_URL: https://api.ssooai.com/v1
+    env_file:
+      - .env
     ports:
-      - "3300:80"
+      - "${APP_PORT:-3300}:80"

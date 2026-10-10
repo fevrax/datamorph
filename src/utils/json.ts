@@ -91,6 +91,8 @@ export function escapeJson(input: string): string {
 
 export interface JsonErrorInfo {
   error?: Error;
+  detail?: string;
+  contextStartLine?: number;
   message: string;
   line: number;
   column: number;

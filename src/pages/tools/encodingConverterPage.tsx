@@ -1,3 +1,5 @@
+import { useBackgroundTask } from "@/components/workspace/useBackgroundTask";
+import { createToolStateHook } from "@/components/workspace/ToolContext";
 import type { editor } from "monaco-editor";
 
 import { useEffect, useRef, useState } from "react";
@@ -15,8 +17,8 @@ import {
   Spinner,
   Switch,
   Tooltip,
-} from "@heroui/react";
-import { Icon } from "@iconify/react";
+} from "@/components/ui";
+import { Icon } from "@/components/ui/icon";
 import { useTheme } from "next-themes";
 
 import ToolboxPageTemplate from "@/layouts/toolboxPageTemplate";
@@ -24,9 +26,6 @@ import ResizableEditorLayout from "@/components/layout/ResizableEditorLayout";
 import clipboard from "@/utils/clipboard";
 import {
   DEFAULT_ENCODING_OPTIONS,
-  EncodingConversionError,
-  decodeToText,
-  encodeFromText,
   getUtf8ByteLength,
   type EncodingOptions,
   type EncodingType,
@@ -142,7 +141,7 @@ function FormatOptions({ type, options, onChange }: FormatOptionsProps) {
             />
             <div>
               <p className="text-sm font-semibold">格式选项</p>
-              <p className="text-default-500 text-xs">
+              <p className="text-muted-foreground text-xs">
                 {ENCODING_MAP.get(type)?.label}
               </p>
             </div>
@@ -272,7 +271,7 @@ function EncodingSelect({
 
   return (
     <div className="flex min-w-0 items-center gap-1.5">
-      <span className="text-default-500 hidden shrink-0 text-xs sm:inline">
+      <span className="text-muted-foreground hidden shrink-0 text-xs sm:inline">
         编码类型
       </span>
       <Select
@@ -332,14 +331,14 @@ function EditorPanel({
   const byteCount = getUtf8ByteLength(value);
 
   return (
-    <Card className="h-full min-h-0 overflow-hidden border border-default-200 shadow-sm">
+    <Card className="h-full min-h-0 overflow-hidden border border-border shadow-sm">
       <CardBody className="flex h-full min-h-0 flex-col p-0">
-        <div className="flex min-h-11 items-center justify-between border-b border-default-200 bg-default-50 px-3 py-2">
+        <div className="flex min-h-11 items-center justify-between border-b border-border bg-muted px-3 py-2">
           <div className="flex min-w-0 items-center gap-2">
             <Icon className="text-primary" icon={definition.icon} width={18} />
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{title}</p>
-              <p className="text-default-400 truncate text-xs">
+              <p className="text-muted-foreground truncate text-xs">
                 {definition.label}
               </p>
             </div>
@@ -384,7 +383,7 @@ function EditorPanel({
         </div>
 
         {error && (
-          <div className="flex items-start gap-2 border-b border-danger-100 bg-danger-50/70 px-3 py-2 text-danger-600 dark:bg-danger-950/20 dark:text-danger-400">
+          <div className="flex items-start gap-2 border-b border-destructive bg-destructive/70 px-3 py-2 text-destructive dark:bg-destructive/20 dark:text-destructive">
             <Icon
               className="mt-0.5 shrink-0"
               icon="solar:danger-triangle-outline"
@@ -427,7 +426,7 @@ function EditorPanel({
           />
         </div>
 
-        <div className="text-default-400 flex min-h-8 items-center justify-between border-t border-default-200 bg-default-50 px-3 text-xs">
+        <div className="text-muted-foreground flex min-h-8 items-center justify-between border-t border-border bg-muted px-3 text-xs">
           <span>{footerLabel}</span>
           <span>
             {characterCount.toLocaleString()} 字符 ·{" "}
@@ -447,12 +446,19 @@ interface ConversionRequest {
   immediate: boolean;
 }
 
+const useToolState = createToolStateHook("encodingConverter");
+
 export default function EncodingConverterPage() {
-  const [encodingType, setEncodingType] = useState<EncodingType>("base64");
-  const [encodingOptions, setEncodingOptions] =
-    useState<EncodingOptions>(cloneDefaultOptions);
-  const [plainText, setPlainText] = useState("");
-  const [encodedText, setEncodedText] = useState("");
+  const [encodingType, setEncodingType] = useToolState(
+    "encodingType",
+    "base64",
+  );
+  const [encodingOptions, setEncodingOptions] = useToolState(
+    "options",
+    cloneDefaultOptions,
+  );
+  const [plainText, setPlainText] = useToolState("plainText", "");
+  const [encodedText, setEncodedText] = useToolState("encodedText", "");
   const [error, setError] = useState("");
   const [errorSide, setErrorSide] = useState<EditSide | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -470,6 +476,9 @@ export default function EncodingConverterPage() {
     setRequest({ id, side, immediate });
   };
 
+  const task = useBackgroundTask(
+    encodingType + JSON.stringify(encodingOptions),
+  );
   useEffect(() => {
     if (!request) return;
 
@@ -495,26 +504,24 @@ export default function EncodingConverterPage() {
     setIsProcessing(true);
 
     const timeoutId = window.setTimeout(
-      () => {
+      async () => {
         if (request.id !== latestRequestIdRef.current) return;
 
         try {
+          const result =
+            (
+              await task.run({
+                action: request.side === "plain" ? "encode" : "decode",
+                content: sourceValue,
+                encoding: encodingType,
+                options: encodingOptions,
+              })
+            ).content || "";
+          if (request.id !== latestRequestIdRef.current) return;
           if (request.side === "plain") {
-            const result = encodeFromText(
-              plainTextRef.current,
-              encodingType,
-              encodingOptions,
-            );
-
             encodedTextRef.current = result;
             setEncodedText(result);
           } else {
-            const result = decodeToText(
-              encodedTextRef.current,
-              encodingType,
-              encodingOptions,
-            );
-
             plainTextRef.current = result;
             setPlainText(result);
           }
@@ -522,6 +529,11 @@ export default function EncodingConverterPage() {
           setError("");
           setErrorSide(null);
         } catch (conversionError) {
+          if (
+            (conversionError as Error).name === "AbortError" ||
+            request.id !== latestRequestIdRef.current
+          )
+            return;
           if (request.side === "plain") {
             encodedTextRef.current = "";
             setEncodedText("");
@@ -531,7 +543,7 @@ export default function EncodingConverterPage() {
           }
 
           setError(
-            conversionError instanceof EncodingConversionError
+            conversionError instanceof Error
               ? conversionError.message
               : "转换失败，请检查输入内容",
           );
@@ -545,7 +557,10 @@ export default function EncodingConverterPage() {
       request.immediate ? 0 : 150,
     );
 
-    return () => window.clearTimeout(timeoutId);
+    return () => {
+      window.clearTimeout(timeoutId);
+      task.cancel();
+    };
   }, [encodingOptions, encodingType, request]);
 
   const handlePlainTextChange = (value: string, immediate = false) => {

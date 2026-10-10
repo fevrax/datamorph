@@ -15,8 +15,8 @@ import {
   DropdownTrigger,
   Input,
   Tooltip,
-} from "@heroui/react";
-import { Icon } from "@iconify/react";
+} from "@/components/ui";
+import { Icon } from "@/components/ui/icon";
 
 import StatusButton, { IconStatus } from "@/components/button/StatusButton.tsx";
 import toast from "@/utils/toast";
@@ -455,7 +455,7 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
         <Dropdown
           key={button.key}
           classNames={{
-            base: "before:bg-default-200",
+            base: "before:bg-border",
             content: "min-w-[140px] p-1",
           }}
           isOpen={isDropdownOpen}
@@ -469,9 +469,9 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
             >
               <Button
                 className={cn(
-                  "pl-2 pr-2 h-8 gap-1 text-default-600 transition-colors",
+                  "pl-2 pr-2 h-8 gap-1 text-muted-foreground transition-colors",
                   button.className,
-                  "hover:bg-default-200/50",
+                  "hover:bg-border/50",
                 )}
                 size="sm"
                 startContent={
@@ -495,7 +495,7 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
             {button.dropdownItems.map((item) => (
               <DropdownItem
                 key={item.key}
-                className="py-2 px-3 hover:bg-default-100 rounded-md"
+                className="py-2 px-3 hover:bg-secondary rounded-md"
                 textValue={item.text}
                 onPress={item.onClick}
               >
@@ -515,9 +515,9 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
       <Tooltip key={button.key} content={button.tooltip} delay={300}>
         <Button
           className={cn(
-            "pl-2 pr-2 h-8 gap-1 text-default-600 transition-colors",
+            "pl-2 pr-2 h-8 gap-1 text-muted-foreground transition-colors",
             button.className,
-            "hover:bg-default-200/50",
+            "hover:bg-border/50",
           )}
           size="sm"
           startContent={
@@ -544,7 +544,7 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
     return (
       <Dropdown
         classNames={{
-          base: "before:bg-default-200",
+          base: "before:bg-border",
           content: "min-w-[140px] p-1",
         }}
         isOpen={isMoreDropdownOpen}
@@ -557,7 +557,7 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
             onMouseLeave={unShowMoreDropdown}
           >
             <Button
-              className="pl-2 pr-2 h-8 gap-1 text-default-600 !min-w-16 hover:bg-default-200/50 transition-colors"
+              className="pl-2 pr-2 h-8 gap-1 text-muted-foreground !min-w-16 hover:bg-border/50 transition-colors"
               startContent={<Icon icon="mingcute:more-2-fill" width={20} />}
               variant="light"
             >
@@ -578,7 +578,7 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
             .map((item) => (
               <DropdownItem
                 key={item.key}
-                className="py-2 px-3 hover:bg-default-100 rounded-md"
+                className="py-2 px-3 hover:bg-secondary rounded-md"
                 textValue={item.text}
                 onPress={() => {
                   setMoreDropdownOpen(false);
@@ -610,7 +610,7 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
         <React.Fragment key={group.key}>
           {/* 分隔线 */}
           {groupIndex > 0 && hasVisibleButtons && (
-            <div className="h-6 w-px bg-default-200 mx-1" />
+            <div className="h-6 w-px bg-border mx-1" />
           )}
           <div className="flex items-center gap-2">
             {group.buttons.map(renderButton)}
@@ -623,7 +623,7 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
   return (
     <div
       ref={containerRef}
-      className="h-10 flex items-center gap-1 px-1 bg-default-100 shadow-sm"
+      className="h-10 flex items-center gap-1 px-1 bg-secondary shadow-sm"
     >
       {renderActionGroups()}
 
@@ -639,7 +639,7 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
             size="sm"
             startContent={
               <Icon
-                className="text-default-400"
+                className="text-muted-foreground"
                 icon="mdi:magnify"
                 width={16}
               />

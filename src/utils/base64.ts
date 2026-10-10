@@ -77,7 +77,7 @@ export function decodeBase64Strict(str: string): string {
 
     // 如果这里没有抛出异常，说明是有效的UTF-8序列
     return decoder.decode(uint8Array);
-  } catch (error) {
+  } catch {
     return "";
   }
 }

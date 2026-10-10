@@ -1,4 +1,4 @@
-import { Input } from "@heroui/react";
+import { Input } from "@/components/ui";
 
 import {
   ControlSlot,
@@ -64,7 +64,7 @@ export function ShortcutsSettings() {
   };
 
   const Hint = () => (
-    <div className="whitespace-nowrap rounded-md bg-default-100 px-2 py-1 text-xs text-default-500">
+    <div className="whitespace-nowrap rounded-md bg-secondary px-2 py-1 text-xs text-muted-foreground">
       按组合键设置
     </div>
   );
@@ -111,9 +111,7 @@ export function ShortcutsSettings() {
               size="sm"
               value={closeTabShortcut}
               variant="bordered"
-              onChange={(e) =>
-                handleShortcutChange("closeTab", e.target.value)
-              }
+              onChange={(e) => handleShortcutChange("closeTab", e.target.value)}
               onKeyDown={(e) => {
                 const shortcut = captureShortcut(e);
 

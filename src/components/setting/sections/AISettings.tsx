@@ -1,16 +1,5 @@
 import type { TestResult } from "../ai/TestConnection";
 
-import {
-  Button,
-  Input,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  useDisclosure,
-} from "@heroui/react";
-import { Icon } from "@iconify/react";
 import { useEffect, useState } from "react";
 
 import {
@@ -32,8 +21,8 @@ import { OpenAIService, openAIService } from "@/services/openAIService";
 import { isUtoolsAvailable } from "@/utils/env";
 
 /**
- * AI 助手设置：线路管理（4 条线路） + 线路配置面板 + 推荐横幅 + 添加模型弹窗。
- * 行为与原 settingPage.renderAISettings 一致，仅做组件拆分与样式收敛。
+ * AI 助手设置：线路管理（4 条线路） + 线路配置面板 + 推荐横幅。
+ * 模型由各线路 API 提供，不维护本地手动模型列表。
  */
 export function AISettings() {
   const {
@@ -49,14 +38,8 @@ export function AISettings() {
     updateSsooaiRouteConfig,
     updateCustomRouteConfig,
     updateRouteEnabled,
-    fetchUtoolsModels,
-    fetchSsooaiModels,
-    fetchCustomModels,
+    fetchModels,
     syncConfig,
-    addCustomModel,
-    removeCustomModel,
-    addSsooaiModel,
-    removeSsooaiModel,
   } = useOpenAIConfigStore();
 
   const [configuringRoute, setConfiguringRoute] = useState<AIRouteType | null>(
@@ -64,45 +47,38 @@ export function AISettings() {
   );
   const [testingRoute, setTestingRoute] = useState<AIRouteType | null>(null);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
-  const [newModelName, setNewModelName] = useState("");
-  const [newModelLabel, setNewModelLabel] = useState("");
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const [addModelMode, setAddModelMode] = useState<"ssooai" | "custom">(
-    "custom",
-  );
-
   const [testModelUtools, setTestModelUtools] = useState<string>("");
-  const [testModelSsooai, setTestModelSsooai] =
-    useState<string>("deepseek-v4-pro");
-  const [testModelCustom, setTestModelCustom] =
-    useState<string>("deepseek-v4-pro");
+  const [testModelSsooai, setTestModelSsooai] = useState<string>("");
+  const [testModelCustom, setTestModelCustom] = useState<string>("");
 
   // 初始化时同步配置
   useEffect(() => {
     syncConfig();
   }, [syncConfig]);
 
-  // 按当前线路获取模型列表
+  // Only fetch the panel being configured. Debounce credential edits.
   useEffect(() => {
-    if (routeType === "utools") {
-      fetchUtoolsModels();
-    } else if (routeType === "ssooai" && ssooaiRoute.apiKey) {
-      fetchSsooaiModels();
-    } else if (
-      routeType === "custom" &&
-      customRoute.apiKey &&
-      customRoute.proxyUrl
-    ) {
-      useOpenAIConfigStore.getState().fetchCustomModels();
-    }
+    if (!configuringRoute) return;
+    const timer = setTimeout(() => {
+      void fetchModels(configuringRoute).catch((error: unknown) => {
+        toast.error(error instanceof Error ? error.message : "获取模型失败");
+      });
+    }, 400);
+    return () => clearTimeout(timer);
   }, [
-    routeType,
-    fetchUtoolsModels,
-    fetchSsooaiModels,
+    configuringRoute,
+    fetchModels,
     ssooaiRoute.apiKey,
+    ssooaiRoute.proxyUrl,
     customRoute.apiKey,
     customRoute.proxyUrl,
   ]);
+
+  const refreshModels = (route: AIRouteType) => {
+    void fetchModels(route).catch((error: unknown) => {
+      toast.error(error instanceof Error ? error.message : "获取模型失败");
+    });
+  };
 
   // 配置变更同步到 openAIService
   useEffect(() => {
@@ -111,20 +87,20 @@ export function AISettings() {
 
   // 默认测试模型
   useEffect(() => {
-    if (utoolsModels.length > 0 && !testModelUtools) {
-      setTestModelUtools(utoolsModels[0].value);
+    if (!utoolsModels.some((model) => model.value === testModelUtools)) {
+      setTestModelUtools(utoolsModels[0]?.value || "");
     }
   }, [utoolsModels, testModelUtools]);
 
   useEffect(() => {
-    if (ssooaiModels.length > 0 && !testModelSsooai) {
-      setTestModelSsooai(ssooaiModels[0].value);
+    if (!ssooaiModels.some((model) => model.value === testModelSsooai)) {
+      setTestModelSsooai(ssooaiModels[0]?.value || "");
     }
   }, [ssooaiModels, testModelSsooai]);
 
   useEffect(() => {
-    if (customModels.length > 0 && !testModelCustom) {
-      setTestModelCustom(customModels[0].value);
+    if (!customModels.some((model) => model.value === testModelCustom)) {
+      setTestModelCustom(customModels[0]?.value || "");
     }
   }, [customModels, testModelCustom]);
 
@@ -137,13 +113,6 @@ export function AISettings() {
     }
     setTestingRoute(null);
     setTestResult(null);
-    if (type === "utools") {
-      if (!isUtoolsAvailable) {
-        toast.error("uTools API 不可用，请确保在 uTools 环境中运行");
-      } else {
-        fetchUtoolsModels();
-      }
-    }
     openAIService.syncConfig();
   };
 
@@ -153,7 +122,6 @@ export function AISettings() {
   const handleApiKeyChange = (route: "ssooai" | "custom", apiKey: string) => {
     if (route === "ssooai") {
       updateSsooaiRouteConfig({ apiKey });
-      if (apiKey && routeType === "ssooai") fetchSsooaiModels();
       if (routeType === "ssooai") openAIService.syncConfig();
     } else {
       updateCustomRouteConfig({ apiKey });
@@ -209,67 +177,12 @@ export function AISettings() {
     }
   };
 
-  // 添加 / 删除模型
-  const openAddModel = (mode: "ssooai" | "custom") => {
-    setAddModelMode(mode);
-    setNewModelName("");
-    setNewModelLabel("");
-    onOpen();
-  };
-
-  const handleAddModel = () => {
-    if (!newModelName.trim()) {
-      toast.error("请输入模型名称");
-
-      return;
-    }
-    if (addModelMode === "custom") {
-      addCustomModel(newModelName, newModelLabel || undefined);
-      updateCustomRouteConfig({ model: customRoute.model });
-    } else {
-      addSsooaiModel(newModelName, newModelLabel || undefined);
-      updateSsooaiRouteConfig({ model: ssooaiRoute.model });
-    }
-    setNewModelName("");
-    setNewModelLabel("");
-    onClose();
-    toast.success(`已添加模型 ${newModelName}`);
-  };
-
-  const handleRemoveCustomModel = (modelValue: string) => {
-    const isCurrent = modelValue === customRoute.model;
-
-    removeCustomModel(modelValue);
-    if (isCurrent && customModels.length > 1) {
-      const next = customModels.find((m) => m.value !== modelValue);
-
-      updateCustomRouteConfig({ model: next ? next.value : "" });
-    } else {
-      updateCustomRouteConfig({ model: customRoute.model });
-    }
-    toast.success(`已删除模型 ${modelValue}`);
-  };
-
-  const handleRemoveSsooaiModel = (modelValue: string) => {
-    const isCurrent = modelValue === ssooaiRoute.model;
-
-    removeSsooaiModel(modelValue);
-    if (isCurrent && ssooaiModels.length > 1) {
-      const next = ssooaiModels.find((m) => m.value !== modelValue);
-
-      updateSsooaiRouteConfig({ model: next ? next.value : "" });
-    } else {
-      updateSsooaiRouteConfig({ model: ssooaiRoute.model });
-    }
-    toast.success(`已删除模型 ${modelValue}`);
-  };
-
   return (
     <div className="h-full">
       <SectionHeader description="管理 AI 线路与模型配置" title="AI 设置" />
 
       <GroupLabel>AI 线路</GroupLabel>
-      <p className="mb-3 px-4 text-[13px] text-default-500">
+      <p className="mb-3 px-4 text-[13px] text-muted-foreground">
         启用或禁用不同的 AI
         线路，点击「配置」按钮设置线路参数。站点线路需要由站点管理员启用。
       </p>
@@ -277,7 +190,7 @@ export function AISettings() {
         <RouteCard
           isSelected
           showConfigure
-          description="使用站点提供的 AI 服务；不可用时可配置私有线路"
+          description="使用站点提供的 AI 服务；不可用时可配置私有API"
           routeType="default"
           onConfigure={() => handleConfigureRoute("default")}
           onToggle={() => {}}
@@ -335,15 +248,13 @@ export function AISettings() {
             testModelUtools={testModelUtools}
             testResult={testResult}
             testing={testingRoute === configuringRoute}
-            onAddModel={openAddModel}
             onClose={handleCloseConfig}
             onConfigureApiKey={handleApiKeyChange}
             onConfigureProxyUrl={handleProxyUrlChange}
             onConfigureUtoolsModel={handleUtoolsModelChange}
-            onRefreshCustomModels={fetchCustomModels}
-            onRefreshSsooaiModels={fetchSsooaiModels}
-            onRemoveCustomModel={handleRemoveCustomModel}
-            onRemoveSsooaiModel={handleRemoveSsooaiModel}
+            onRefreshCustomModels={() => refreshModels("custom")}
+            onRefreshSsooaiModels={() => refreshModels("ssooai")}
+            onRefreshDefaultModels={() => refreshModels("default")}
             onSetTestModel={(route, value) => {
               if (route === "utools") setTestModelUtools(value);
               else if (route === "ssooai") setTestModelSsooai(value);
@@ -353,91 +264,6 @@ export function AISettings() {
           />
         </SectionCard>
       ) : null}
-
-      {/* 添加模型弹窗 */}
-      <Modal backdrop="blur" isOpen={isOpen} onClose={onClose}>
-        <ModalContent className="p-1">
-          <ModalHeader className="flex items-center gap-2 pb-2">
-            <div className="rounded-lg bg-primary/15 p-1.5">
-              <Icon
-                className="text-primary"
-                icon="solar:add-circle-bold"
-                width={18}
-              />
-            </div>
-            添加{addModelMode === "ssooai" ? "SSOOAI" : "自定义"}模型
-          </ModalHeader>
-          <ModalBody>
-            <div className="mb-4">
-              <label
-                className="mb-2 flex items-center gap-2 text-sm font-medium"
-                htmlFor="new-model-name"
-              >
-                <Icon
-                  className="text-primary"
-                  icon="solar:code-bold"
-                  width={16}
-                />
-                模型名称 <span className="text-danger">*</span>
-              </label>
-              <Input
-                className="w-full"
-                id="new-model-name"
-                placeholder="输入模型名称，例如: gpt-4-0613"
-                value={newModelName}
-                variant="bordered"
-                onChange={(e) => setNewModelName(e.target.value)}
-              />
-              <p className="ml-5 mt-1 text-xs text-default-500">
-                该名称用于API请求，必须准确填写
-              </p>
-            </div>
-            <div>
-              <label
-                className="mb-2 flex items-center gap-2 text-sm font-medium"
-                htmlFor="new-model-label"
-              >
-                <Icon
-                  className="text-primary"
-                  icon="solar:text-bold"
-                  width={16}
-                />
-                显示名称
-              </label>
-              <Input
-                className="w-full"
-                id="new-model-label"
-                placeholder="输入显示名称，例如: GPT-4 (8K)"
-                value={newModelLabel}
-                variant="bordered"
-                onChange={(e) => setNewModelLabel(e.target.value)}
-              />
-              <p className="ml-5 mt-1 text-xs text-default-500">
-                显示在界面上的友好名称，可选
-              </p>
-            </div>
-          </ModalBody>
-          <ModalFooter>
-            <Button
-              color="default"
-              radius="full"
-              variant="flat"
-              onPress={onClose}
-            >
-              取消
-            </Button>
-            <Button
-              color="primary"
-              isDisabled={!newModelName.trim()}
-              radius="full"
-              startContent={<Icon icon="solar:add-circle-bold" width={18} />}
-              onPress={handleAddModel}
-            >
-              添加模型
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
     </div>
   );
 }

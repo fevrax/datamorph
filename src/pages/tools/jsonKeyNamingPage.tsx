@@ -1,6 +1,9 @@
+import { writeClipboardText } from "@/utils/clipboard";
+import { useBackgroundTask } from "@/components/workspace/useBackgroundTask";
+import { createToolStateHook } from "@/components/workspace/ToolContext";
 import { useRef, useState } from "react";
-import { Button, Card, CardBody, Tooltip } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { Button, Card, CardBody, Tooltip } from "@/components/ui";
+import { Icon } from "@/components/ui/icon";
 import { useTheme } from "next-themes";
 
 import toast from "@/utils/toast";
@@ -9,7 +12,6 @@ import MonacoEditor, {
 } from "@/components/monacoEditor/MonacoJsonEditor.tsx";
 import ToolboxPageTemplate from "@/layouts/toolboxPageTemplate";
 import {
-  convertJsonKeys,
   KeyNamingCollisionError,
   type KeyNamingCollision,
   type NamingFormat,
@@ -36,15 +38,14 @@ const FORMAT_OPTIONS: {
     displayText: "转小驼峰",
     example: "firstName",
     icon: "solar:arrow-right-linear",
-    inactiveBg: "bg-primary-50 dark:bg-primary-950/30",
-    inactiveBorder: "border-primary-200 dark:border-primary-800/40",
-    inactiveHoverBg: "hover:bg-primary-100 dark:hover:bg-primary-900/40",
-    inactiveHoverBorder:
-      "hover:border-primary-300 dark:hover:border-primary-700/60",
-    inactiveIconColor: "text-primary-400",
-    activeBg: "bg-gradient-to-br from-primary-500 to-primary-600",
-    activeBorder: "border-primary-500",
-    activeShadow: "shadow-primary-300/50 dark:shadow-primary-900/50",
+    inactiveBg: "bg-accent dark:bg-accent/30",
+    inactiveBorder: "border-accent dark:border-accent/40",
+    inactiveHoverBg: "hover:bg-accent dark:hover:bg-accent/40",
+    inactiveHoverBorder: "hover:border-primary dark:hover:border-primary/60",
+    inactiveIconColor: "text-primary",
+    activeBg: "bg-gradient-to-br from-primary to-primary",
+    activeBorder: "border-primary",
+    activeShadow: "shadow-primary/50 dark:shadow-accent/50",
   },
   {
     format: "pascal",
@@ -52,15 +53,15 @@ const FORMAT_OPTIONS: {
     displayText: "转大驼峰",
     example: "FirstName",
     icon: "solar:arrow-right-linear",
-    inactiveBg: "bg-secondary-50 dark:bg-secondary-950/30",
-    inactiveBorder: "border-secondary-200 dark:border-secondary-800/40",
-    inactiveHoverBg: "hover:bg-secondary-100 dark:hover:bg-secondary-900/40",
+    inactiveBg: "bg-secondary dark:bg-secondary/30",
+    inactiveBorder: "border-secondary dark:border-secondary/40",
+    inactiveHoverBg: "hover:bg-secondary dark:hover:bg-secondary/40",
     inactiveHoverBorder:
-      "hover:border-secondary-300 dark:hover:border-secondary-700/60",
-    inactiveIconColor: "text-secondary-400",
-    activeBg: "bg-gradient-to-br from-secondary-500 to-secondary-600",
-    activeBorder: "border-secondary-500",
-    activeShadow: "shadow-secondary-300/50 dark:shadow-secondary-900/50",
+      "hover:border-secondary dark:hover:border-secondary/60",
+    inactiveIconColor: "text-secondary",
+    activeBg: "bg-gradient-to-br from-secondary to-secondary",
+    activeBorder: "border-secondary",
+    activeShadow: "shadow-secondary/50 dark:shadow-secondary/50",
   },
   {
     format: "snake",
@@ -68,15 +69,14 @@ const FORMAT_OPTIONS: {
     displayText: "转下划线",
     example: "first_name",
     icon: "solar:arrow-right-linear",
-    inactiveBg: "bg-success-50 dark:bg-success-950/30",
-    inactiveBorder: "border-success-200 dark:border-success-800/40",
-    inactiveHoverBg: "hover:bg-success-100 dark:hover:bg-success-900/40",
-    inactiveHoverBorder:
-      "hover:border-success-300 dark:hover:border-success-700/60",
-    inactiveIconColor: "text-success-400",
-    activeBg: "bg-gradient-to-br from-success-500 to-success-600",
-    activeBorder: "border-success-500",
-    activeShadow: "shadow-success-300/50 dark:shadow-success-900/50",
+    inactiveBg: "bg-success dark:bg-success/30",
+    inactiveBorder: "border-success dark:border-success/40",
+    inactiveHoverBg: "hover:bg-success dark:hover:bg-success/40",
+    inactiveHoverBorder: "hover:border-success dark:hover:border-success/60",
+    inactiveIconColor: "text-success",
+    activeBg: "bg-gradient-to-br from-success to-success",
+    activeBorder: "border-success",
+    activeShadow: "shadow-success/50 dark:shadow-success/50",
   },
   {
     format: "kebab",
@@ -84,15 +84,14 @@ const FORMAT_OPTIONS: {
     displayText: "转短横线",
     example: "first-name",
     icon: "solar:arrow-right-linear",
-    inactiveBg: "bg-warning-50 dark:bg-warning-950/30",
-    inactiveBorder: "border-warning-200 dark:border-warning-800/40",
-    inactiveHoverBg: "hover:bg-warning-100 dark:hover:bg-warning-900/40",
-    inactiveHoverBorder:
-      "hover:border-warning-300 dark:hover:border-warning-700/60",
-    inactiveIconColor: "text-warning-400",
-    activeBg: "bg-gradient-to-br from-warning-500 to-warning-600",
-    activeBorder: "border-warning-500",
-    activeShadow: "shadow-warning-300/50 dark:shadow-warning-900/50",
+    inactiveBg: "bg-warning dark:bg-warning/30",
+    inactiveBorder: "border-warning dark:border-warning/40",
+    inactiveHoverBg: "hover:bg-warning dark:hover:bg-warning/40",
+    inactiveHoverBorder: "hover:border-warning dark:hover:border-warning/60",
+    inactiveIconColor: "text-warning",
+    activeBg: "bg-gradient-to-br from-warning to-warning",
+    activeBorder: "border-warning",
+    activeShadow: "shadow-warning/50 dark:shadow-warning/50",
   },
   {
     format: "constant",
@@ -100,35 +99,38 @@ const FORMAT_OPTIONS: {
     displayText: "转常量",
     example: "FIRST_NAME",
     icon: "solar:arrow-right-linear",
-    inactiveBg: "bg-danger-50 dark:bg-danger-950/30",
-    inactiveBorder: "border-danger-200 dark:border-danger-800/40",
-    inactiveHoverBg: "hover:bg-danger-100 dark:hover:bg-danger-900/40",
+    inactiveBg: "bg-destructive dark:bg-destructive/30",
+    inactiveBorder: "border-destructive dark:border-destructive/40",
+    inactiveHoverBg: "hover:bg-destructive dark:hover:bg-destructive/40",
     inactiveHoverBorder:
-      "hover:border-danger-300 dark:hover:border-danger-700/60",
-    inactiveIconColor: "text-danger-400",
-    activeBg: "bg-gradient-to-br from-danger-500 to-danger-600",
-    activeBorder: "border-danger-500",
-    activeShadow: "shadow-danger-300/50 dark:shadow-danger-900/50",
+      "hover:border-destructive dark:hover:border-destructive/60",
+    inactiveIconColor: "text-destructive",
+    activeBg: "bg-gradient-to-br from-destructive to-destructive",
+    activeBorder: "border-destructive",
+    activeShadow: "shadow-destructive/50 dark:shadow-destructive/50",
   },
 ];
 
+const useToolState = createToolStateHook("jsonKeyNaming");
+
 export default function JsonKeyNamingPage() {
-  const { theme } = useTheme();
+  const { resolvedTheme: theme } = useTheme();
   const inputEditorRef = useRef<MonacoJsonEditorRef>(null);
   const outputEditorRef = useRef<MonacoJsonEditorRef>(null);
 
-  const [inputValue, setInputValue] = useState("");
-  const [outputValue, setOutputValue] = useState("");
-  const [activeFormat, setActiveFormat] = useState<NamingFormat | null>(null);
+  const [inputValue, setInputValue] = useToolState("inputValue", "");
+  const [outputValue, setOutputValue] = useToolState("outputValue", "");
+  const [activeFormat, setActiveFormat] = useToolState("activeFormat", null);
   const [collisions, setCollisions] = useState<KeyNamingCollision[]>([]);
 
+  const task = useBackgroundTask(inputValue);
   const clearConversionResult = () => {
     setOutputValue("");
     outputEditorRef.current?.updateValue("");
     setActiveFormat(null);
   };
 
-  const handleConvert = (format: NamingFormat) => {
+  const handleConvert = async (format: NamingFormat) => {
     if (!inputValue.trim()) {
       toast.warning("请先输入 JSON 内容");
 
@@ -136,7 +138,9 @@ export default function JsonKeyNamingPage() {
     }
 
     try {
-      const result = convertJsonKeys(inputValue, format, 2);
+      const result =
+        (await task.run({ action: "keys", content: inputValue, format }))
+          .content || "";
 
       setOutputValue(result);
       outputEditorRef.current?.updateValue(result);
@@ -145,10 +149,12 @@ export default function JsonKeyNamingPage() {
       toast.success(
         `已转换为${FORMAT_OPTIONS.find((f) => f.format === format)?.label}`,
       );
-    } catch (e) {
+    } catch (error) {
+      const e = error as KeyNamingCollisionError;
+      if (e.name === "AbortError") return;
       clearConversionResult();
 
-      if (e instanceof KeyNamingCollisionError) {
+      if (e.name === "KeyNamingCollisionError") {
         setCollisions(e.collisions);
         const first = e.collisions[0];
 
@@ -182,8 +188,7 @@ export default function JsonKeyNamingPage() {
       return;
     }
 
-    navigator.clipboard
-      .writeText(text)
+    writeClipboardText(text)
       .then(() => toast.success("已复制到剪贴板"))
       .catch(() => toast.error("复制失败"));
   };
@@ -194,14 +199,14 @@ export default function JsonKeyNamingPage() {
       toolIconColor="text-primary"
       toolName="JSON 字段命名转换"
     >
-      <div className="flex flex-1 h-0 overflow-hidden gap-0">
+      <div className="key-naming-layout flex flex-1 min-h-0 overflow-hidden gap-2">
         {/* 左侧输入编辑器 */}
-        <Card className="flex-1 h-full overflow-hidden shadow-md border border-default-200 m-2 mr-0">
+        <Card className="flex-1 h-full overflow-hidden shadow-md border border-border m-2 mr-0">
           <CardBody className="p-0 h-full flex flex-col">
-            <div className="p-2.5 bg-default-50 border-b border-default-200 flex justify-between items-center">
+            <div className="p-2.5 bg-muted border-b border-border flex justify-between items-center">
               <span className="text-sm font-medium flex items-center gap-2">
                 <Icon
-                  className="text-default-600"
+                  className="text-muted-foreground"
                   icon="solar:document-text-outline"
                   width={16}
                 />
@@ -212,13 +217,13 @@ export default function JsonKeyNamingPage() {
                   <Button
                     isIconOnly
                     aria-label="格式化"
-                    className="bg-default-100/50 hover:bg-default-200/60"
+                    className="bg-secondary/50 hover:bg-border/60"
                     size="sm"
                     variant="light"
                     onPress={() => inputEditorRef.current?.format()}
                   >
                     <Icon
-                      className="text-default-600"
+                      className="text-muted-foreground"
                       icon="solar:magic-stick-linear"
                       width={18}
                     />
@@ -228,13 +233,13 @@ export default function JsonKeyNamingPage() {
                   <Button
                     isIconOnly
                     aria-label="复制输入"
-                    className="bg-default-100/50 hover:bg-default-200/60"
+                    className="bg-secondary/50 hover:bg-border/60"
                     size="sm"
                     variant="light"
                     onPress={() => copyToClipboard(inputValue)}
                   >
                     <Icon
-                      className="text-default-600"
+                      className="text-muted-foreground"
                       icon="solar:copy-outline"
                       width={18}
                     />
@@ -257,7 +262,7 @@ export default function JsonKeyNamingPage() {
         </Card>
 
         {/* 中间按钮列 */}
-        <div className="flex flex-col items-center justify-center gap-3 min-w-28 px-2 py-2 overflow-y-auto">
+        <div className="key-naming-actions flex flex-col items-center justify-center gap-2 w-36 shrink-0 px-1 py-2 overflow-y-auto">
           {FORMAT_OPTIONS.map(
             ({
               format,
@@ -283,7 +288,7 @@ export default function JsonKeyNamingPage() {
                   ${
                     isActive
                       ? `${activeBg} ${activeBorder} text-white shadow-lg ${activeShadow} scale-[1.02]`
-                      : `${inactiveBg} ${inactiveBorder} ${inactiveHoverBg} ${inactiveHoverBorder} text-default-700 dark:text-default-300 hover:shadow-md hover:scale-[1.02]`
+                      : `${inactiveBg} ${inactiveBorder} ${inactiveHoverBg} ${inactiveHoverBorder} text-foreground dark:text-input hover:shadow-md hover:scale-[1.02]`
                   }`}
                   type="button"
                   onClick={() => handleConvert(format)}
@@ -300,7 +305,7 @@ export default function JsonKeyNamingPage() {
                   </span>
                   <span
                     className={`block text-xs mt-0.5 font-mono transition-colors duration-200 ${
-                      isActive ? "text-white/60" : "text-default-400"
+                      isActive ? "text-white/60" : "text-muted-foreground"
                     }`}
                   >
                     {example}
@@ -311,10 +316,10 @@ export default function JsonKeyNamingPage() {
           )}
           <button
             className="group w-full rounded-xl px-3 py-2 text-sm font-medium
-              bg-transparent border border-default-200 dark:border-default-700
-              hover:bg-danger-50 dark:hover:bg-danger-950/30
-              hover:border-danger-200 dark:hover:border-danger-800/40
-              text-default-500 hover:text-danger
+              bg-transparent border border-border dark:border-foreground
+              hover:bg-destructive dark:hover:bg-destructive/30
+              hover:border-destructive dark:hover:border-destructive/40
+              text-muted-foreground hover:text-danger
               transition-all duration-200 ease-out
               active:scale-[0.97] hover:scale-[1.02]"
             type="button"
@@ -322,7 +327,7 @@ export default function JsonKeyNamingPage() {
           >
             <span className="flex items-center justify-center gap-1.5">
               <Icon
-                className="transition-transform duration-200 group-hover:rotate-45 text-default-400 group-hover:text-danger"
+                className="transition-transform duration-200 group-hover:rotate-45 text-muted-foreground group-hover:text-danger"
                 icon="solar:restart-linear"
                 width={14}
               />
@@ -332,12 +337,12 @@ export default function JsonKeyNamingPage() {
         </div>
 
         {/* 右侧输出编辑器 */}
-        <Card className="flex-1 h-full overflow-hidden shadow-md border border-default-200 m-2 ml-0">
+        <Card className="flex-1 h-full overflow-hidden shadow-md border border-border m-2 ml-0">
           <CardBody className="p-0 h-full flex flex-col">
-            <div className="p-2.5 bg-default-50 border-b border-default-200 flex justify-between items-center">
+            <div className="p-2.5 bg-muted border-b border-border flex justify-between items-center">
               <span className="text-sm font-medium flex items-center gap-2">
                 <Icon
-                  className="text-default-600"
+                  className="text-muted-foreground"
                   icon="solar:code-square-linear"
                   width={16}
                 />
@@ -348,13 +353,13 @@ export default function JsonKeyNamingPage() {
                   <Button
                     isIconOnly
                     aria-label="格式化输出"
-                    className="bg-default-100/50 hover:bg-default-200/60"
+                    className="bg-secondary/50 hover:bg-border/60"
                     size="sm"
                     variant="light"
                     onPress={() => outputEditorRef.current?.format()}
                   >
                     <Icon
-                      className="text-default-600"
+                      className="text-muted-foreground"
                       icon="solar:magic-stick-linear"
                       width={18}
                     />
@@ -364,13 +369,13 @@ export default function JsonKeyNamingPage() {
                   <Button
                     isIconOnly
                     aria-label="复制输出"
-                    className="bg-default-100/50 hover:bg-default-200/60"
+                    className="bg-secondary/50 hover:bg-border/60"
                     size="sm"
                     variant="light"
                     onPress={() => copyToClipboard(outputValue)}
                   >
                     <Icon
-                      className="text-default-600"
+                      className="text-muted-foreground"
                       icon="solar:copy-outline"
                       width={18}
                     />
@@ -379,7 +384,7 @@ export default function JsonKeyNamingPage() {
               </div>
             </div>
             {collisions.length > 0 && (
-              <div className="max-h-36 overflow-y-auto border-b border-danger-200 bg-danger-50 px-3 py-2 text-xs text-danger-700 dark:border-danger-800/60 dark:bg-danger-950/30 dark:text-danger-300">
+              <div className="max-h-36 overflow-y-auto border-b border-destructive bg-destructive px-3 py-2 text-xs text-destructive dark:border-destructive/60 dark:bg-destructive/30 dark:text-destructive">
                 <div className="mb-1 font-medium">
                   检测到 {collisions.length} 处字段命名冲突，未生成转换结果：
                 </div>

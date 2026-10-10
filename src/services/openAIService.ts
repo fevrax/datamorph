@@ -14,6 +14,7 @@ import {
   AIRouteType,
   DEFAULT_ROUTE_PROXY_URL,
 } from "@/store/useOpenAIConfigStore.ts";
+import { AI_ROUTE_CONFIG_KEYS } from "./aiModelSelection";
 import toast from "@/utils/toast.tsx";
 
 // 检查 utools 是否可用
@@ -83,11 +84,16 @@ export class OpenAIService {
         : DEFAULT_ROUTE_PROXY_URL;
   }
 
-  /**
-   * 获取当前线路的模型
-   */
-  private getCurrentModel(): string {
-    return this.config.model;
+  private async resolveModel(): Promise<string> {
+    if (this.config.model) return this.config.model;
+    const route = this.routeType;
+    const state = useOpenAIConfigStore.getState();
+    await state.fetchModels(route);
+    const latest = useOpenAIConfigStore.getState();
+    const model = latest[AI_ROUTE_CONFIG_KEYS[route]].model;
+    if (!model) throw new Error("API 暂未返回可用模型，请检查配置后重试");
+    if (this.routeType === route) this.config.model = model;
+    return model;
   }
 
   /**
@@ -193,7 +199,7 @@ export class OpenAIService {
         if (this.routeType === "custom" || this.routeType === "ssooai") {
           toast.error("请在设置中输入您的 API 密钥");
         } else {
-          toast.error("站点 AI 线路不可用，请配置私有线路或联系站点管理员");
+          toast.error("站点 AI 线路不可用，请配置私有API或联系站点管理员");
         }
       } else {
         this.initOpenAI();
@@ -223,7 +229,8 @@ export class OpenAIService {
         request.check();
         if (!this.validateService())
           throw new Error("AI服务未初始化或配置错误");
-        const model = this.getCurrentModel();
+        const model = await this.resolveModel();
+        request.check();
 
         if (this.routeType === "utools") {
           guarded.onProcessing?.("连接到 uTools AI...");
@@ -263,7 +270,7 @@ export class OpenAIService {
             (error as Error & { status?: number }).status === 503
           ) {
             callbacks.onError?.(
-              new Error("站点 AI 线路尚未配置，请使用私有线路。"),
+              new Error("站点 AI 线路尚未配置，请使用私有API。"),
             );
           } else callbacks.onError?.(error);
         },
@@ -441,7 +448,7 @@ export class OpenAIService {
       throw new Error("AI服务未初始化或配置错误");
     }
 
-    const modelToUse = options.model || this.getCurrentModel();
+    const modelToUse = options.model || (await this.resolveModel());
     const temperature = options.temperature ?? this.getCurrentTemperature();
 
     try {

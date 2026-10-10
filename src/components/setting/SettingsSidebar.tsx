@@ -1,5 +1,5 @@
-import { cn, Tooltip } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { cn, Tooltip } from "@/components/ui";
+import { Icon } from "@/components/ui/icon";
 
 /** 设置页二级导航项 */
 export interface SettingsMenuItem {
@@ -25,10 +25,10 @@ export function SettingsSidebar({
   onSelect,
 }: SettingsSidebarProps) {
   return (
-    <div className="flex h-full w-[60px] flex-shrink-0 flex-col border-r border-default-200/70 bg-background/80 backdrop-blur-md dark:bg-default-50/20 md:w-[188px]">
+    <div className="flex h-full w-[60px] flex-shrink-0 flex-col border-r border-border/70 bg-background/80 backdrop-blur-md dark:bg-muted/20 md:w-[188px]">
       {/* 标题区 */}
       <div className="px-2 pb-2 pt-4 md:px-3">
-        <p className="hidden text-[10.5px] font-medium text-default-500 md:block">
+        <p className="hidden text-[10.5px] font-medium text-muted-foreground md:block">
           设置
         </p>
       </div>
@@ -43,8 +43,8 @@ export function SettingsSidebar({
               className={cn(
                 "flex h-9 w-full items-center justify-center gap-2 rounded-lg px-2 text-left transition-colors md:justify-start md:px-2.5",
                 isActive
-                  ? "bg-default-900 text-background shadow-sm dark:bg-default-100 dark:text-default-900"
-                  : "text-default-600 hover:bg-default-100 dark:text-default-400 dark:hover:bg-default-100/40",
+                  ? "bg-foreground text-background shadow-sm dark:bg-secondary dark:text-foreground"
+                  : "text-muted-foreground hover:bg-secondary dark:text-muted-foreground dark:hover:bg-secondary/40",
               )}
               onClick={() => onSelect(item.key)}
             >

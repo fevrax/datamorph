@@ -1,7 +1,7 @@
 // src/components/SearchBox.tsx
 import React from "react";
-import { Input } from "@heroui/input";
-import { Icon } from "@iconify/react";
+import { Input } from "@/components/ui";
+import { Icon } from "@/components/ui/icon";
 
 import { useToolboxStore } from "@/store/useToolboxStore";
 

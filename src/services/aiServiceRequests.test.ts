@@ -88,7 +88,7 @@ test("service uses instance model/temperature, preserves zero, and maps only sit
       }),
       false,
     );
-    assert.match(errors[1].message, /站点.*未配置.*私有线路/);
+    assert.match(errors[1].message, /站点.*未配置.*私有API/);
     assert.equal(errors.length, 2);
   } finally {
     globalThis.fetch = originalFetch;

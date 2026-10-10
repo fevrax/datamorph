@@ -1,9 +1,9 @@
 import type { Tool } from "@/store/useToolboxStore.ts";
 
 import React from "react";
-import { Card, CardBody, CardFooter } from "@heroui/card";
-import { Chip } from "@heroui/chip";
-import { Icon } from "@iconify/react";
+import { Card, CardBody, CardFooter } from "@/components/ui";
+import { Chip } from "@/components/ui";
+import { Icon } from "@/components/ui/icon";
 
 import { useTabStore } from "@/store/useTabStore";
 
@@ -24,9 +24,9 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool }) => {
       className="w-full h-[144px] cursor-pointer rounded-lg transition-shadow duration-200 hover:shadow-md flex flex-col"
       onPress={handleCardClick}
     >
-      <CardBody className="overflow-hidden p-3 flex-grow bg-default-100/30">
+      <CardBody className="overflow-hidden p-3 flex-grow bg-secondary/30">
         <div className="flex items-start gap-3 mb-2">
-          <div className="p-2 rounded-lg bg-default-100 flex-none">
+          <div className="p-2 rounded-lg bg-secondary flex-none">
             <Icon
               className="text-primary"
               height={22}
@@ -52,11 +52,11 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool }) => {
             </div>
           </div>
         </div>
-        <p className="text-default-500 text-xs leading-5 line-clamp-2">
+        <p className="text-muted-foreground text-xs leading-5 line-clamp-2">
           {tool.description}
         </p>
       </CardBody>
-      <CardFooter className="bg-default-100/30 border-t-1 border-default-100 justify-end gap-2 flex-none px-3 py-2">
+      <CardFooter className="bg-secondary/30 border-t-1 border-secondary justify-end gap-2 flex-none px-3 py-2">
         <div className="flex items-center text-primary text-xs">
           <span>新建工具 Tab</span>
           <Icon className="ml-1" icon="solar:arrow-right-linear" width={16} />

@@ -1,6 +1,6 @@
 import React, { forwardRef } from "react";
-import { Button, cn } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { Button, cn } from "@/components/ui";
+import { Icon } from "@/components/ui/icon";
 
 export enum IconStatus {
   Default = "default",
@@ -51,7 +51,7 @@ const StatusButton = forwardRef<HTMLButtonElement, StatusButtonProps>(
     return (
       <Button
         className={cn(
-          "min-w-0 px-1.5 gap-1 text-default-600 h-7 text-xs",
+          "min-w-0 px-1.5 gap-1 text-muted-foreground h-7 text-xs",
           {
             "text-green-500": status === IconStatus.Success,
             "text-red-500": status === IconStatus.Error,

@@ -3,7 +3,7 @@
   <h1>JSON Tools Next</h1>
   <p><strong>强大、灵活的JSON工具集，融合AI的现代化JSON数据处理解决方案</strong></p>
   
-  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT) [![GitHub Stars](https://img.shields.io/github/stars/dalefengs/json-tools?style=social)](https://github.com/dalefengs/json-tools/stargazers) [![React](https://img.shields.io/badge/React-19.0-61DAFB?logo=react&logoColor=white)](https://reactjs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/) [![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/) [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/) [![Node](https://img.shields.io/badge/Node.js-%E2%89%A518-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT) [![GitHub Stars](https://img.shields.io/github/stars/dalefengs/json-tools?style=social)](https://github.com/dalefengs/json-tools/stargazers) [![React](https://img.shields.io/badge/React-19.0-61DAFB?logo=react&logoColor=white)](https://reactjs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/) [![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/) [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/) [![Node](https://img.shields.io/badge/Node.js-%E2%89%A520-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
   
 </div>
 
@@ -16,6 +16,7 @@ JSON Tools Next 是一个多功能的JSON工具集，提供了直观的界面和
 - 🔄 **视图切换**：快速在不同视图模式间切换
 - 🧩 **多标签页**：支持同时打开多个JSON文件处理
 - 🧩 **丰富工具箱**：集成多种专用JSON处理工具
+- 🔎 **JSONPath 查询**：字段提取、条件筛选、递归查询，内置交互示例与[使用指南](docs/jsonpath.md)
 - 🔍 **字符解码器**：自动识别并解码常见编码格式
 - 🤖 **AI驱动功能**：利用AI技术增强JSON处理体验
 
@@ -70,6 +71,12 @@ JSON Tools Next 是一个多功能的JSON工具集，提供了直观的界面和
 - **差异对比视图**：方便对比JSON数据差异
 - **表格视图**：以表格形式展示JSON数据
 
+### JSONPath 查询
+
+在代码编辑器底部输入 `$.users[*].name` 等表达式即可实时查看结果，也可从工具箱打开「JSONPath 查询」练习页。支持 RFC 9535 语法、匹配数量、结果复制及差异预览后替换。
+
+查询结果始终为数组。旧 JSON Query 的管道、`map()`、`sort()` 等语法不再适用；完整示例、数字精度限制与迁移说明见 [JSONPath 使用指南](docs/jsonpath.md)。
+
 ### 字符解码解码器
 
 - **时间戳解码器**：自动识别并将时间戳转换为可读日期时间格式
@@ -90,8 +97,10 @@ JSON Tools Next 是一个多功能的JSON工具集，提供了直观的界面和
 ### 使用 Docker Compose（推荐）
 
 ```bash
-# 构建并启动容器
-docker-compose up -d
+# 初始化配置并填写 API 地址和密钥
+cp .env.example .env
+# 启动容器
+docker compose up -d
 
 # 访问 http://localhost:3300
 ```
@@ -103,7 +112,7 @@ docker-compose up -d
 docker build -t json-tools-next .
 
 # 运行容器
-docker run -d -p 3300:80 --name json-tools json-tools-next
+docker run -d --env-file .env -p 3300:80 --name json-tools json-tools-next
 
 # 访问 http://localhost:3300
 ```
@@ -115,31 +124,38 @@ docker run -d -p 3300:80 --name json-tools json-tools-next
 前端不再内置共享 API Key，也不会在未填写密钥时回退到共享凭据。
 浏览器的「站点线路」访问同源 `/api/ai/v1`，由 Docker 容器中的 Nginx
 附加服务端密钥。没有配置时返回明确的 503 错误，本地 JSON 工具不受影响。
-纯静态部署、开发服务器和 uTools 用户可以在设置中使用自己的私有线路或 uTools AI。
-
-Docker 部署可在容器运行时设置以下环境变量（不要使用 `VITE_*` 或构建参数传入密钥）：
-
-两个 Compose 文件都已在 `environment` 中配置以下变量，无需 `.env`。
-直接填写所用 Compose 文件中的 `OPENAI_API_KEY`，留空则关闭站点 AI 线路。
-密钥由容器运行时读取，不要提交填写了真实密钥的 Compose 文件。
-Compose 文件已从 Docker 构建上下文中排除，避免运行时密钥进入镜像层。
+站点API、本地开发和 Docker Compose 共用根目录 `.env`。纯静态部署或 uTools
+可在设置中配置私有API或使用 uTools AI。
 
 ```bash
+cp .env.example .env
+# 编辑 .env，设置 OPENAI_BASE_URL 和 OPENAI_API_KEY
 # 从当前源码构建并启动：
 docker compose -f docker-compose-dev.yml up -d --build
+# 本地开发（Vite 在服务端代理请求）：
+pnpm dev
 ```
 
-使用已包含本次修复的发布镜像时，执行 `docker compose up -d`。
-修改配置后重新执行对应的 `up -d` 命令使环境变量生效。
+- `OPENAI_BASE_URL`：OpenAI 兼容 API 的 HTTPS 基础地址（含 `/v1` 等前缀）。
+- `OPENAI_API_KEY`：服务端 API Key；留空则关闭站点API。
+- `APP_PORT`：Docker Compose 映射到宿主机的端口，示例值为 `3300`。
 
-- `OPENAI_API_KEY`：OpenAI 兼容服务的 API Key，留空则关闭站点线路。
-- `OPENAI_BASE_URL`：OpenAI 兼容 API 的 HTTPS 基础地址，默认 `https://api.ssooai.com/v1`。
+两个 Compose 文件通过 `env_file: .env` 注入运行时配置，无需在 YAML 中填写密钥。
+`.env` 已被 Git 和 Docker 构建上下文排除；仅提交不含密钥的 `.env.example`。
+不要使用 `VITE_*` 或构建参数传入密钥。
+使用包含上述功能的发布镜像时，执行 `docker compose up -d`。
+修改 `.env` 后，重新执行 Compose `up -d`；本地开发需重启 `pnpm dev`。
+
+模型列表全部从各线路 API 获取（OpenAI 兼容接口为 `GET /models`，uTools 使用
+`allAiModels()`）。不内置模型名称，也不支持手动添加模型。首次加载自动选择 API
+返回的第一个模型；刷新后保留仍有效的选择，模型失效则切换到第一个。旧的手动模型
+缓存不会继续加载；空列表或获取失败时不能发送，可在选择器或 AI 设置中刷新。
 
 代理仅开放聊天和模型列表接口，默认每个 IP 每分钟 6 次请求、突发 3 次、
 最多 2 个并发连接，单次请求体限制 1 MiB，支持流式响应和客户端断开取消。
 这是一条公开站点线路；部署者应在服务商后台为专用密钥限制可用模型和总额度，
 或在入口增加自己的用户鉴权。反向代理部署时应按实际可信代理配置客户端 IP。
-可在「设置 → AI 设置 → 站点线路」填写上游支持的模型名称。
+可在「设置 → AI 设置 → 站点API」查看、刷新并选择 API 返回的模型。
 
 **升级时必须在服务商后台撤销此前已公开的旧共享密钥，改用新密钥。**
 删除源码中的密钥不会撤销服务商凭据，也不会清除旧构建产物和 Git 历史。

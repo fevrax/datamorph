@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import type { AIRouteType } from "@/store/useOpenAIConfigStore";
 
-import { Button, Switch } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { Button, Switch } from "@/components/ui";
+import { Icon } from "@/components/ui/icon";
 
 import { ROUTE_BRAND, ROUTE_ICON, ROUTE_LABEL } from "./aiRoutes";
 
@@ -35,7 +35,7 @@ export function RouteCard({
   const enabled = isSelected && available;
 
   return (
-    <div className="flex min-h-[138px] flex-col justify-between gap-3 rounded-lg border border-default-200/70 bg-background p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-default-300 dark:bg-default-50/30 sm:p-4">
+    <div className="flex min-h-[138px] flex-col justify-between gap-3 rounded-lg border border-border/70 bg-background p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-input dark:bg-muted/30 sm:p-4">
       <div className="flex items-center gap-3">
         <div
           className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
@@ -47,10 +47,10 @@ export function RouteCard({
           <Icon icon={ROUTE_ICON[routeType]} width={20} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-[13px] font-semibold text-default-900">
+          <div className="text-[13px] font-semibold text-foreground">
             {ROUTE_LABEL[routeType]}
           </div>
-          <div className="mt-0.5 text-[11px] text-default-500">
+          <div className="mt-0.5 text-[11px] text-muted-foreground">
             {description}
           </div>
         </div>
@@ -58,7 +58,7 @@ export function RouteCard({
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         {!available ? (
-          <span className="rounded-full bg-default-200/60 px-2 py-0.5 text-[10.5px] font-semibold text-default-400">
+          <span className="rounded-full bg-border/60 px-2 py-0.5 text-[10.5px] font-semibold text-muted-foreground">
             ● 不可用
           </span>
         ) : routeType === "default" ? (
@@ -70,7 +70,7 @@ export function RouteCard({
             ● 已启用
           </span>
         ) : (
-          <span className="rounded-full bg-default-200/60 px-2 py-0.5 text-[10.5px] font-semibold text-default-400">
+          <span className="rounded-full bg-border/60 px-2 py-0.5 text-[10.5px] font-semibold text-muted-foreground">
             ● 已关闭
           </span>
         )}

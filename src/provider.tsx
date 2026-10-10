@@ -1,27 +1,25 @@
-import type { NavigateOptions } from "react-router-dom";
-
-import { HeroUIProvider } from "@heroui/system";
-import { useHref, useNavigate } from "react-router-dom";
-import { ThemeProvider as NextThemesProvider } from "next-themes";
-import { ToastProvider } from "@heroui/react";
-
-declare module "@react-types/shared" {
-  interface RouterConfig {
-    routerOptions: NavigateOptions;
-  }
-}
-
+import { ImagePreview } from "@/components/workspace/ImagePreview";
+import { ThemeProvider } from "next-themes";
+import { Tooltip } from "radix-ui";
+import { Toaster } from "sonner";
 export function Provider({ children }: { children: React.ReactNode }) {
-  const navigate = useNavigate();
-
   return (
-    // TODO 等待 HeroUIProvider 补丁发布
-    // eslint-disable-next-line react-compiler/react-compiler
-    <HeroUIProvider navigate={navigate} useHref={useHref}>
-      <ToastProvider aria-hidden="true" maxVisibleToasts={2} />
-      <NextThemesProvider attribute="class" defaultTheme="light">
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+    >
+      <Tooltip.Provider delayDuration={350}>
         {children}
-      </NextThemesProvider>
-    </HeroUIProvider>
+        <ImagePreview />
+        <Toaster
+          position="bottom-right"
+          closeButton
+          richColors
+          visibleToasts={3}
+        />
+      </Tooltip.Provider>
+    </ThemeProvider>
   );
 }

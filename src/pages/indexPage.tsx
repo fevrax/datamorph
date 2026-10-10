@@ -1,996 +1,750 @@
-import { Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { cn } from "@heroui/react";
-import { useTheme } from "next-themes";
-import { Content } from "vanilla-jsoneditor-cn";
-import { useLocation, useNavigate } from "react-router-dom";
-
-import { useTabStore, type TabItem } from "@/store/useTabStore";
-import DynamicTabs, {
-  DynamicTabsRef,
-} from "@/components/dynamicTabs/DynamicTabs.tsx";
-import MonacoJsonEditor, {
-  MonacoJsonEditorRef,
-} from "@/components/monacoEditor/MonacoJsonEditor.tsx";
-import { useSidebarStore } from "@/store/useSidebarStore";
+import type { TextChange } from "@/store/useTabStore";
+import { useTabMetadata } from "@/store/useTabMetadata";
+import {
+  DocumentActions,
+  type DocumentAction,
+} from "@/components/workspace/DocumentActions";
+import { DiffPreview } from "@/components/workspace/DiffPreview";
+import { WorkspaceWelcome } from "@/components/workspace/WorkspaceWelcome";
 import { useSettingsStore } from "@/store/useSettingsStore";
-import { useMonacoInit } from "@/components/monacoEditor/useMonacoInit.ts";
-// eslint-disable-next-line import/order
-import VanillaJsonEditor, {
-  VanillaJsonEditorRef,
-} from "@/components/vanillaJsonEditor/VanillaJsonEditor.tsx";
-
-import "vanilla-jsoneditor-cn/themes/jse-theme-dark.css";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useTheme } from "next-themes";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import {
+  Braces,
+  Network,
+  Table2,
+  Columns2,
+  WandSparkles,
+  Copy,
+  Download,
+  Minimize2,
+  ArrowDownAZ,
+  ArrowUpAZ,
+  CodeXml,
+  TextQuote,
+  MessageSquareOff,
+  Trash2,
+  History,
+  Sparkles,
+  X,
+  Upload,
+} from "lucide-react";
+import {
+  Button,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Select,
+  SelectItem,
+  Spinner,
+} from "@/components/ui";
+import DynamicTabs, { importFiles } from "@/components/dynamicTabs/DynamicTabs";
+import MonacoJsonEditor, {
+  type MonacoJsonEditorRef,
+} from "@/components/monacoEditor/MonacoJsonEditor";
 import MonacoDiffEditor, {
-  MonacoDiffEditorRef,
-} from "@/components/monacoEditor/MonacoDiffEditor.tsx";
-import MonacoDiffOperationBar, {
-  MonacoDiffOperationBarRef,
-} from "@/components/monacoEditor/operationBar/MonacoDiffOperationBar.tsx";
-import MonacoOperationBar from "@/components/monacoEditor/operationBar/MonacoOperationBar.tsx";
-import "@/styles/index.css";
-import { SidebarKeys } from "@/components/sidebar/Items.tsx";
-import JsonTableView, {
-  JsonTableViewRef,
-} from "@/components/jsonTable/JsonTableView.tsx";
-import TabHistoryModal from "@/components/tabHistory/TabHistoryModal.tsx";
+  type MonacoDiffEditorRef,
+} from "@/components/monacoEditor/MonacoDiffEditor";
+import MonacoDiffOperationBar from "@/components/monacoEditor/operationBar/MonacoDiffOperationBar";
+import {
+  useTabStore,
+  downloadRecoveryData,
+  type DocumentView,
+} from "@/store/useTabStore";
+import { useToolboxStore } from "@/store/useToolboxStore";
+import { useMonacoInit } from "@/components/monacoEditor/useMonacoInit";
+import { getToolComponent } from "@/pages/tools/toolRegistry";
+import { ToolContext } from "@/components/workspace/ToolContext";
+import TabHistoryModal from "@/components/tabHistory/TabHistoryModal";
+import { runJsonTask, cancelJsonTask, type TaskResult } from "@/workers/client";
+import type { JsonTask } from "@/workers/jsonTasks";
+import type { JsonTableViewRef } from "@/components/jsonTable/JsonTableView";
+import { stringifyJson } from "@/utils/json";
+import { JsonSample } from "@/utils/jsonSample";
 import clipboard from "@/utils/clipboard";
 import toast from "@/utils/toast";
-import { stringifyJson } from "@/utils/json";
-import UtoolsListener from "@/services/utoolsListener";
-import ToolboxPage from "@/pages/toolboxPage";
-import { getToolComponent } from "@/pages/tools/toolRegistry";
-import { useToolboxStore } from "@/store/useToolboxStore";
-
-export default function IndexPage() {
-  const { theme } = useTheme();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const tools = useToolboxStore((state) => state.tools);
-  const monacoReady = useMonacoInit();
-  const monacoJsonEditorRefs = useRef<Record<string, MonacoJsonEditorRef>>({});
-  const monacoDiffEditorRefs = useRef<Record<string, MonacoDiffEditorRef>>({});
-  const vanillaJsonEditorRefs = useRef<Record<string, VanillaJsonEditorRef>>(
-    {},
+import { useDelayedVisibility } from "@/hooks/useDelayedVisibility";
+const TreeEditor = lazy(
+  () => import("@/components/vanillaJsonEditor/VanillaJsonEditor"),
+);
+const TableView = lazy(() => import("@/components/jsonTable/JsonTableView"));
+const Toolbox = lazy(() => import("@/pages/toolboxPage"));
+const onTabSwitch = () => {};
+const Loading = () => (
+  <div className="flex h-full items-center justify-center">
+    <Spinner label="正在准备工作区…" />
+  </div>
+);
+export function downloadText(content: string, title: string) {
+  const url = URL.createObjectURL(
+    new Blob([content], { type: "text/plain;charset=utf-8" }),
   );
-  // 添加JsonTableView的引用
-  const jsonTableViewRefs = useRef<Record<string, JsonTableViewRef>>({});
-
-  // 历史记录弹窗状态
-  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
-
-  const {
-    tabs,
-    activeTabKey,
-    activeTab,
-    getTabByKey,
-    setTabContent,
-    setTabModifiedValue,
-    syncTabStore,
-    setTabVanillaContent,
-    setTabVanillaMode,
-    vanilla2JsonContent,
-    setMonacoVersion,
-    setVanillaVersion,
-    jsonContent2VanillaContent,
-    restoreTabHistory,
-    deleteTabHistory,
-    clearTabHistory,
-    openToolboxTab,
-    addToolTab,
-  } = useTabStore();
-
-  const sidebarStore = useSidebarStore();
-  const tabRef = useRef<DynamicTabsRef>(null);
-  const monacoDiffOperationBarRef = useRef<MonacoDiffOperationBarRef>(null);
-  const [isTabStoreReady, setIsTabStoreReady] = useState(false);
-
-  const monacoUpdateContentTimeoutId = useRef<Record<string, NodeJS.Timeout>>(
-    {},
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = title;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function ToolResultActions({ tabKey }: { tabKey: string }) {
+  const tab = useTabStore((s) => s.getTabByKey(tabKey))!;
+  const [preview, setPreview] = useState(false);
+  const [baseRevision, setBaseRevision] = useState<number>();
+  const source = useTabStore((s) => s.getTabByKey(tab.source?.key || ""));
+  const result = String(
+    tab.toolState.outputValue ??
+      tab.toolState.fixedValue ??
+      tab.toolState.encodedText ??
+      tab.toolState.jwtToken ??
+      "",
   );
-  const vanillaUpdateContentTimeoutId = useRef<Record<string, NodeJS.Timeout>>(
-    {},
-  );
-
-  // 使用Map来分别存储每种编辑器类型的加载状态
-  const [loadedEditors, setLoadedEditors] = useState<{
-    monaco: Set<string>;
-    diff: Set<string>;
-    vanilla: Set<string>;
-    table: Set<string>; // 将table从可选改为必需
-  }>({
-    monaco: new Set(),
-    diff: new Set(),
-    vanilla: new Set(),
-    table: new Set(), // 初始化table集合
-  });
-
-  // LRU 淘汰：跟踪每种编辑器类型的标签页访问顺序（最近访问在前）
-  const lruOrder = useRef<Record<string, string[]>>({
-    monaco: [],
-    diff: [],
-    vanilla: [],
-    table: [],
-  });
-
-  /** 单种编辑器类型最多同时存活的实例数 */
-  const MAX_EDITOR_INSTANCES = 5;
-
-  /**
-   * 将 key 标记为最近访问，并淘汰超出上限的最久未访问的标签页
-   * @returns 需要被卸载的 tab keys
-   */
-  const touchAndEvict = (editorType: string, key: string): string[] => {
-    const order = lruOrder.current[editorType];
-    // 移到最前面
-    const idx = order.indexOf(key);
-    if (idx !== -1) order.splice(idx, 1);
-    order.unshift(key);
-
-    // 淘汰超出上限的
-    if (order.length > MAX_EDITOR_INSTANCES) {
-      const evicted = order.splice(MAX_EDITOR_INSTANCES);
-      return evicted;
-    }
-    return [];
-  };
-
-  const closeTabHandle = (keys: string[]) => {
-    if (keys.length === 0) {
-      return;
-    }
-    // 删除 monacoJsonEditorRefs 中对象
-    keys.forEach((key) => {
-      delete monacoJsonEditorRefs.current[key];
-      delete monacoDiffEditorRefs.current[key];
-      delete vanillaJsonEditorRefs.current[key];
-      delete jsonTableViewRefs.current[key]; // 添加删除JsonTableView引用
-
-      // 清理 LRU 记录
-      for (const type of Object.keys(lruOrder.current)) {
-        lruOrder.current[type] = lruOrder.current[type].filter(
-          (k) => k !== key,
-        );
-      }
-    });
-
-    // 删除 loadedEditors 中对象
-    setLoadedEditors((prev) => ({
-      ...prev,
-      monaco: new Set([...prev.monaco].filter((key) => !keys.includes(key))),
-      diff: new Set([...prev.diff].filter((key) => !keys.includes(key))),
-      vanilla: new Set([...prev.vanilla].filter((key) => !keys.includes(key))),
-      table: new Set([...prev.table].filter((key) => !keys.includes(key))), // 添加处理table集合
-    }));
-  };
-
-  // MonacoJsonEditor 更新内容后同步
-  const monacoEditorUpdateContent = (key: string, content: string) => {
-    clearTimeout(monacoUpdateContentTimeoutId.current[key]);
-    monacoUpdateContentTimeoutId.current[key] = setTimeout(() => {
-      setTabContent(key, content);
-    }, 0);
-  };
-
-  // VanillaJsonEditor 更新内容后同步
-  const vanillaEditorUpdateContent = (key: string, content: Content) => {
-    clearTimeout(vanillaUpdateContentTimeoutId.current[key]);
-    vanillaUpdateContentTimeoutId.current[key] = setTimeout(() => {
-      setTabVanillaContent(key, content);
-    }, 200);
-  };
-
-  const [editorLoading, setEditorLoading] = useState<{
-    [key: string]: boolean;
-  }>({});
-
-  const renderMonacoJsonEditor = () => {
-    return (
-      <>
-        <MonacoOperationBar
-          onAiClick={() => {
-            return monacoJsonEditorRefs.current[activeTabKey].showAiPrompt();
-          }}
-          onClear={() => {
-            return monacoJsonEditorRefs.current[activeTabKey].clear();
-          }}
-          onCopy={() => {
-            return monacoJsonEditorRefs.current[activeTabKey].copy();
-          }}
-          onCompress={() => {
-            return monacoJsonEditorRefs.current[activeTabKey].compress();
-          }}
-          onEscape={() => {
-            return monacoJsonEditorRefs.current[activeTabKey].escape();
-          }}
-          onFieldSort={(type) => {
-            return monacoJsonEditorRefs.current[activeTabKey].fieldSort(type);
-          }}
-          onFormat={() => {
-            return monacoJsonEditorRefs.current[activeTabKey].format();
-          }}
-          onMore={(key) => {
-            return monacoJsonEditorRefs.current[activeTabKey].moreAction(key);
-          }}
-          onSaveFile={() => {
-            return monacoJsonEditorRefs.current[activeTabKey].saveFile();
-          }}
-          onShowHistory={handleShowHistory}
-        />
-        <div className="editor-container flex-grow overflow-hidden">
-          {tabs
-            .filter((tab) => tab.kind === "json")
-            .map((tab) => {
-            // 如果已加载过该 tab，或者该 tab 恰好为当前激活 tab，则渲染
-            const shouldRender = loadedEditors.monaco.has(tab.key);
-            const isVisible = tab.key === activeTabKey;
-
-            // 如果当前 tab 未加载且正是 activeTab，则将其加入 loaded 集合
-            if (!shouldRender && isVisible) {
-              // LRU 淘汰：移除最久未使用的编辑器实例
-              const evicted = touchAndEvict("monaco", tab.key);
-              const newMonacoSet = new Set([...loadedEditors.monaco, tab.key]);
-              for (const evictedKey of evicted) {
-                newMonacoSet.delete(evictedKey);
-                delete monacoJsonEditorRefs.current[evictedKey];
-              }
-              setLoadedEditors((prev) => ({
-                ...prev,
-                monaco: newMonacoSet,
-              }));
-            } else if (shouldRender && isVisible) {
-              // 已加载但切换到此 tab，更新 LRU 顺序
-              touchAndEvict("monaco", tab.key);
-            }
-
-            // 保持一个包裹容器常驻 DOM
-            // 如果 shouldRender 为 true 才真正挂载编辑器，否则空占位
-            return (
-              <div
-                key={tab.key}
-                className={cn(
-                  "editor-wrapper w-full h-full",
-                  "editor-transition",
-                  isVisible && "visible",
-                  !editorLoading[tab.key] && "loaded",
-                )}
-              >
-                {shouldRender && (
-                  <MonacoJsonEditor
-                    key={tab.key}
-                    ref={(ref) => {
-                      if (ref) {
-                        monacoJsonEditorRefs.current[tab.key] = ref;
-                      }
-                    }}
-                    height="100%"
-                    isMenu={true}
-                    language={tab.editorSettings?.language || "json"}
-                    minimap={true}
-                    showAi={true}
-                    showJsonQueryFilter={true}
-                    tabKey={tab.key}
-                    tabTitle={tab.title}
-                    theme={theme === "dark" ? "vs-dark" : "vs-light"}
-                    value={tab.content}
-                    onMount={() => {
-                      setEditorLoading((prev) => ({
-                        ...prev,
-                        [tab.key]: false,
-                      }));
-                    }}
-                    onUpdateValue={(value) => {
-                      monacoEditorUpdateContent(tab.key, value);
-                    }}
-                  />
-                )}
-              </div>
-            );
-            })}
-        </div>
-      </>
-    );
-  };
-
-  // MonacoDiffEditor 渲染函数
-  const renderMonacoDiffEditor = () => {
-    return (
-      <div className="w-full h-full flex flex-col">
-        <MonacoDiffOperationBar
-          ref={monacoDiffOperationBarRef}
-          onAiClick={() => {
-            monacoDiffEditorRefs.current[activeTabKey].showAiPrompt();
-          }}
-          onClear={(type) => {
-            return monacoDiffEditorRefs.current[activeTabKey].clear(type);
-          }}
-          onCopy={(type) => {
-            return monacoDiffEditorRefs.current[activeTabKey].copy(type);
-          }}
-          onFieldSort={(type, sort: "asc" | "desc") => {
-            return monacoDiffEditorRefs.current[activeTabKey].fieldSort(
-              type,
-              sort,
-            );
-          }}
-          onFormat={(type) => {
-            return monacoDiffEditorRefs.current[activeTabKey].format(type);
-          }}
-        />
-        <div className="editor-container flex-grow overflow-hidden">
-          {tabs
-            .filter((tab) => tab.kind === "json")
-            .map((tab) => {
-            const shouldRender = loadedEditors.diff.has(tab.key);
-            const isVisible = tab.key === activeTabKey;
-
-            if (!shouldRender && isVisible) {
-              const evicted = touchAndEvict("diff", tab.key);
-              const newDiffSet = new Set([...loadedEditors.diff, tab.key]);
-              for (const evictedKey of evicted) {
-                newDiffSet.delete(evictedKey);
-                delete monacoDiffEditorRefs.current[evictedKey];
-              }
-              setLoadedEditors((prev) => ({
-                ...prev,
-                diff: newDiffSet,
-              }));
-            } else if (shouldRender && isVisible) {
-              touchAndEvict("diff", tab.key);
-            }
-
-            return (
-              <div
-                key={"diff" + tab.key}
-                className={cn(
-                  "editor-wrapper w-full h-full",
-                  "editor-transition",
-                  isVisible && "visible",
-                  !editorLoading[tab.key] && "loaded",
-                )}
-              >
-                {shouldRender && (
-                  <MonacoDiffEditor
-                    key={"diff" + tab.key}
-                    ref={(ref) => {
-                      if (ref) {
-                        monacoDiffEditorRefs.current[tab.key] = ref;
-                      }
-                    }}
-                    height="100%"
-                    language={tab.editorSettings?.language || "json"}
-                    modifiedValue={
-                      tab.diffModifiedValue ? tab.diffModifiedValue : ""
-                    }
-                    originalValue={tab.content}
-                    tabKey={tab.key}
-                    tabTitle={tab.title}
-                    theme={theme === "dark" ? "vs-dark" : "vs-light"}
-                    onMount={() => {
-                      setEditorLoading((prev) => ({
-                        ...prev,
-                        [tab.key]: false,
-                      }));
-                    }}
-                    onUpdateModifiedValue={(value) => {
-                      setTabModifiedValue(tab.key, value);
-                    }}
-                    onUpdateOriginalValue={(value) => {
-                      monacoEditorUpdateContent(tab.key, value);
-                    }}
-                  />
-                )}
-              </div>
-            );
-            })}
-        </div>
-      </div>
-    );
-  };
-
-  // vanillaJsonEditor 渲染函数
-  const renderVanillaJsonEditor = () => {
-    return (
-      <div className="editor-container h-full">
-        {tabs
-          .filter((tab) => tab.kind === "json")
-          .map((tab) => {
-          const shouldRender = loadedEditors.vanilla.has(tab.key);
-          const isVisible = tab.key === activeTabKey;
-
-          if (!shouldRender && isVisible) {
-            const evicted = touchAndEvict("vanilla", tab.key);
-            const newVanillaSet = new Set([...loadedEditors.vanilla, tab.key]);
-            for (const evictedKey of evicted) {
-              newVanillaSet.delete(evictedKey);
-              delete vanillaJsonEditorRefs.current[evictedKey];
-            }
-            setLoadedEditors((prev) => ({
-              ...prev,
-              vanilla: newVanillaSet,
-            }));
-          } else if (shouldRender && isVisible) {
-            touchAndEvict("vanilla", tab.key);
-          }
-
-          return (
-            <div
-              key={"vanilla-" + tab.key}
-              className={cn(
-                "w-full h-full",
-                isVisible && "visible",
-                !editorLoading[tab.key] && "loaded",
-                {
-                  hidden: tab.key !== activeTabKey,
-                  "jse-theme-dark": theme === "dark",
-                },
-              )}
-            >
-              {shouldRender && (
-                <VanillaJsonEditor
-                  key={tab.key}
-                  ref={(ref) => {
-                    if (ref) {
-                      vanillaJsonEditorRefs.current[tab.key] = ref;
-                    }
-                  }}
-                  content={tab.vanilla}
-                  height="100%"
-                  mode={tab.vanillaMode}
-                  tabKey={tab.key}
-                  onChangeMode={(mode) => {
-                    setTabVanillaMode(tab.key, mode);
-                  }}
-                  onMount={() => {
-                    setEditorLoading((prev) => ({
-                      ...prev,
-                      [tab.key]: false,
-                    }));
-                  }}
-                  onUpdateValue={(content) => {
-                    vanillaEditorUpdateContent(tab.key, content);
-                  }}
-                />
-              )}
-            </div>
-          );
-          })}
-      </div>
-    );
-  };
-
-  // 通过菜单栏的 activeKey 渲染编辑器
-  const renderEditor = () => {
-    switch (sidebarStore.activeKey) {
-      case SidebarKeys.textView:
-        return monacoReady ? renderMonacoJsonEditor() : null;
-      case SidebarKeys.treeView:
-        return renderVanillaJsonEditor();
-      case SidebarKeys.diffView:
-        return monacoReady ? renderMonacoDiffEditor() : null;
-      case SidebarKeys.tableView:
-        return renderJsonTableView();
-      default:
-        return <div>404</div>;
-    }
-  };
-
-  // tab 切换时同步数据
-  const tabSwitchHandle = () => {
-    const currentTab = activeTab();
-
-    if (!currentTab || currentTab.kind !== "json") {
-      return;
-    }
-
-    // 如果当前 tab 存在 monaco 版本和 vanilla 版本不一致, 则需要同步数据
-    if (currentTab && currentTab.monacoVersion != currentTab.vanillaVersion) {
-      switch (sidebarStore.clickSwitchKey) {
-        case SidebarKeys.textView:
-          // 如果切换之前是 diff 视图着不需要处理
-          if (sidebarStore.activeKey == SidebarKeys.diffView) {
-            break;
-          }
-          // 如果vanillaVersion < monacoVersion 则需要不同步数据
-          if (currentTab.vanillaVersion < currentTab.monacoVersion) {
-            break;
-          }
-          vanilla2JsonContent(activeTabKey);
-          setMonacoVersion(activeTabKey, currentTab.vanillaVersion);
-          // 强制更新 monaco 编辑器内容
-          monacoJsonEditorRefs.current[currentTab.key]?.updateValue(
-            activeTab().content,
-          );
-          break;
-        case SidebarKeys.diffView:
-          // 如果切换之前是 text 视图着不需要处理
-          if (sidebarStore.activeKey == SidebarKeys.textView) {
-            break;
-          }
-          // 如果vanillaVersion < monacoVersion 则需要不同步数据
-          if (currentTab.vanillaVersion < currentTab.monacoVersion) {
-            break;
-          }
-          vanilla2JsonContent(activeTabKey);
-          setMonacoVersion(activeTabKey, currentTab.vanillaVersion);
-          monacoDiffEditorRefs.current[currentTab.key]?.updateOriginalValue(
-            activeTab().content,
-          );
-          break;
-        case SidebarKeys.treeView:
-          // 如果vanillaVersion < monacoVersion 则需要不同步数据
-          if (currentTab.monacoVersion < currentTab.vanillaVersion) {
-            break;
-          }
-          jsonContent2VanillaContent(activeTabKey);
-          setVanillaVersion(activeTabKey, currentTab.monacoVersion);
-          const tempTab = activeTab();
-
-          if (tempTab && tempTab.vanilla) {
-            vanillaJsonEditorRefs.current[
-              tempTab.key
-            ]?.updateEditorContentAndMode(tempTab.vanillaMode, tempTab.vanilla);
-          }
-          break;
-        case SidebarKeys.tableView:
-          // 如果切换到表格视图，确保使用最新的数据
-          if (sidebarStore.activeKey == SidebarKeys.treeView) {
-            // 如果从树形视图切换，先同步数据
-            if (currentTab.vanillaVersion > currentTab.monacoVersion) {
-              vanilla2JsonContent(activeTabKey);
-              setMonacoVersion(activeTabKey, currentTab.vanillaVersion);
-            }
-          }
-          break;
-      }
-    }
-
-    // tab 切换时触发校验
-    if (sidebarStore.clickSwitchKey == SidebarKeys.textView) {
-      setTimeout(() => {
-        monacoJsonEditorRefs.current[currentTab.key]?.validate();
-      }, 500);
-    }
-  };
-
-  // url 刷新时同步数据同步数据
-  const urlRefreshHandle = (key: string) => {
-    const currentTab = getTabByKey(key);
-
-    if (!currentTab || currentTab.kind !== "json") {
-      return;
-    }
-
-    switch (sidebarStore.clickSwitchKey) {
-      case SidebarKeys.textView:
-        setMonacoVersion(currentTab.key, currentTab.vanillaVersion);
-        monacoJsonEditorRefs.current[currentTab.key]?.updateValue(
-          activeTab().content,
-        );
-        break;
-      case SidebarKeys.diffView:
-        monacoDiffEditorRefs.current[currentTab.key]?.updateOriginalValue(
-          activeTab().content,
-        );
-        break;
-      case SidebarKeys.treeView:
-        jsonContent2VanillaContent(currentTab.key);
-        setVanillaVersion(currentTab.key, currentTab.monacoVersion);
-        const tempTab = activeTab();
-
-        if (tempTab && tempTab.vanilla) {
-          vanillaJsonEditorRefs.current[
-            tempTab.key
-          ]?.updateEditorContentAndMode(tempTab.vanillaMode, tempTab.vanilla);
-        }
-        break;
-      case SidebarKeys.tableView:
-        break;
-    }
-  };
-
-  useLayoutEffect(() => {
-    const init = async () => {
-      // 先同步设置数据到 store
-      await useSettingsStore.getState().syncSettingsStore();
-
-      // 同步标签页数据
-      await syncTabStore();
-      setIsTabStoreReady(true);
-    };
-
-    init();
-  }, []);
-
-  useEffect(() => {
-    if (!isTabStoreReady) return;
-
-    const browserPath = window.location.pathname;
-    const routePath =
-      location.pathname === "/" && browserPath.startsWith("/toolbox")
-        ? browserPath
-        : location.pathname;
-    const normalizeWorkspaceUrl = () => {
-      if (browserPath.startsWith("/toolbox")) {
-        window.history.replaceState(null, "", `${window.location.origin}#/`);
-
-        return;
-      }
-
-      navigate("/", { replace: true });
-    };
-
-    if (routePath === "/toolbox") {
-      openToolboxTab();
-      normalizeWorkspaceUrl();
-
-      return;
-    }
-
-    const toolRouteMatch = routePath.match(/^\/toolbox\/([^/]+)$/);
-
-    if (!toolRouteMatch) return;
-
-    const toolId = decodeURIComponent(toolRouteMatch[1]);
-    const routeTool = tools.find((tool) => tool.id === toolId);
-
-    if (routeTool) {
-      addToolTab(routeTool);
-    } else {
-      openToolboxTab();
-      toast.warning("未找到对应工具", "已返回工具箱");
-    }
-
-    normalizeWorkspaceUrl();
-  }, [
-    addToolTab,
-    isTabStoreReady,
-    location.pathname,
-    navigate,
-    openToolboxTab,
-    tools,
-  ]);
-
-  useEffect(() => {
-    // 设置 UtoolsListener 的编辑器引用
-    UtoolsListener.getInstance().setEditorRefs(monacoJsonEditorRefs.current);
-  }, [monacoJsonEditorRefs]);
-
-  useEffect(() => {
-    // 在切换标签时预加载下一个编辑器
-    if (activeTabKey) {
-      const currentTab = getTabByKey(activeTabKey);
-
-      if (!currentTab || currentTab.kind !== "json") {
-        return;
-      }
-
-      // 设置新标签页的加载状态
-      setEditorLoading((prev) => ({
-        ...prev,
-        [activeTabKey]: true,
-      }));
-
-      // 预加载相邻的标签页
-      const currentIndex = tabs.findIndex((tab) => tab.key === activeTabKey);
-      const preloadIndexes = [currentIndex - 1, currentIndex + 1].filter(
-        (index) => index >= 0 && index < tabs.length,
-      );
-
-      preloadIndexes.forEach((index) => {
-        const tab = tabs[index];
-
-        if (!tab) {
-          return;
-        }
-
-        switch (sidebarStore.activeKey) {
-          case SidebarKeys.textView: {
-            const evicted = touchAndEvict("monaco", tab.key);
-            const newSet = new Set([...loadedEditors.monaco, tab.key]);
-            for (const evictedKey of evicted) {
-              newSet.delete(evictedKey);
-              delete monacoJsonEditorRefs.current[evictedKey];
-            }
-            setLoadedEditors((prev) => ({ ...prev, monaco: newSet }));
-            // 焦点切换到当前激活的 tab
-            if (monacoJsonEditorRefs.current[activeTabKey]) {
-              monacoJsonEditorRefs.current[activeTabKey].layout();
-              monacoJsonEditorRefs.current[activeTabKey].focus();
-            }
-            break;
-          }
-          case SidebarKeys.treeView: {
-            const evicted = touchAndEvict("vanilla", tab.key);
-            const newSet = new Set([...loadedEditors.vanilla, tab.key]);
-            for (const evictedKey of evicted) {
-              newSet.delete(evictedKey);
-              delete vanillaJsonEditorRefs.current[evictedKey];
-            }
-            setLoadedEditors((prev) => ({ ...prev, vanilla: newSet }));
-            break;
-          }
-          case SidebarKeys.diffView: {
-            const evicted = touchAndEvict("diff", tab.key);
-            const newSet = new Set([...loadedEditors.diff, tab.key]);
-            for (const evictedKey of evicted) {
-              newSet.delete(evictedKey);
-              delete monacoDiffEditorRefs.current[evictedKey];
-            }
-            setLoadedEditors((prev) => ({ ...prev, diff: newSet }));
-            // 焦点切换到当前激活的 tab
-            if (monacoDiffEditorRefs.current[activeTabKey]) {
-              monacoDiffEditorRefs.current[activeTabKey].layout();
-              monacoDiffEditorRefs.current[activeTabKey].focus();
-            }
-            break;
-          }
-          case SidebarKeys.tableView: {
-            const evicted = touchAndEvict("table", tab.key);
-            const newSet = new Set([...loadedEditors.table, tab.key]);
-            for (const evictedKey of evicted) {
-              newSet.delete(evictedKey);
-              delete jsonTableViewRefs.current[evictedKey];
-            }
-            setLoadedEditors((prev) => ({ ...prev, table: newSet }));
-            break;
-          }
-        }
-      });
-    }
-  }, [activeTabKey]);
-
-  // 切换视图时同步数据
-  useEffect(() => {
-    tabSwitchHandle();
-    sidebarStore.switchActiveKey();
-  }, [sidebarStore.clickSwitchKey]);
-
-  // 历史记录处理函数
-  const handleShowHistory = () => {
-    setIsHistoryModalOpen(true);
-  };
-
-  const handleRestoreHistory = (historyKey: string) => {
-    const currentTab = activeTab();
-    if (!currentTab) return;
-
-    restoreTabHistory(currentTab.key, historyKey);
-    toast.success("历史记录已恢复");
-
-    // 更新编辑器显示（使用 requestAnimationFrame 确保状态已更新）
-    requestAnimationFrame(() => {
-      const updatedTab = getTabByKey(currentTab.key);
-      if (!updatedTab) return;
-
-      console.log('[历史记录] 更新编辑器内容:', updatedTab.key);
-
-      switch (sidebarStore.activeKey) {
-        case SidebarKeys.textView:
-          monacoJsonEditorRefs.current[currentTab.key]?.updateValue(
-            updatedTab.content,
-          );
-          break;
-        case SidebarKeys.diffView:
-          monacoDiffEditorRefs.current[currentTab.key]?.updateOriginalValue(
-            updatedTab.content,
-          );
-          break;
-        case SidebarKeys.treeView:
-          if (updatedTab.vanilla) {
-            vanillaJsonEditorRefs.current[
-              currentTab.key
-            ]?.updateEditorContentAndMode(updatedTab.vanillaMode, updatedTab.vanilla);
-          }
-          break;
-      }
-    });
-  };
-
-  const handleDeleteHistory = (historyKey: string) => {
-    const currentTab = activeTab();
-    if (!currentTab) return;
-
-    deleteTabHistory(currentTab.key, historyKey);
-    toast.success("历史记录已删除");
-  };
-
-  const handleClearHistory = () => {
-    const currentTab = activeTab();
-    if (!currentTab) return;
-
-    clearTabHistory(currentTab.key);
-    toast.success("历史记录已清空");
-  };
-
-  // 添加renderJsonTableView函数
-  const renderJsonTableView = () => {
-    return (
-      <div className="h-full">
-        {tabs
-          .filter((tab) => tab.kind === "json")
-          .map((tab) => {
-          const shouldRender = loadedEditors.table.has(tab.key);
-          const isVisible = tab.key === activeTabKey;
-
-          if (!shouldRender && isVisible) {
-            const evicted = touchAndEvict("table", tab.key);
-            const newTableSet = new Set([...loadedEditors.table, tab.key]);
-            for (const evictedKey of evicted) {
-              newTableSet.delete(evictedKey);
-              delete jsonTableViewRefs.current[evictedKey];
-            }
-            setLoadedEditors((prev) => ({
-              ...prev,
-              table: newTableSet,
-            }));
-          } else if (shouldRender && isVisible) {
-            touchAndEvict("table", tab.key);
-          }
-
-          return (
-            <div
-              key={"table-" + tab.key}
-              className={cn(
-                "w-full h-full",
-                "editor-transition", // 添加与其他编辑器一致的过渡效果
-                isVisible && "visible",
-                !editorLoading[tab.key] && "loaded",
-                {
-                  hidden: tab.key !== activeTabKey,
-                },
-              )}
-            >
-              {shouldRender && (
-                <JsonTableView
-                  key={tab.key}
-                  ref={(ref) => {
-                    if (ref) {
-                      jsonTableViewRefs.current[tab.key] = ref;
-                    }
-                  }}
-                  data={tab.content}
-                  onCopy={(type) => {
-                    // 实现复制功能
-                    try {
-                      let content = "";
-                      const currentTab = activeTab();
-
-                      if (!currentTab) return false;
-
-                      switch (type) {
-                        case "node":
-                          // 复制选中节点的值
-                          if (jsonTableViewRefs.current[tab.key]) {
-                            const selectedNode =
-                              jsonTableViewRefs.current[
-                                tab.key
-                              ].getSelectedNode();
-
-                            if (selectedNode) {
-                              content = stringifyJson(selectedNode, 2);
-                              clipboard.copy(content, "已复制选中节点");
-
-                              return true;
-                            }
-                          }
-
-                          return false;
-                        case "path":
-                          // 复制选中节点的路径
-                          if (jsonTableViewRefs.current[tab.key]) {
-                            const selectedPath =
-                              jsonTableViewRefs.current[
-                                tab.key
-                              ].getSelectedPath();
-
-                            if (selectedPath) {
-                              clipboard.copy(selectedPath, "已复制选中路径");
-
-                              return true;
-                            }
-                          }
-
-                          return false;
-                        default:
-                          // 默认复制整个JSON内容
-                          content = tab.content || "{}";
-                          clipboard.copy(content, "已复制全部内容");
-
-                          return true;
-                      }
-                    } catch (err) {
-                      console.error("复制失败:", err);
-                      toast.error("复制失败: " + (err as Error).message);
-
-                      return false;
-                    }
-                  }}
-                  onDataUpdate={(newData) => {
-                    // 更新tab内容
-                    setTabContent(tab.key, newData);
-                  }}
-                  onMount={() => {
-                    setEditorLoading((prev) => ({
-                      ...prev,
-                      [tab.key]: false,
-                    }));
-                  }}
-                />
-              )}
-            </div>
-          );
-          })}
-      </div>
-    );
-  };
-
-  const renderToolTab = (tab: TabItem) => {
-    const toolId = String(tab.extraData?.toolId || "");
-    const ToolComponent = getToolComponent(toolId);
-
-    if (!ToolComponent) {
-      return (
-        <div className="flex h-full w-full items-center justify-center bg-default-50 text-default-500">
-          未找到工具：{toolId || tab.title}
-        </div>
-      );
-    }
-
-    return <ToolComponent />;
-  };
-
-  const renderWorkspaceTabs = () => {
-    return tabs
-      .filter((tab) => tab.kind === "toolbox" || tab.kind === "tool")
-      .map((tab) => {
-        const isVisible = tab.key === activeTabKey;
-
-        return (
-          <div
-            key={`workspace-${tab.key}`}
-            className={cn("h-full w-full", {
-              hidden: !isVisible,
-            })}
-          >
-            <Suspense
-              fallback={
-                <div className="flex h-full w-full items-center justify-center text-sm text-default-400">
-                  加载中...
-                </div>
-              }
-            >
-              {tab.kind === "toolbox" ? <ToolboxPage /> : renderToolTab(tab)}
-            </Suspense>
-          </div>
-        );
-      });
-  };
-
-  const activeTabItem = getTabByKey(activeTabKey);
-
+  const pendingResult = useRef("");
+  if (!result) return null;
   return (
-    <div className="flex flex-col h-full dark:bg-vscode-dark">
-      <DynamicTabs
-        ref={tabRef}
-        onClose={closeTabHandle}
-        onSwitch={tabSwitchHandle}
-        onUrlRefresh={urlRefreshHandle}
-      />
-      <div className="flex-grow h-0 overflow-hidden flex flex-col">
-        {activeTabItem?.kind === "json" && renderEditor()}
-        {renderWorkspaceTabs()}
+    <>
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t bg-muted/40 px-3 py-2">
+        <span className="text-xs text-muted-foreground">
+          {tab.source ? `来源：${tab.source.title}` : "转换结果"}
+        </span>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            onPress={() => void clipboard.copy(result, "已复制结果")}
+          >
+            复制结果
+          </Button>
+          <Button size="sm" onPress={() => downloadText(result, "result.txt")}>
+            下载
+          </Button>
+          <Button
+            size="sm"
+            onPress={() => useTabStore.getState().addTab("result.json", result)}
+          >
+            新建标签
+          </Button>
+          {source && (
+            <Button
+              size="sm"
+              color="primary"
+              onPress={() => {
+                pendingResult.current = result;
+                setBaseRevision(source.revision);
+                setPreview(true);
+              }}
+            >
+              替换来源…
+            </Button>
+          )}
+        </div>
       </div>
-
-      {/* 历史记录弹窗 */}
-      <TabHistoryModal
-        isOpen={isHistoryModalOpen}
-        onClose={() => setIsHistoryModalOpen(false)}
-        currentContent={activeTab()?.content || ""}
-        historyItems={activeTab()?.history || []}
-        onRestore={handleRestoreHistory}
-        onDelete={handleDeleteHistory}
-        onClear={handleClearHistory}
-      />
+      <Modal isOpen={preview} onClose={() => setPreview(false)} size="5xl">
+        <ModalContent>
+          <ModalHeader>预览替换 · {source?.title}</ModalHeader>
+          <ModalBody>
+            <DiffPreview
+              original={source?.content || ""}
+              modified={pendingResult.current}
+            />
+            {(source?.revision !== baseRevision ||
+              source?.revision !== tab.source?.revision) && (
+              <p className="mt-2 text-sm text-warning">
+                来源已发生变化，请查看最新差异后再次确认。
+              </p>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button onPress={() => setPreview(false)}>取消</Button>
+            <Button
+              color="primary"
+              isDisabled={!source}
+              onPress={() => {
+                if (!source) return;
+                if (source.revision !== baseRevision) {
+                  setBaseRevision(source.revision);
+                  return;
+                }
+                useTabStore
+                  .getState()
+                  .updateTabContent(source.key, pendingResult.current);
+                setPreview(false);
+                toast.success("已更新来源文件，可通过历史恢复");
+              }}
+            >
+              {source?.revision !== baseRevision ? "确认最新版本" : "应用替换"}
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </>
+  );
+}
+function DocumentWorkspace({ tabKey }: { tabKey: string }) {
+  const tab = useTabStore((s) => s.getTabByKey(tabKey))!;
+  const editor = useRef<MonacoJsonEditorRef>(null);
+  const diff = useRef<MonacoDiffEditorRef>(null);
+  const table = useRef<JsonTableViewRef>(null);
+  const [history, setHistory] = useState(false);
+  const [settingsTarget, setSettingsTarget] = useState<HTMLSpanElement | null>(
+    null,
+  );
+  const [diffSettingsTarget, setDiffSettingsTarget] =
+    useState<HTMLSpanElement | null>(null);
+  const [statusTarget, setStatusTarget] = useState<HTMLSpanElement | null>(
+    null,
+  );
+  const [busy, setBusy] = useState(false);
+  const [welcome, setWelcome] = useState(() => !tab.content);
+  const showBusy = useDelayedVisibility(busy);
+  const [validation, setValidation] = useState<TaskResult>({});
+  const [compare, setCompare] = useState(false);
+  const [other, setOther] = useState("blank");
+  const { resolvedTheme } = useTheme();
+  const theme = resolvedTheme === "dark" ? "vs-dark" : "vs-light";
+  const store = useTabStore.getState();
+  const view = tab.view;
+  const treeContent = useMemo(() => ({ text: tab.content }), [tab.content]);
+  const fileBytes = tab.byteLength;
+  const persistence = useSettingsStore((s) => s.persistentDataEnabled);
+  const saveStatus = useTabStore((s) => s.saveStatus);
+  const storageError = useTabStore((s) => s.storageError);
+  const files = useTabMetadata();
+  const viewList: [DocumentView, string, typeof Braces][] = [
+    ["code", "代码", Braces],
+    ["tree", "树形", Network],
+    ["table", "表格", Table2],
+  ];
+  const update = useCallback(
+    (content: string, changes?: readonly TextChange[]) =>
+      useTabStore.getState().updateTabContent(tab.key, content, changes),
+    [tab.key],
+  );
+  useEffect(() => {
+    const scope = "validate:" + tab.key;
+    const revision = tab.revision;
+    const timer = setTimeout(
+      () => {
+        void runJsonTask(scope, {
+          action: "validate",
+          content: tab.content,
+          language: tab.editorSettings.language,
+        })
+          .then((result) => {
+            if (
+              useTabStore.getState().getTabByKey(tab.key)?.revision === revision
+            )
+              setValidation(result);
+          })
+          .catch(() => {});
+      },
+      tab.content.length > 1_000_000 ? 1000 : 400,
+    );
+    return () => {
+      clearTimeout(timer);
+      cancelJsonTask(scope);
+    };
+  }, [tab.content, tab.revision, tab.key, tab.editorSettings.language]);
+  useEffect(() => {
+    return () => cancelJsonTask("action:" + tab.key);
+  }, [tab.key, view]);
+  async function action(action: JsonTask, direction?: "asc" | "desc") {
+    const revision = tab.revision;
+    setBusy(true);
+    try {
+      const result = await runJsonTask("action:" + tab.key, {
+        action,
+        content: tab.content,
+        indent: tab.editorSettings.indentSize,
+        language: tab.editorSettings.language,
+        direction,
+      });
+      if (store.getTabByKey(tab.key)?.revision !== revision) {
+        toast.warning("内容已变化，请重新执行操作");
+        return;
+      }
+      if (result.content !== undefined) {
+        if (editor.current) editor.current.updateValue(result.content);
+        else update(result.content);
+        setWelcome(false);
+      }
+    } catch (error) {
+      if ((error as Error).name !== "AbortError")
+        toast.error("处理失败", (error as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  const tableCopy = (type?: "default" | "node" | "path") => {
+    const value =
+      type === "path"
+        ? table.current?.getSelectedPath()
+        : type === "node"
+          ? stringifyJson(table.current?.getSelectedNode() ?? null)
+          : tab.content;
+    void clipboard.copy(value ?? "", "已复制");
+    return true;
+  };
+  return (
+    <>
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-3 py-2">
+        <div className="flex shrink-0 items-center gap-1 rounded-md bg-secondary/60 p-0.5">
+          {viewList.map(([id, label, Icon]) => (
+            <Button
+              key={id}
+              size="sm"
+              variant="ghost"
+              className={
+                view === id ? "bg-background text-primary shadow-xs" : ""
+              }
+              aria-pressed={view === id}
+              onPress={() => store.setView(tab.key, id)}
+            >
+              <Icon />
+              {label}
+            </Button>
+          ))}
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-pressed={view === "diff"}
+            className={
+              view === "diff" ? "bg-background text-primary shadow-xs" : ""
+            }
+            onPress={() => setCompare(true)}
+          >
+            <Columns2 />
+            对比
+          </Button>
+        </div>
+        <DocumentActions
+          endContent={
+            view === "code" ? (
+              <span
+                ref={setSettingsTarget}
+                className="flex shrink-0 items-center"
+              />
+            ) : undefined
+          }
+          actions={[
+            {
+              key: "ai",
+              label: "AI 助手",
+              icon: Sparkles,
+              onPress: () => {
+                setWelcome(false);
+                if (view === "diff") diff.current?.showAiPrompt();
+                else {
+                  if (view !== "code") store.setView(tab.key, "code");
+                  setTimeout(() => editor.current?.showAiPrompt(), 100);
+                }
+              },
+            },
+            ...(view !== "diff"
+              ? [
+                  {
+                    key: "format",
+                    label: "格式化",
+                    icon: WandSparkles,
+                    disabled: busy,
+                    onPress: () => void action("format"),
+                  },
+                  {
+                    key: "copy",
+                    label: "复制",
+                    icon: Copy,
+                    onPress: () => void clipboard.copy(tab.content, "已复制"),
+                  },
+                ]
+              : []),
+            {
+              key: "clear",
+              label: "清空",
+              icon: Trash2,
+              destructive: true,
+              onPress: () => {
+                if (editor.current) editor.current.clear();
+                else update("");
+                setWelcome(true);
+              },
+            },
+            ...(
+              [
+                ["压缩", "compress", Minimize2],
+                ["字段升序", "sort", ArrowDownAZ],
+                ["字段降序", "sort-desc", ArrowUpAZ],
+                ["转义", "escape", CodeXml],
+                ["删除转义", "unescape", TextQuote],
+                ["删除注释", "comments", MessageSquareOff],
+              ] as const
+            ).map(
+              ([label, key, icon]): DocumentAction => ({
+                key,
+                label,
+                icon,
+                disabled: busy,
+                onPress: () =>
+                  void action(
+                    key === "sort-desc" ? "sort" : key,
+                    key === "sort-desc" ? "desc" : "asc",
+                  ),
+              }),
+            ),
+            {
+              key: "download",
+              label: "下载",
+              icon: Download,
+              onPress: () => downloadText(tab.content, tab.title),
+            },
+            {
+              key: "history",
+              label: "历史",
+              icon: History,
+              onPress: () => setHistory(true),
+            },
+          ]}
+        />
+      </div>
+      {showBusy && (
+        <div className="flex items-center justify-between border-b bg-accent px-3 py-1 text-xs">
+          <Spinner size="sm" label="正在后台处理…" />
+          <Button
+            size="sm"
+            variant="ghost"
+            onPress={() => cancelJsonTask("action:" + tab.key)}
+          >
+            <X />
+            取消
+          </Button>
+        </div>
+      )}
+      <div className="relative min-h-0 flex-1">
+        <Suspense fallback={<Loading />}>
+          {view === "code" && (
+            <WorkspaceWelcome
+              active={welcome}
+              title={tab.title}
+              language={tab.editorSettings.language}
+              hasContent={!!tab.content.trim()}
+              busy={busy}
+              onFocus={() => editor.current?.focus()}
+              onSample={() => {
+                if (editor.current) editor.current.updateValue(JsonSample);
+                else update(JsonSample);
+                setWelcome(false);
+              }}
+              onStart={() => void action("format")}
+              onContinue={() => {
+                setWelcome(false);
+                editor.current?.focus();
+              }}
+            >
+              <MonacoJsonEditor
+                ref={editor}
+                tabKey={tab.key}
+                tabTitle={tab.title}
+                documentId={tab.key}
+                language={tab.editorSettings.language}
+                theme={theme}
+                height="100%"
+                isMenu
+                settingsBarTarget={settingsTarget}
+                showJsonPathFilter={!welcome}
+                statusBarTarget={statusTarget}
+                onUpdateValue={update}
+              />
+            </WorkspaceWelcome>
+          )}
+          {view === "tree" && (
+            <TreeEditor
+              tabKey={tab.key}
+              content={treeContent}
+              onUpdateValue={(value) =>
+                update(
+                  "text" in value
+                    ? value.text
+                    : stringifyJson(value.json, tab.editorSettings.indentSize),
+                )
+              }
+            />
+          )}{" "}
+          {view === "table" && (
+            <TableView
+              ref={table}
+              data={tab.content}
+              onDataUpdate={update}
+              onCopy={tableCopy}
+            />
+          )}{" "}
+          {view === "diff" && (
+            <div className="flex h-full flex-col">
+              <MonacoDiffOperationBar
+                settingsTargetRef={setDiffSettingsTarget}
+                onCopy={(type) => diff.current?.copy(type) || false}
+                onClear={(type) => diff.current?.clear(type) || false}
+                onFormat={(type) => diff.current?.format(type) || false}
+                onFieldSort={(type, order) =>
+                  diff.current?.fieldSort(type, order) || false
+                }
+                onAiClick={() => diff.current?.showAiPrompt()}
+              />
+              <div className="min-h-0 flex-1">
+                <MonacoDiffEditor
+                  ref={diff}
+                  settingsBarTarget={diffSettingsTarget}
+                  tabKey={tab.key}
+                  tabTitle={tab.title}
+                  originalValue={tab.content}
+                  modifiedValue={tab.diffModifiedValue || ""}
+                  language={tab.editorSettings.language}
+                  theme={theme}
+                  onUpdateOriginalValue={update}
+                  onUpdateModifiedValue={(text) =>
+                    store.setTabModifiedValue(tab.key, text)
+                  }
+                />
+              </div>
+            </div>
+          )}
+        </Suspense>
+      </div>
+      <div className="workbench-status">
+        <div className="status-document">
+          <button
+            className={
+              validation.error
+                ? "text-destructive"
+                : tab.content
+                  ? "text-success"
+                  : "text-muted-foreground"
+            }
+            onClick={() => {
+              if (validation.error) {
+                const { line, column } = validation.error;
+                store.setView(tab.key, "code");
+                setTimeout(
+                  () =>
+                    window.dispatchEvent(
+                      new CustomEvent("json-tools:reveal", {
+                        detail: {
+                          key: tab.key,
+                          line,
+                          column,
+                        },
+                      }),
+                    ),
+                  100,
+                );
+              }
+            }}
+          >
+            {validation.error
+              ? `错误 · ${validation.error.line}:${validation.error.column}`
+              : tab.content
+                ? ["json", "json5"].includes(tab.editorSettings.language)
+                  ? "✓ JSON 有效"
+                  : "文本文件"
+                : "等待输入"}
+          </button>
+          <button
+            type="button"
+            className={storageError ? "truncate text-destructive" : "truncate"}
+            title={
+              storageError ||
+              (persistence ? "文档自动保存到本地" : "仅在当前窗口保存")
+            }
+            onClick={() => {
+              if (storageError) void downloadRecoveryData();
+            }}
+          >
+            {storageError
+              ? "保存失败 · 请下载备份"
+              : !persistence
+                ? "仅在当前窗口保存"
+                : saveStatus === "saving"
+                  ? "正在保存…"
+                  : saveStatus === "saved"
+                    ? "已保存"
+                    : ""}
+          </button>
+        </div>
+        <div className="status-details">
+          <span ref={setStatusTarget} className="status-cursor" />
+          <span
+            className="status-character-count"
+            title={`总字符数：${tab.content.length.toLocaleString()}`}
+          >
+            {tab.content.length.toLocaleString()} 字符
+          </span>
+          <span
+            className="status-file-size"
+            title={`${fileBytes.toLocaleString()} 字节 · UTF-8`}
+          >
+            {fileBytes < 1024
+              ? `${fileBytes} B`
+              : fileBytes < 1048576
+                ? `${(fileBytes / 1024).toFixed(1)} KB`
+                : `${(fileBytes / 1048576).toFixed(1)} MB`}
+          </span>
+          <span className="status-secondary" title="UTF-8 编码">
+            {tab.editorSettings.language.toUpperCase()}
+          </span>
+          <span className="status-secondary">
+            {tab.editorSettings.indentSize} 空格
+          </span>
+        </div>
+      </div>
+      {history && (
+        <TabHistoryModal
+          isOpen={history}
+          onClose={() => setHistory(false)}
+          documentTitle={tab.title}
+          language={tab.editorSettings.language}
+          currentContent={tab.content}
+          historyItems={tab.history}
+          onRestore={(id) => {
+            store.restoreTabHistory(tab.key, id);
+            toast.success("已恢复历史版本");
+          }}
+          onOpenInNewTab={(item) => {
+            const title = item.title || tab.title;
+            const extension = title.lastIndexOf(".");
+            store.addTab(
+              extension > 0
+                ? `${title.slice(0, extension)} · 历史版本${title.slice(extension)}`
+                : `${title} · 历史版本`,
+              item.content,
+            );
+            store.updateEditorSettings(useTabStore.getState().activeTabKey, {
+              language: tab.editorSettings.language,
+            });
+          }}
+          onDelete={(id) => store.deleteTabHistory(tab.key, id)}
+          onClear={() => store.clearTabHistory(tab.key)}
+        />
+      )}
+      <Modal isOpen={compare} onClose={() => setCompare(false)}>
+        <ModalContent>
+          <ModalHeader>选择比较对象</ModalHeader>
+          <ModalBody>
+            <Select
+              aria-label="比较对象"
+              selectedKeys={[other]}
+              onChange={(e) => setOther(e.target.value)}
+            >
+              <SelectItem key="blank">空白内容，手动粘贴</SelectItem>
+              {files
+                .filter((f) => f.kind === "json" && f.key !== tab.key)
+                .map((f) => (
+                  <SelectItem key={f.key}>{f.title}</SelectItem>
+                ))}
+            </Select>
+          </ModalBody>
+          <ModalFooter>
+            <Button onPress={() => setCompare(false)}>取消</Button>
+            <Button
+              color="primary"
+              onPress={() => {
+                store.setTabModifiedValue(
+                  tab.key,
+                  other === "blank"
+                    ? tab.diffModifiedValue || ""
+                    : store.getTabByKey(other)?.content || "",
+                );
+                store.setView(tab.key, "diff");
+                setCompare(false);
+              }}
+            >
+              开始对比
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </>
+  );
+}
+export default function IndexPage() {
+  const ready = useMonacoInit();
+  const hydrated = useTabStore((s) => s.hydrated);
+  const key = useTabStore((s) => s.activeTabKey);
+  useTabStore((s) => s.getTabByKey(key)?.kind);
+  useTabStore((s) => {
+    const tab = s.getTabByKey(key);
+    return tab?.kind === "tool" ? tab.toolId : undefined;
+  });
+  const tab = useTabStore.getState().getTabByKey(key);
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const { toolId } = useParams();
+  const [dragging, setDragging] = useState(false);
+  useEffect(() => {
+    void useTabStore.getState().syncTabStore();
+  }, []);
+  useEffect(() => {
+    if (!hydrated) return;
+    if (toolId) {
+      const tool = useToolboxStore
+        .getState()
+        .tools.find((t) => t.id === toolId);
+      if (tool) useTabStore.getState().addToolTab(tool);
+      navigate("/", { replace: true });
+    } else if (pathname === "/toolbox") useTabStore.getState().openToolboxTab();
+  }, [hydrated, toolId, pathname]);
+  const Component = tab?.kind === "tool" ? getToolComponent(tab.toolId) : null;
+  return (
+    <div
+      className="relative flex h-full flex-col"
+      onDragOver={(event) => {
+        if (event.dataTransfer.types.includes("Files")) {
+          event.preventDefault();
+          setDragging(true);
+        }
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node))
+          setDragging(false);
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        setDragging(false);
+        void importFiles(Array.from(event.dataTransfer.files));
+      }}
+    >
+      <DynamicTabs onSwitch={onTabSwitch} />
+      {!hydrated || !ready ? (
+        <Loading />
+      ) : tab?.kind === "json" ? (
+        <DocumentWorkspace key={tab.key} tabKey={tab.key} />
+      ) : (
+        <Suspense fallback={<Loading />}>
+          {tab?.kind === "toolbox" ? (
+            <Toolbox />
+          ) : tab && Component ? (
+            <ToolContext.Provider value={tab.key}>
+              <div className="min-h-0 flex-1">
+                <Component key={tab.key} />
+              </div>
+              <ToolResultActions tabKey={tab.key} />
+            </ToolContext.Provider>
+          ) : (
+            <div className="p-8 text-muted-foreground">未找到工具</div>
+          )}
+        </Suspense>
+      )}
+      {dragging && (
+        <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center border-2 border-dashed border-primary bg-background/90 text-primary">
+          <Upload className="mr-3 size-6" />
+          释放文件以导入
+        </div>
+      )}
     </div>
   );
 }

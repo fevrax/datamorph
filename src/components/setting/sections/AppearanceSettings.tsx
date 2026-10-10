@@ -56,17 +56,17 @@ export function AppearanceSettings() {
             selected={chatStyle === "bubble"}
             onSelect={() => handleStyleChange("bubble")}
           >
-            <div className="mb-2.5 flex h-[68px] items-center rounded-md bg-default-100 p-2.5">
+            <div className="mb-2.5 flex h-[68px] items-center rounded-md bg-secondary p-2.5">
               <div className="flex w-full flex-col gap-1.5">
                 <div className="h-2 w-full rounded-full bg-primary/40" />
-                <div className="ml-auto h-2 w-3/5 rounded-full bg-default-300" />
+                <div className="ml-auto h-2 w-3/5 rounded-full bg-input" />
                 <div className="h-2 w-[90%] rounded-full bg-primary/40" />
               </div>
             </div>
-            <p className="text-[12.5px] font-semibold text-default-900">
+            <p className="text-[12.5px] font-semibold text-foreground">
               气泡模式
             </p>
-            <p className="mt-0.5 text-[11px] text-default-500">
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
               左右分列的对话气泡
             </p>
           </ChoiceCard>
@@ -75,18 +75,18 @@ export function AppearanceSettings() {
             selected={chatStyle === "document"}
             onSelect={() => handleStyleChange("document")}
           >
-            <div className="mb-2.5 flex h-[68px] items-center rounded-md bg-default-100 p-2.5">
+            <div className="mb-2.5 flex h-[68px] items-center rounded-md bg-secondary p-2.5">
               <div className="flex w-full flex-col gap-1.5">
                 <div className="h-1.5 w-full rounded-sm bg-primary/40" />
-                <div className="h-1.5 w-full rounded-sm bg-default-300" />
+                <div className="h-1.5 w-full rounded-sm bg-input" />
                 <div className="h-1.5 w-3/4 rounded-sm bg-primary/40" />
-                <div className="h-1.5 w-full rounded-sm bg-default-300" />
+                <div className="h-1.5 w-full rounded-sm bg-input" />
               </div>
             </div>
-            <p className="text-[12.5px] font-semibold text-default-900">
+            <p className="text-[12.5px] font-semibold text-foreground">
               文档模式
             </p>
-            <p className="mt-0.5 text-[11px] text-default-500">
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
               上下排列的文档流
             </p>
           </ChoiceCard>
@@ -103,15 +103,17 @@ export function AppearanceSettings() {
               onSelect={() => handleFontSizeChange(opt.value)}
             >
               <div
-                className="mb-2 font-semibold text-default-900"
+                className="mb-2 font-semibold text-foreground"
                 style={{ fontSize: opt.previewSize }}
               >
                 Aa 示例
               </div>
-              <p className="text-[12px] font-semibold text-default-900">
+              <p className="text-[12px] font-semibold text-foreground">
                 {opt.label}
               </p>
-              <p className="mt-0.5 text-[11px] text-default-500">{opt.desc}</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                {opt.desc}
+              </p>
             </ChoiceCard>
           ))}
         </div>

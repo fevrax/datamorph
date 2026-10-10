@@ -7,8 +7,8 @@ import {
   DropdownMenu,
   DropdownTrigger,
   Tooltip,
-} from "@heroui/react";
-import { Icon } from "@iconify/react";
+} from "@/components/ui";
+import { Icon } from "@/components/ui/icon";
 
 import { DEFAULT_DROPDOWN_TIMEOUT } from "./useDropdownTimeout";
 
@@ -72,79 +72,26 @@ export const useAdaptiveButtons = (
   containerRef: React.RefObject<HTMLDivElement | null>,
   actionGroups: ButtonGroup[],
 ) => {
-  const [visibleButtons, setVisibleButtons] = useState<string[]>([]);
-  const [hiddenButtons, setHiddenButtons] = useState<ButtonConfig[]>([]);
-
+  const [width, setWidth] = useState(0);
   useEffect(() => {
-    if (!containerRef.current) return;
-
-    const calculateVisibleButtons = () => {
-      if (!containerRef.current) return;
-
-      const width = containerRef.current.clientWidth;
-
-      // 提取所有按钮
-      const allButtons = actionGroups.flatMap((group) => group.buttons);
-      // 按优先级排序按钮
-      const sortedButtons = [...allButtons].sort(
-        (a, b) => (a.priority || 999) - (b.priority || 999),
-      );
-
-      // 计算可用宽度 (考虑左右边距和两个分隔线)
-      let availableWidth = width - 2 * MIN_PADDING - 2 * SEPARATOR_WIDTH;
-      const visible: string[] = [];
-      const hidden: ButtonConfig[] = [];
-
-      // 第一次遍历，检查是否所有按钮都能显示
-      let totalButtonsWidth = 0;
-
-      for (const {} of sortedButtons) {
-        totalButtonsWidth += 75; // 默认宽度100
-      }
-
-      // 如果所有按钮的总宽度超过可用宽度，则需要"更多"按钮
-      if (totalButtonsWidth > availableWidth) {
-        availableWidth -= MORE_BUTTON_WIDTH;
-      }
-
-      // 第二次遍历，决定哪些按钮可见
-      let usedWidth = 0;
-
-      for (const button of sortedButtons) {
-        const buttonWidth = 75; // 默认宽度100
-
-        if (usedWidth + buttonWidth <= availableWidth) {
-          visible.push(button.key);
-          usedWidth += buttonWidth;
-        } else {
-          hidden.push(button);
-        }
-      }
-
-      setVisibleButtons(visible);
-      setHiddenButtons(hidden);
-    };
-
-    // 初始计算
-    calculateVisibleButtons();
-
-    // 创建ResizeObserver来监听容器大小变化
-    const resizeObserver = new ResizeObserver(calculateVisibleButtons);
-
-    resizeObserver.observe(containerRef.current);
-
-    // 同时监听窗口大小变化作为后备
-    window.addEventListener("resize", calculateVisibleButtons);
-
-    return () => {
-      if (containerRef.current) {
-        resizeObserver.unobserve(containerRef.current);
-      }
-      window.removeEventListener("resize", calculateVisibleButtons);
-    };
-  }, [actionGroups]);
-
-  return { visibleButtons, hiddenButtons };
+    const element = containerRef.current;
+    if (!element) return;
+    const resize = () => setWidth(element.clientWidth);
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [containerRef]);
+  const buttons = actionGroups
+    .flatMap((group) => group.buttons)
+    .sort((a, b) => (a.priority || 999) - (b.priority || 999));
+  let available = width - 2 * MIN_PADDING - 2 * SEPARATOR_WIDTH;
+  if (buttons.length * 75 > available) available -= MORE_BUTTON_WIDTH;
+  const count = Math.max(0, Math.floor(available / 75));
+  return {
+    visibleButtons: buttons.slice(0, count).map((button) => button.key),
+    hiddenButtons: buttons.slice(count),
+  };
 };
 
 // 渲染标准按钮
@@ -153,9 +100,9 @@ export const renderStandardButton = (button: BaseButtonConfig) => {
     <Tooltip key={button.key} content={button.tooltip} delay={300}>
       <Button
         className={cn(
-          "pl-1.5 pr-1.5 h-7 gap-1 text-default-600 transition-colors text-xs",
+          "pl-1.5 pr-1.5 h-7 gap-1 text-muted-foreground transition-colors text-xs",
           button.className,
-          "hover:bg-default-200/50",
+          "hover:bg-border/50",
         )}
         size="sm"
         startContent={
@@ -200,9 +147,9 @@ export const renderDropdownButton = (
       >
         <Button
           className={cn(
-            "pl-1.5 pr-1.5 h-7 gap-1 text-default-600 transition-colors text-xs",
+            "pl-1.5 pr-1.5 h-7 gap-1 text-muted-foreground transition-colors text-xs",
             button.className,
-            "hover:bg-default-200/50",
+            "hover:bg-border/50",
           )}
           size="sm"
           startContent={
@@ -227,7 +174,7 @@ export const renderDropdownButton = (
         {button.dropdownItems.map((item) => (
           <DropdownItem
             key={item.key}
-            className="py-2 px-3 hover:bg-default-100 rounded-md"
+            className="py-2 px-3 hover:bg-secondary rounded-md"
             textValue={item.text}
             onPress={item.onClick}
           >
@@ -259,7 +206,7 @@ export const renderMoreMenu = (
   return (
     <Dropdown
       classNames={{
-        base: "before:bg-default-200",
+        base: "before:bg-border",
         content: "min-w-[140px] p-1",
       }}
       isOpen={isMoreDropdownOpen}
@@ -272,7 +219,7 @@ export const renderMoreMenu = (
         onMouseLeave={unShowMoreDropdown}
       >
         <Button
-          className="pl-1.5 pr-1.5 h-7 gap-1 text-default-600 !min-w-14 hover:bg-default-200/50 transition-colors text-xs"
+          className="pl-1.5 pr-1.5 h-7 gap-1 text-muted-foreground !min-w-14 hover:bg-border/50 transition-colors text-xs"
           startContent={<Icon icon="mingcute:more-2-fill" width={16} />}
           variant="light"
         >
@@ -292,7 +239,7 @@ export const renderMoreMenu = (
             return button.dropdownItems.map((item) => (
               <DropdownItem
                 key={`${button.key}-${item.key}`}
-                className="py-2 px-3 hover:bg-default-100 rounded-md"
+                className="py-2 px-3 hover:bg-secondary rounded-md"
                 textValue={`${button.text} - ${item.text}`}
                 onPress={item.onClick}
               >
@@ -307,7 +254,7 @@ export const renderMoreMenu = (
             return [
               <DropdownItem
                 key={button.key}
-                className="py-2 px-3 hover:bg-default-100 rounded-md"
+                className="py-2 px-3 hover:bg-secondary rounded-md"
                 textValue={"text" in button ? button.text : ""}
                 onPress={button.onClick}
               >

@@ -11,6 +11,7 @@ function withConfig(run) {
   const env = {
     PATH: process.env.PATH,
     AI_PROXY_CONFIG_PATH: path,
+    OPENAI_BASE_URL: "https://example.com/v1",
   };
   try {
     run(path, env);

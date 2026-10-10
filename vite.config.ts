@@ -1,15 +1,44 @@
-import { defineConfig } from "vite";
+import { fileURLToPath } from "node:url";
+import { defineConfig, loadEnv } from "vite";
+import { siteAIProxy } from "./config/aiProxy";
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
 import monacoEditorPlugin from "vite-plugin-monaco-editor-esm";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 import { VitePWA } from "vite-plugin-pwa";
 
-const ReactCompilerConfig = {};
 // https://vitejs.dev/config/
 
-export default defineConfig({
+export default defineConfig(({ mode, command }) => ({
+  cacheDir: process.env.VITE_CACHE_DIR || "node_modules/.vite",
+  optimizeDeps: {
+    include: [
+      "vanilla-jsoneditor-cn",
+      "quicktype-core",
+      "jsonrepair",
+      "jsonpath-rfc9535",
+      "js-yaml",
+      "@iarna/toml",
+      "xml-js",
+    ],
+  },
+  resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
+  worker: { format: "es", plugins: () => [nodePolyfills()] },
   server: {
+    watch: {
+      ignored: [
+        "**/artifacts/**",
+        "**/tests/**",
+        "**/scripts/**",
+        "**/*.test.*",
+        "**/docs/redesign/**",
+        "**/tests/**",
+        "**/scripts/**",
+        "**/*.test.*",
+        "**/.pnpm-store/**",
+      ],
+    },
     host: "0.0.0.0", // 使用 '0.0.0.0' 允许从任何 IP 访问
   },
   css: {
@@ -21,14 +50,20 @@ export default defineConfig({
   },
   base: "./",
   plugins: [
-    react({
-      babel: {
-        plugins: [["babel-plugin-react-compiler", ReactCompilerConfig]],
-      },
-    }),
+    ...(command === "serve"
+      ? [siteAIProxy(loadEnv(mode, process.cwd(), "OPENAI_"))]
+      : []),
+    tailwindcss(),
+    react(),
     tsconfigPaths(),
     monacoEditorPlugin({
-      languageWorkers: ["editorWorkerService", "json"],
+      languageWorkers: [
+        "editorWorkerService",
+        "json",
+        "typescript",
+        "css",
+        "html",
+      ],
     }),
     nodePolyfills(),
     VitePWA({
@@ -38,7 +73,7 @@ export default defineConfig({
       includeManifestIcons: false,
       workbox: {
         // Monaco 主包较大；完整预缓存可确保所有本地工具首次断网也可使用。
-        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
+        maximumFileSizeToCacheInBytes: 16 * 1024 * 1024,
         globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
         cleanupOutdatedCaches: true,
         skipWaiting: false,
@@ -111,7 +146,4 @@ export default defineConfig({
       },
     }),
   ],
-  optimizeDeps: {
-    include: ["vanilla-jsoneditor-cn"],
-  },
-});
+}));

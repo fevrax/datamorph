@@ -5,6 +5,29 @@
 
 import toast from "./toast";
 
+type HostClipboard = {
+  copyText?: (text: string) => void;
+  readText?: () => string;
+};
+function hostClipboard(): HostClipboard | undefined {
+  return (window as Window & { utools?: HostClipboard }).utools;
+}
+
+/** Use the host clipboard when embedded; retain browser permission semantics. */
+export async function writeClipboardText(text: string): Promise<void> {
+  const host = hostClipboard();
+  if (host?.copyText) {
+    host.copyText(text);
+    return;
+  }
+  await navigator.clipboard.writeText(text);
+}
+export async function readClipboardText(): Promise<string> {
+  const host = hostClipboard();
+  if (host?.readText) return host.readText();
+  return navigator.clipboard.readText();
+}
+
 /**
  * 使用document.execCommand方法复制文本到剪贴板
  * @param text 要复制的文本
@@ -132,8 +155,11 @@ export async function copyToClipboard(
 
   // 方法1: 尝试使用现代的Navigator Clipboard API
   try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
+    if (
+      hostClipboard()?.copyText ||
+      (navigator.clipboard && window.isSecureContext)
+    ) {
+      await writeClipboardText(text);
       if (successMessage) toast.success(successMessage);
 
       return true;
@@ -158,8 +184,11 @@ export async function readFromClipboard(
 ): Promise<string | null> {
   // 方案1: 使用现代的Navigator Clipboard API
   try {
-    if (navigator.clipboard && window.isSecureContext) {
-      const text = await navigator.clipboard.readText();
+    if (
+      hostClipboard()?.readText ||
+      (navigator.clipboard && window.isSecureContext)
+    ) {
+      const text = await readClipboardText();
 
       return text;
     } else {
@@ -179,7 +208,10 @@ export async function readFromClipboard(
  * @returns {boolean} 是否支持
  */
 export function isClipboardSupported(): boolean {
-  return !!(navigator.clipboard && window.isSecureContext);
+  return !!(
+    hostClipboard()?.copyText ||
+    (navigator.clipboard && window.isSecureContext)
+  );
 }
 
 export default {

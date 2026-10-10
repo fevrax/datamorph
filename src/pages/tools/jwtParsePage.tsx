@@ -1,3 +1,6 @@
+import { encodeJwtLossless, decodeJwtLossless } from "@/utils/jwtLossless";
+import { writeClipboardText } from "@/utils/clipboard";
+import { createToolStateHook } from "@/components/workspace/ToolContext";
 import { useRef, useState } from "react";
 import {
   Button,
@@ -9,8 +12,8 @@ import {
   SelectItem,
   Tooltip,
   Input,
-} from "@heroui/react";
-import { Icon } from "@iconify/react";
+} from "@/components/ui";
+import { Icon } from "@/components/ui/icon";
 import { useTheme } from "next-themes";
 import jwt from "jsonwebtoken";
 
@@ -47,11 +50,7 @@ const encodeJwt = async (
       throw new Error("无效的payload格式");
     }
 
-    // 使用 jsonwebtoken 库签发 token
-    const token = jwt.sign(payload, secret, {
-      algorithm: algorithm as jwt.Algorithm,
-      header: updatedHeader,
-    });
+    const token = encodeJwtLossless(updatedHeader, payload, secret, algorithm);
 
     return token;
   } catch (error) {
@@ -84,8 +83,7 @@ const decodeJwt = (token: string) => {
       };
     }
 
-    // 使用 jsonwebtoken 解码而不验证签名
-    const decoded = jwt.decode(token, { complete: true });
+    const decoded = decodeJwtLossless(token);
 
     if (!decoded) {
       return {
@@ -223,8 +221,10 @@ const verifyJwtSignature = async (token: string, secret: string) => {
   }
 };
 
+const useToolState = createToolStateHook("jwtParse");
+
 export default function JwtParsePage() {
-  const { theme } = useTheme();
+  const { resolvedTheme: theme } = useTheme();
 
   // 编辑器引用
   const jwtEditorRef = useRef<MonacoJsonEditorRef>(null);
@@ -234,13 +234,15 @@ export default function JwtParsePage() {
   const encodePayloadEditorRef = useRef<MonacoJsonEditorRef>(null);
 
   // 状态管理
-  const [jwtToken, setJwtToken] = useState<string>("");
-  const [headerJson, setHeaderJson] = useState<string>("");
-  const [payloadJson, setPayloadJson] = useState<string>("");
-  const [encodeHeaderJson, setEncodeHeaderJson] = useState<string>(
+  const [jwtToken, setJwtToken] = useToolState("jwtToken", "");
+  const [headerJson, setHeaderJson] = useToolState("headerJson", "");
+  const [payloadJson, setPayloadJson] = useToolState("payloadJson", "");
+  const [encodeHeaderJson, setEncodeHeaderJson] = useToolState(
+    "encodeHeaderJson",
     stringifyJson({ alg: "HS256", typ: "JWT" }, 2),
   );
-  const [encodePayloadJson, setEncodePayloadJson] = useState<string>(
+  const [encodePayloadJson, setEncodePayloadJson] = useToolState(
+    "encodePayloadJson",
     stringifyJson(
       {
         sub: "1234567890",
@@ -250,11 +252,17 @@ export default function JwtParsePage() {
       2,
     ),
   );
-  const [secret, setSecret] = useState<string>("");
-  const [isTokenValid, setIsTokenValid] = useState<boolean | null>(null);
-  const [validationMessage, setValidationMessage] = useState<string>("");
+  const [secret, setSecret] = useToolState("secret", "");
+  const [isTokenValid, setIsTokenValid] = useToolState("isTokenValid", null);
+  const [validationMessage, setValidationMessage] = useToolState(
+    "validationMessage",
+    "",
+  );
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [selectedAlgorithm, setSelectedAlgorithm] = useState<string>("HS256");
+  const [selectedAlgorithm, setSelectedAlgorithm] = useToolState(
+    "selectedAlgorithm",
+    "HS256",
+  );
 
   // 解析 JWT
   const parseJwt = () => {
@@ -549,9 +557,8 @@ export default function JwtParsePage() {
       return;
     }
 
-    if (navigator.clipboard) {
-      navigator.clipboard
-        .writeText(jwtToken)
+    if (navigator.clipboard || (window as any).utools) {
+      writeClipboardText(jwtToken)
         .then(() => {
           setIsTokenValid(true);
           setValidationMessage("已复制到剪贴板");
@@ -659,16 +666,16 @@ export default function JwtParsePage() {
       toolIconColor="text-primary"
       toolName="JWT 解析与验证"
     >
-      <div className="flex flex-col h-full">
+      <div className="jwt-layout flex min-h-0 flex-1 flex-col">
         {/* 解码/验证界面 */}
-        <div className="flex flex-col md:flex-row h-full gap-4">
+        <div className="jwt-panels flex min-h-0 flex-col md:flex-row h-full gap-3">
           {/* 编码区域 - JWT 输入 */}
-          <Card className="flex-1 shadow-md border border-default-200 transition-shadow hover:shadow-lg">
+          <Card className="flex-1 shadow-md border border-border transition-shadow hover:shadow-lg">
             <CardBody className="p-0 h-full flex flex-col">
-              <div className="px-2.5 py-1  bg-default-50 border-b border-default-200 flex justify-between items-center">
+              <div className="px-2.5 py-1  bg-muted border-b border-border flex justify-between items-center">
                 <span className="text-sm font-medium flex items-center gap-2">
                   <Icon
-                    className="text-default-600"
+                    className="text-muted-foreground"
                     icon="solar:key-minimalistic-outline"
                     width={16}
                   />
@@ -686,12 +693,12 @@ export default function JwtParsePage() {
                     <Button
                       isIconOnly
                       aria-label="帮助"
-                      className="bg-default-100/50 hover:bg-default-200/60"
+                      className="bg-secondary/50 hover:bg-border/60"
                       size="sm"
                       variant="light"
                     >
                       <Icon
-                        className="text-default-600"
+                        className="text-muted-foreground"
                         icon="solar:question-circle-outline"
                         width={18}
                       />
@@ -701,13 +708,13 @@ export default function JwtParsePage() {
                     <Button
                       isIconOnly
                       aria-label="复制"
-                      className="bg-default-100/50 hover:bg-default-200/60"
+                      className="bg-secondary/50 hover:bg-border/60"
                       size="sm"
                       variant="light"
                       onPress={copyJwt}
                     >
                       <Icon
-                        className="text-default-600"
+                        className="text-muted-foreground"
                         icon="solar:copy-outline"
                         width={18}
                       />
@@ -730,12 +737,12 @@ export default function JwtParsePage() {
           </Card>
 
           {/* 操作区域 */}
-          <Card className="flex-1 shadow-md border border-default-200 transition-shadow hover:shadow-lg">
+          <Card className="flex-1 shadow-md border border-border transition-shadow hover:shadow-lg">
             <CardBody className="p-0 h-full flex flex-col">
-              <div className="p-2.5 bg-default-50 border-b border-default-200 flex justify-between items-center">
+              <div className="p-2.5 bg-muted border-b border-border flex justify-between items-center">
                 <span className="text-sm font-medium flex items-center gap-2">
                   <Icon
-                    className="text-default-600"
+                    className="text-muted-foreground"
                     icon="solar:settings-minimalistic-outline"
                     width={16}
                   />
@@ -814,7 +821,7 @@ export default function JwtParsePage() {
                   "PS384",
                   "PS512",
                 ].includes(selectedAlgorithm) && (
-                  <div className="mt-1 text-xs text-default-400">
+                  <div className="mt-1 text-xs text-muted-foreground">
                     注意：非对称算法（RS*/ES*/PS*）签名需要私钥
                   </div>
                 )}
@@ -905,12 +912,12 @@ export default function JwtParsePage() {
           </Card>
 
           {/* 解码区域 */}
-          <Card className="flex-1 shadow-md border border-default-200 transition-shadow hover:shadow-lg">
+          <Card className="flex-1 shadow-md border border-border transition-shadow hover:shadow-lg">
             <CardBody className="p-0 h-full flex flex-col">
-              <div className="p-2.5 bg-default-50 border-b border-default-200 flex justify-between items-center">
+              <div className="p-2.5 bg-muted border-b border-border flex justify-between items-center">
                 <span className="text-sm font-medium flex items-center gap-2">
                   <Icon
-                    className="text-default-600"
+                    className="text-muted-foreground"
                     icon="solar:document-text-outline"
                     width={16}
                   />
@@ -920,11 +927,11 @@ export default function JwtParsePage() {
 
               <div className="flex flex-col h-full overflow-auto">
                 {/* 头部/Header */}
-                <div className="p-3 border-b border-default-200">
+                <div className="p-3 border-b border-border">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-medium flex items-center gap-2">
                       <Icon
-                        className="text-default-600"
+                        className="text-muted-foreground"
                         icon="solar:document-text-outline"
                         width={16}
                       />
@@ -942,12 +949,12 @@ export default function JwtParsePage() {
                         <Button
                           isIconOnly
                           aria-label="帮助"
-                          className="bg-default-100/50 hover:bg-default-200/60"
+                          className="bg-secondary/50 hover:bg-border/60"
                           size="sm"
                           variant="light"
                         >
                           <Icon
-                            className="text-default-600"
+                            className="text-muted-foreground"
                             icon="solar:question-circle-outline"
                             width={18}
                           />
@@ -956,18 +963,18 @@ export default function JwtParsePage() {
                       <Button
                         isIconOnly
                         aria-label="复制"
-                        className="bg-default-100/50 hover:bg-default-200/60"
+                        className="bg-secondary/50 hover:bg-border/60"
                         size="sm"
                         variant="light"
                         onPress={() => {
                           if (headerJson) {
-                            navigator.clipboard.writeText(headerJson);
+                            writeClipboardText(headerJson);
                             setValidationMessage("已复制头部到剪贴板");
                           }
                         }}
                       >
                         <Icon
-                          className="text-default-600"
+                          className="text-muted-foreground"
                           icon="solar:copy-outline"
                           width={18}
                         />
@@ -988,11 +995,11 @@ export default function JwtParsePage() {
                 </div>
 
                 {/* 载荷/Payload */}
-                <div className="p-3 border-b border-default-200">
+                <div className="p-3 border-b border-border">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-medium flex items-center gap-2">
                       <Icon
-                        className="text-default-600"
+                        className="text-muted-foreground"
                         icon="solar:server-outline"
                         width={16}
                       />
@@ -1010,12 +1017,12 @@ export default function JwtParsePage() {
                         <Button
                           isIconOnly
                           aria-label="帮助"
-                          className="bg-default-100/50 hover:bg-default-200/60"
+                          className="bg-secondary/50 hover:bg-border/60"
                           size="sm"
                           variant="light"
                         >
                           <Icon
-                            className="text-default-600"
+                            className="text-muted-foreground"
                             icon="solar:question-circle-outline"
                             width={18}
                           />
@@ -1024,18 +1031,18 @@ export default function JwtParsePage() {
                       <Button
                         isIconOnly
                         aria-label="复制"
-                        className="bg-default-100/50 hover:bg-default-200/60"
+                        className="bg-secondary/50 hover:bg-border/60"
                         size="sm"
                         variant="light"
                         onPress={() => {
                           if (payloadJson) {
-                            navigator.clipboard.writeText(payloadJson);
+                            writeClipboardText(payloadJson);
                             setValidationMessage("已复制载荷到剪贴板");
                           }
                         }}
                       >
                         <Icon
-                          className="text-default-600"
+                          className="text-muted-foreground"
                           icon="solar:copy-outline"
                           width={18}
                         />
@@ -1060,7 +1067,7 @@ export default function JwtParsePage() {
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-medium flex items-center gap-2">
                       <Icon
-                        className="text-default-600"
+                        className="text-muted-foreground"
                         icon="solar:lock-keyhole-minimalistic-outline"
                         width={16}
                       />

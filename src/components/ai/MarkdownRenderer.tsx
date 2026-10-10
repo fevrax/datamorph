@@ -1,7 +1,8 @@
+import { writeClipboardText } from "@/utils/clipboard";
 import React, { useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { cn } from "@heroui/react";
-import { Button } from "@heroui/react";
+import { cn } from "@/components/ui";
+import { Button } from "@/components/ui";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { useTheme } from "next-themes";
@@ -11,6 +12,7 @@ import {
 } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 import toast from "@/utils/toast.tsx";
+import "./assistant.css";
 import {
   ChevronRightIcon,
   ChevronDownIcon,
@@ -52,7 +54,7 @@ interface CodeBlockProps {
 // 定义内联代码组件，处理内联代码样式
 const InlineCode: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <code className="text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1 py-0.5 rounded-md">
+    <code className="rounded-md bg-accent px-1 py-0.5 text-foreground">
       {children}
     </code>
   );
@@ -83,29 +85,31 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
   };
 
   return (
-    <div className="rounded-md overflow-hidden my-3 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md dark:hover:shadow-neutral-900/50 transition-shadow duration-200">
-      <div className="flex items-center justify-between px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+    <div className="ai-code-result">
+      <div className="ai-code-toolbar">
         <div className="flex items-center space-x-2">
           <Button
             isIconOnly
-            className="h-5 w-5 min-w-5 bg-transparent hover:bg-gray-300 dark:hover:bg-gray-600 rounded-full transition-colors"
+            className="size-7 min-w-7 bg-transparent p-0"
             size="sm"
             title={isCollapsed ? "展开代码" : "收起代码"}
+            aria-label={isCollapsed ? "展开代码" : "收起代码"}
+            aria-expanded={!isCollapsed}
             variant="flat"
             onPress={toggleCollapse}
           >
             {isCollapsed ? <ChevronRightIcon /> : <ChevronDownIcon />}
           </Button>
-          <span className="font-mono font-medium text-base">
+          <span className="font-mono text-xs uppercase tracking-wide">
             {language || "text"}
           </span>
         </div>
-        <div className="flex items-center space-x-1">
+        <div className="ai-code-actions">
           {/* 差异编辑器模式下显示两个应用按钮 */}
           {isDiffEditor ? (
             <>
               <Button
-                className="h-6 text-xs px-2 bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-800/40 rounded-md transition-colors"
+                className="ai-code-apply h-7 px-2 text-xs"
                 size="sm"
                 title="应用到左侧编辑器"
                 variant="flat"
@@ -115,7 +119,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
                 应用到左侧
               </Button>
               <Button
-                className="h-6 text-xs px-2 bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-800/40 rounded-md transition-colors"
+                className="ai-code-apply h-7 px-2 text-xs"
                 size="sm"
                 title="应用到右侧编辑器"
                 variant="flat"
@@ -131,25 +135,26 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
             /* 普通模式下显示单个应用按钮 */
             onApplyCode && (
               <Button
-                className="h-6 text-xs px-2 bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-800/40 rounded-md transition-colors"
+                className="ai-code-apply h-7 px-2 text-xs"
                 size="sm"
                 title="应用到编辑器"
                 variant="flat"
                 onPress={() => onApplyCode(content)}
               >
                 <ApplyIcon />
-                应用
+                预览修改
               </Button>
             )
           )}
           <Button
             isIconOnly
-            className="h-5 w-5 min-w-5 bg-transparent hover:bg-gray-300 dark:hover:bg-gray-600 rounded-full transition-colors"
+            className="size-7 min-w-7 bg-transparent p-0"
             size="sm"
             title="复制代码"
+            aria-label="复制代码"
             variant="flat"
             onPress={() => {
-              navigator.clipboard.writeText(content);
+              writeClipboardText(content);
               toast.success("已复制代码");
             }}
           >
@@ -170,7 +175,9 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
           customStyle={{
             margin: 0,
             borderRadius: "0 0 6px 6px",
-            padding: "1rem",
+            padding: "0.875rem",
+            fontSize: "12px",
+            background: "var(--ai-panel, var(--background))",
             width: "100%",
           }}
           language={language || "text"}
@@ -194,7 +201,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   onApplyCodeToRight,
 }) => {
   // 正确使用钩子 - 始终在组件顶层无条件调用
-  const { theme } = useTheme();
+  const { resolvedTheme: theme } = useTheme();
 
   return (
     <div className={cn(className, "flex flex-col h-full w-full")}>
@@ -254,14 +261,14 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             );
           },
           // 表格样式优化
-          table({ node, ...props }) {
+          table({ node: _node, ...props }) {
             return (
               <div className="overflow-x-auto my-4 rounded-md border border-gray-200 dark:border-gray-700">
                 <table className="min-w-full border-collapse" {...props} />
               </div>
             );
           },
-          th({ node, ...props }) {
+          th({ node: _node, ...props }) {
             return (
               <th
                 className="border-b border-gray-300 dark:border-gray-700 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-left font-medium text-gray-700 dark:text-gray-300"
@@ -269,7 +276,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
               />
             );
           },
-          td({ node, ...props }) {
+          td({ node: _node, ...props }) {
             return (
               <td
                 className="border-b border-gray-200 dark:border-gray-800 px-4 py-2 text-sm"
@@ -278,7 +285,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             );
           },
           // 增强引用块样式
-          blockquote({ node, ...props }) {
+          blockquote({ node: _node, ...props }) {
             return (
               <blockquote
                 className="pl-4 border-l-4 border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/20 py-1 my-4 rounded-r-md italic text-gray-700 dark:text-gray-300"
@@ -287,7 +294,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             );
           },
           // 增强标题样式
-          h1({ node, children, ...props }) {
+          h1({ node: _node, children, ...props }) {
             return (
               <h1
                 className="mt-6 mb-4 pb-2 border-b border-gray-200 dark:border-gray-800 font-bold text-gray-900 dark:text-gray-100"
@@ -297,7 +304,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
               </h1>
             );
           },
-          h2({ node, children, ...props }) {
+          h2({ node: _node, children, ...props }) {
             return (
               <h2
                 className="mt-5 mb-3 pb-1 font-semibold text-gray-800 dark:text-gray-200"
@@ -308,7 +315,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             );
           },
           // 优化列表项样式
-          ul({ node, ...props }) {
+          ul({ node: _node, ...props }) {
             return (
               <ul
                 className="pl-6 list-disc marker:text-blue-500 dark:marker:text-blue-400 my-3"
@@ -316,7 +323,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
               />
             );
           },
-          ol({ node, ...props }) {
+          ol({ node: _node, ...props }) {
             return (
               <ol
                 className="pl-6 list-decimal marker:text-blue-500 dark:marker:text-blue-400 my-3"
@@ -325,7 +332,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             );
           },
           // 优化链接样式
-          a({ node, children, ...props }) {
+          a({ node: _node, children, ...props }) {
             return (
               <a
                 className="text-blue-600 dark:text-blue-400 hover:underline hover:text-blue-800 dark:hover:text-blue-300 transition-colors duration-200"
@@ -338,7 +345,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             );
           },
           // 优化图片样式
-          img({ node, alt, src, ...props }) {
+          img({ node: _node, alt, src, ...props }) {
             return (
               <img
                 alt={alt || "Markdown图片"}

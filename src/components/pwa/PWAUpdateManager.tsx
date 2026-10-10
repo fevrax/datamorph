@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, Spinner } from "@heroui/react";
+import { Button, Spinner } from "@/components/ui";
 import { RefreshCw, WifiOff, X } from "lucide-react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 
@@ -138,7 +138,7 @@ export const PWAUpdateManager: React.FC = () => {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold">网络连接已断开</p>
-            <p className="mt-0.5 text-xs leading-relaxed text-default-500">
+            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
               已缓存的本地工具仍可使用，联网功能暂不可用。
             </p>
           </div>
@@ -160,7 +160,7 @@ export const PWAUpdateManager: React.FC = () => {
                 <Button
                   isIconOnly
                   aria-label="30 分钟后提醒"
-                  className="-mr-1 -mt-1 h-7 min-w-7 text-default-400"
+                  className="-mr-1 -mt-1 h-7 min-w-7 text-muted-foreground"
                   isDisabled={isUpdating}
                   size="sm"
                   variant="light"
@@ -169,7 +169,7 @@ export const PWAUpdateManager: React.FC = () => {
                   <X size={16} />
                 </Button>
               </div>
-              <p className="mt-0.5 text-xs leading-relaxed text-default-500">
+              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
                 更新前会保存当前数据，随后自动重新载入。
               </p>
               <div className="mt-3 flex justify-end">

@@ -1,6 +1,6 @@
 import React from "react";
-import { Button, ButtonGroup } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { Button, ButtonGroup } from "@/components/ui";
+import { Icon } from "@/components/ui/icon";
 
 interface JsonPathBarProps {
   currentPath: string;
@@ -14,9 +14,9 @@ const JsonPathBar: React.FC<JsonPathBarProps> = ({
   onCollapse,
 }) => {
   return (
-    <div className="h-8 flex items-center justify-between px-2 bg-default-50 border-b border-default-200">
+    <div className="h-8 flex items-center justify-between px-2 bg-muted border-b border-border">
       {/* 当前JSON路径 */}
-      <div className="flex items-center space-x-1 text-sm text-default-600">
+      <div className="flex items-center space-x-1 text-sm text-muted-foreground">
         <Icon icon="solar:folder-path-duotone" width={16} />
         <span>{currentPath}</span>
       </div>
@@ -24,14 +24,14 @@ const JsonPathBar: React.FC<JsonPathBarProps> = ({
       {/* 展开/折叠按钮组 */}
       <ButtonGroup size="sm" variant="light">
         <Button
-          className="text-sm text-default-600"
+          className="text-sm text-muted-foreground"
           startContent={<Icon icon="tabler:fold-down" width={16} />}
           onPress={onExpand}
         >
           展开所有
         </Button>
         <Button
-          className="text-sm text-default-600"
+          className="text-sm text-muted-foreground"
           startContent={<Icon icon="tabler:fold-up" width={16} />}
           onPress={onCollapse}
         >

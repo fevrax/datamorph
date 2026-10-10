@@ -1,5 +1,5 @@
-import { Input } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { Input } from "@/components/ui";
+import { Icon } from "@/components/ui/icon";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 
@@ -94,7 +94,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
         aria-controls={`listbox-${id || ""}`}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        className="w-full flex items-center justify-between border border-default-200 rounded-lg px-3 py-0.5 cursor-pointer bg-white dark:bg-default-100 min-h-[38px] transition-colors hover:border-primary/50 text-left"
+        className="w-full flex items-center justify-between border border-border rounded-lg px-3 py-0.5 cursor-pointer bg-white dark:bg-secondary min-h-[38px] transition-colors hover:border-primary/50 text-left"
         type="button"
         onClick={() => setIsOpen(!isOpen)}
       >
@@ -102,7 +102,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
           {selectedItem ? selectedItem.label : placeholder}
         </div>
         <Icon
-          className={`ml-2 transition-transform ${isOpen ? "text-primary" : "text-default-400"}`}
+          className={`ml-2 transition-transform ${isOpen ? "text-primary" : "text-muted-foreground"}`}
           icon={isOpen ? "heroicons:chevron-up" : "heroicons:chevron-down"}
           width={18}
         />
@@ -113,7 +113,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
         createPortal(
           <div
             ref={dropdownRef}
-            className="fixed z-[9999] shadow-lg bg-white dark:bg-default-100 rounded-lg border border-default-200"
+            className="fixed z-[9999] shadow-lg bg-white dark:bg-secondary rounded-lg border border-border"
             role="listbox"
             style={{
               top: `${position.top}px`,
@@ -151,10 +151,10 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                   <li key={item.value} role="presentation">
                     <button
                       aria-selected={selectedValue === item.value}
-                      className={`w-full text-left px-3 py-2.5 z-[9999] cursor-pointer hover:bg-default-100 dark:hover:bg-default-200 transition-colors ${
+                      className={`w-full text-left px-3 py-2.5 z-[9999] cursor-pointer hover:bg-secondary dark:hover:bg-border transition-colors ${
                         selectedValue === item.value
                           ? "bg-primary/10 text-primary font-medium"
-                          : "text-default-700"
+                          : "text-foreground"
                       }`}
                       role="option"
                       type="button"
@@ -165,7 +165,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                   </li>
                 ))
               ) : (
-                <li className="px-3 py-2 text-default-400 text-center">
+                <li className="px-3 py-2 text-muted-foreground text-center">
                   无匹配结果
                 </li>
               )}

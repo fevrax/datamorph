@@ -221,7 +221,7 @@ export class StorageManager {
       }
 
       return {};
-    } catch (error) {
+    } catch {
       return {};
     }
   }

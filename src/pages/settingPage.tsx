@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { useState } from "react";
 
 import {
@@ -51,7 +50,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex h-full w-full min-w-0 flex-1 bg-default-50 dark:bg-default-50/5">
+    <div className="flex h-full w-full min-w-0 flex-1 bg-muted dark:bg-muted/5">
       <div className="flex h-full w-full min-w-0 flex-row overflow-hidden">
         <SettingsSidebar
           activeTab={activeTab}
@@ -60,15 +59,9 @@ export default function SettingsPage() {
         />
 
         <div className="min-w-0 flex-1 overflow-y-auto px-3 py-4 sm:px-5 md:px-6 md:py-6">
-          <motion.div
-            key={activeTab}
-            animate={{ opacity: 1, y: 0 }}
-            className="mx-auto w-full max-w-[960px] pb-8"
-            initial={{ opacity: 0, y: 8 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-          >
+          <div key={activeTab} className="mx-auto w-full max-w-[960px] pb-8">
             {renderContent()}
-          </motion.div>
+          </div>
         </div>
       </div>
     </div>

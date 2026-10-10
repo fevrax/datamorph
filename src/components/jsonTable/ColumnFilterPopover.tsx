@@ -1,3 +1,4 @@
+import { VirtualList } from "@/components/ui/virtual-list";
 import React, { useState, useMemo, useEffect } from "react";
 import {
   Popover,
@@ -6,8 +7,8 @@ import {
   Input,
   Checkbox,
   Button,
-} from "@heroui/react";
-import { Icon } from "@iconify/react";
+} from "@/components/ui";
+import { Icon } from "@/components/ui/icon";
 
 interface ColumnFilterPopoverProps {
   /** 列名 */
@@ -23,7 +24,6 @@ interface ColumnFilterPopoverProps {
 }
 
 /** 去重列表最大显示数量 */
-const MAX_VISIBLE_ITEMS = 200;
 
 const ColumnFilterPopover: React.FC<ColumnFilterPopoverProps> = ({
   columnKey,
@@ -54,7 +54,7 @@ const ColumnFilterPopover: React.FC<ColumnFilterPopoverProps> = ({
         )
       : allValues;
 
-    return values.slice(0, MAX_VISIBLE_ITEMS);
+    return values;
   }, [allValues, searchText]);
 
   const isAllSelected =
@@ -114,8 +114,9 @@ const ColumnFilterPopover: React.FC<ColumnFilterPopoverProps> = ({
           className={`inline-flex items-center justify-center w-5 h-5 rounded-sm transition-colors ${
             isActive
               ? "text-primary bg-primary/10"
-              : "text-default-400 hover:text-primary hover:bg-default-100"
+              : "text-muted-foreground hover:text-primary hover:bg-secondary"
           }`}
+          aria-label={`筛选 ${columnKey}`}
           onClick={(e) => e.stopPropagation()}
         >
           <Icon
@@ -134,7 +135,7 @@ const ColumnFilterPopover: React.FC<ColumnFilterPopoverProps> = ({
             size="sm"
             startContent={
               <Icon
-                className="text-default-400"
+                className="text-muted-foreground"
                 icon="mdi:magnify"
                 width={16}
               />
@@ -151,35 +152,37 @@ const ColumnFilterPopover: React.FC<ColumnFilterPopoverProps> = ({
               size="sm"
               onValueChange={handleToggleAll}
             >
-              <span className="text-xs text-default-500">
+              <span className="text-xs text-muted-foreground">
                 全选 ({tempSelected.size}/{totalValues})
               </span>
             </Checkbox>
           </div>
 
           {/* 去重列表 */}
-          <div className="max-h-48 overflow-y-auto border-t border-b border-default-200 py-1">
-            {filteredValues.map((value) => (
-              <div
-                key={value}
-                className="flex items-center gap-2 px-1 py-0.5 hover:bg-default-50 rounded-sm"
-              >
-                <Checkbox
-                  isSelected={tempSelected.has(value)}
-                  size="sm"
-                  onValueChange={() => handleToggleItem(value)}
+          <div className="max-h-48 overflow-y-auto border-t border-b border-border py-1">
+            <VirtualList items={filteredValues}>
+              {(value) => (
+                <div
+                  key={value}
+                  className="flex items-center gap-2 px-1 py-0.5 hover:bg-muted rounded-sm"
                 >
-                  <span
-                    className="text-xs truncate max-w-[140px]"
-                    title={value}
+                  <Checkbox
+                    isSelected={tempSelected.has(value)}
+                    size="sm"
+                    onValueChange={() => handleToggleItem(value)}
                   >
-                    {value || "(空)"}
-                  </span>
-                </Checkbox>
-              </div>
-            ))}
+                    <span
+                      className="text-xs truncate max-w-[140px]"
+                      title={value}
+                    >
+                      {value || "(空)"}
+                    </span>
+                  </Checkbox>
+                </div>
+              )}
+            </VirtualList>
             {hiddenCount > 0 && (
-              <div className="text-xs text-default-400 px-2 py-1">
+              <div className="text-xs text-muted-foreground px-2 py-1">
                 还有 {hiddenCount} 项，请搜索缩小范围
               </div>
             )}

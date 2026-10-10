@@ -1,6 +1,10 @@
 import { create } from "zustand";
 import { devtools, subscribeWithSelector } from "zustand/middleware";
-import { OpenAI } from "openai";
+import {
+  AI_ROUTE_CONFIG_KEYS,
+  AI_ROUTE_MODEL_KEYS,
+  getAIModels,
+} from "../services/aiModelSelection";
 
 import { storage } from "@/lib/indexedDBStore";
 
@@ -45,6 +49,7 @@ export interface OpenAIConfig {
   utoolsRoute: UtoolsRouteConfig;
   ssooaiRoute: SsooaiRouteConfig;
   customRoute: CustomRouteConfig;
+  defaultModels: Array<{ value: string; label: string }>;
   utoolsModels: Array<{ value: string; label: string }>;
   ssooaiModels: Array<{ value: string; label: string }>;
   customModels: Array<{ value: string; label: string }>;
@@ -59,25 +64,26 @@ export interface OpenAIConfig {
 const defaultOpenAIConfig: OpenAIConfig = {
   routeType: "default",
   defaultRoute: {
-    model: "json-tools",
+    model: "",
     temperature: 0.7,
   },
   utoolsRoute: {
-    model: "deepseek-v3", // 使用默认模型
+    model: "",
     temperature: 0.7,
   },
   ssooaiRoute: {
     apiKey: "",
-    model: "deepseek-v4-pro",
+    model: "",
     proxyUrl: "https://api.ssooai.com/v1",
     temperature: 0.7,
   },
   customRoute: {
     apiKey: "",
-    model: "deepseek-v4-pro",
+    model: "",
     proxyUrl: "https://api.ssooai.com/v1",
     temperature: 0.7,
   },
+  defaultModels: [],
   utoolsModels: [],
   ssooaiModels: [],
   customModels: [],
@@ -103,13 +109,11 @@ interface OpenAIConfigStore extends OpenAIConfig {
   updateRouteEnabled: (routeType: AIRouteType, enabled: boolean) => void;
   resetConfig: () => void;
   syncConfig: () => Promise<void>;
+  fetchDefaultModels: () => Promise<void>;
   fetchUtoolsModels: () => Promise<void>;
   fetchSsooaiModels: () => Promise<void>;
   fetchCustomModels: () => Promise<void>;
-  addCustomModel: (model: string, label?: string) => void;
-  removeCustomModel: (model: string) => void;
-  addSsooaiModel: (model: string, label?: string) => void;
-  removeSsooaiModel: (model: string) => void;
+  fetchModels: (route: AIRouteType) => Promise<void>;
 
   // 获取当前线路的配置
   getCurrentRouteConfig: () =>
@@ -132,6 +136,7 @@ export const useOpenAIConfigStore = create<OpenAIConfigStore>()(
   subscribeWithSelector(
     devtools(
       (set, get) => {
+        const modelRequests = { default: 0, utools: 0, ssooai: 0, custom: 0 };
         // 辅助函数：获取可序列化状态
         const getSerializableState = () => {
           const state = get();
@@ -142,9 +147,7 @@ export const useOpenAIConfigStore = create<OpenAIConfigStore>()(
             utoolsRoute: state.utoolsRoute,
             ssooaiRoute: state.ssooaiRoute,
             customRoute: state.customRoute,
-            utoolsModels: state.utoolsModels,
-            ssooaiModels: state.ssooaiModels,
-            customModels: state.customModels,
+            routeEnabled: state.routeEnabled,
           };
         };
 
@@ -189,6 +192,15 @@ export const useOpenAIConfigStore = create<OpenAIConfigStore>()(
             set((state) => ({
               ...state,
               ssooaiRoute: { ...state.ssooaiRoute, ...config },
+              ...((config.apiKey !== undefined &&
+                config.apiKey !== state.ssooaiRoute.apiKey) ||
+              (config.proxyUrl !== undefined &&
+                config.proxyUrl !== state.ssooaiRoute.proxyUrl)
+                ? {
+                    ssooaiModels: [],
+                    ssooaiRoute: { ...state.ssooaiRoute, ...config, model: "" },
+                  }
+                : {}),
             }));
             // 保存到存储，只保存可序列化的数据
             storage
@@ -202,6 +214,15 @@ export const useOpenAIConfigStore = create<OpenAIConfigStore>()(
             set((state) => ({
               ...state,
               customRoute: { ...state.customRoute, ...config },
+              ...((config.apiKey !== undefined &&
+                config.apiKey !== state.customRoute.apiKey) ||
+              (config.proxyUrl !== undefined &&
+                config.proxyUrl !== state.customRoute.proxyUrl)
+                ? {
+                    customModels: [],
+                    customRoute: { ...state.customRoute, ...config, model: "" },
+                  }
+                : {}),
             }));
             // 保存到存储，只保存可序列化的数据
             storage
@@ -227,7 +248,11 @@ export const useOpenAIConfigStore = create<OpenAIConfigStore>()(
               );
           },
 
-          resetConfig: () => set(defaultOpenAIConfig),
+          resetConfig: () => {
+            for (const route of Object.keys(modelRequests) as AIRouteType[])
+              modelRequests[route]++;
+            set(defaultOpenAIConfig);
+          },
 
           syncConfig: async () => {
             try {
@@ -249,12 +274,11 @@ export const useOpenAIConfigStore = create<OpenAIConfigStore>()(
                     serializableConfig.ssooaiRoute || state.ssooaiRoute,
                   customRoute:
                     serializableConfig.customRoute || state.customRoute,
-                  utoolsModels:
-                    serializableConfig.utoolsModels || state.utoolsModels,
-                  ssooaiModels:
-                    serializableConfig.ssooaiModels || state.ssooaiModels,
-                  customModels:
-                    serializableConfig.customModels || state.customModels,
+                  routeEnabled: {
+                    ...state.routeEnabled,
+                    ...serializableConfig.routeEnabled,
+                    default: true,
+                  },
                 }));
               }
             } catch (error) {
@@ -262,260 +286,104 @@ export const useOpenAIConfigStore = create<OpenAIConfigStore>()(
             }
           },
 
-          fetchUtoolsModels: async () => {
+          fetchDefaultModels: () => get().fetchModels("default"),
+          fetchUtoolsModels: () => get().fetchModels("utools"),
+          fetchSsooaiModels: () => get().fetchModels("ssooai"),
+          fetchCustomModels: () => get().fetchModels("custom"),
+
+          fetchModels: async (route) => {
+            const key = AI_ROUTE_CONFIG_KEYS[route];
+            const listKey = AI_ROUTE_MODEL_KEYS[route];
+            const initial = get()[key];
+            const credentials =
+              "apiKey" in initial
+                ? { apiKey: initial.apiKey, proxyUrl: initial.proxyUrl }
+                : null;
+            const requestId = ++modelRequests[route];
+            const isCurrent = () => {
+              const current = get()[key];
+              return (
+                requestId === modelRequests[route] &&
+                (!credentials ||
+                  ("apiKey" in current &&
+                    current.apiKey === credentials.apiKey &&
+                    current.proxyUrl === credentials.proxyUrl))
+              );
+            };
             try {
-              // 检查 uTools 是否可用
-              if (!isUtoolsAvailable) {
-                console.error("uTools is not available");
-
-                return;
-              }
-
-              // 使用 utools.allAiModels API 获取模型列表
-              const models = await (window as any).utools.allAiModels();
-
-              if (Array.isArray(models) && models.length > 0) {
-                // 将 utools 模型数据转换为应用需要的格式
-                const formattedModels = models.map((model) => ({
-                  value: model.id,
-                  label: `${model.label}${model.cost > 0 ? ` (${model.cost}积分)` : ""}`,
-                }));
-
-                set((state) => ({ ...state, utoolsModels: formattedModels }));
-
-                // 如果当前没有选择模型或选择的模型不在列表中，自动选择第一个模型
-                const currentModel = get().utoolsRoute.model;
-
+              let models: Array<{ value: string; label: string }>;
+              if (route === "utools") {
+                if (!isUtoolsAvailable) throw new Error("uTools API 不可用");
+                const result = await (window as any).utools.allAiModels();
+                if (!Array.isArray(result))
+                  throw new Error("模型列表格式不正确");
+                models = result.flatMap((model) =>
+                  typeof model?.id === "string" && model.id.trim()
+                    ? [
+                        {
+                          value: model.id,
+                          label: `${model.label || model.id}${model.cost > 0 ? ` (${model.cost}积分)` : ""}`,
+                        },
+                      ]
+                    : [],
+                );
+              } else {
                 if (
-                  !currentModel ||
-                  !formattedModels.find((m) => m.value === currentModel)
-                ) {
-                  const defaultModel =
-                    formattedModels[0]?.value || "deepseek-v3";
-
-                  get().updateUtoolsRouteConfig({ model: defaultModel });
-                }
-              }
-            } catch (error) {
-              console.error("Failed to fetch Utools models:", error);
-            }
-          },
-
-          fetchSsooaiModels: async () => {
-            try {
-              const state = get();
-
-              // 只有在有API密钥和代理URL时才尝试获取模型列表
-              if (!state.ssooaiRoute.apiKey && state.ssooaiRoute.proxyUrl) {
-                // 如果没有API密钥但有代理URL，设置一些默认模型
-                set((state) => ({ ...state, ssooaiModels: [] }));
-
-                return;
-              }
-
-              if (!state.ssooaiRoute.proxyUrl) {
-                return;
-              }
-
-              // 创建临时OpenAI实例用于获取模型
-              const openai = new OpenAI({
-                apiKey: state.ssooaiRoute.apiKey || "dummy-key", // 如果没有apiKey使用dummy-key
-                baseURL: state.ssooaiRoute.proxyUrl,
-                dangerouslyAllowBrowser: true,
-              });
-
-              // 获取模型列表
-              const response = await openai.models.list();
-
-              if (response.data && Array.isArray(response.data)) {
-                // 提取模型信息
-                let apiModels = response.data.map((model) => ({
-                  value: model.id,
-                  label: model.id,
-                }));
-
-                // 获取当前存储的自定义模型（手动添加的）
-                const currentSsooaiModels = state.ssooaiModels.filter(
-                  (model) =>
-                    !apiModels.some(
-                      (apiModel) => apiModel.value === model.value,
-                    ),
+                  credentials &&
+                  (!credentials.apiKey || !credentials.proxyUrl)
+                )
+                  throw new Error("请先配置 API 地址和密钥");
+                const baseURL =
+                  credentials?.proxyUrl.replace(/\/+$/, "") ||
+                  DEFAULT_ROUTE_PROXY_URL;
+                const response = await fetch(`${baseURL}/models`, {
+                  headers: credentials
+                    ? { Authorization: `Bearer ${credentials.apiKey}` }
+                    : undefined,
+                  signal: AbortSignal.timeout(10000),
+                });
+                if (!response.ok)
+                  throw new Error(
+                    route === "default" && response.status === 503
+                      ? "站点API尚未配置，请联系管理员或使用私有API"
+                      : "获取模型失败，请检查 API 配置后重试",
+                  );
+                const data = await response.json();
+                if (!Array.isArray(data?.data))
+                  throw new Error("模型列表格式不正确");
+                models = data.data.flatMap((item: { id?: unknown }) =>
+                  typeof item?.id === "string" && item.id.trim()
+                    ? [{ value: item.id, label: item.id }]
+                    : [],
                 );
-
-                // 合并自定义模型和API模型
-                const mergedModels = [...currentSsooaiModels, ...apiModels];
-
-                set({ ssooaiModels: mergedModels });
               }
+              models = [
+                ...new Map(
+                  models.map((model) => [model.value, model]),
+                ).values(),
+              ];
+              if (!isCurrent()) return;
+              set((state) => ({
+                [listKey]: models,
+                [key]: {
+                  ...state[key],
+                  model: models.some((m) => m.value === state[key].model)
+                    ? state[key].model
+                    : models[0]?.value || "",
+                },
+              }));
+              await storage.setItem(
+                BD_OPENAI_CONFIG_KEY,
+                getSerializableState(),
+              );
             } catch (error) {
-              console.error("Failed to fetch SSOOAI models:", error);
-              // 失败时不清空现有模型，保留手动添加的模型
+              if (!isCurrent()) return;
+              set((state) => ({
+                [listKey]: [],
+                [key]: { ...state[key], model: "" },
+              }));
+              throw error;
             }
-          },
-
-          fetchCustomModels: async () => {
-            try {
-              const state = get();
-
-              // 只有在有API密钥和代理URL时才尝试获取模型列表
-              if (!state.customRoute.apiKey || !state.customRoute.proxyUrl) {
-                return;
-              }
-
-              // 创建临时OpenAI实例用于获取模型
-              const openai = new OpenAI({
-                apiKey: state.customRoute.apiKey,
-                baseURL: state.customRoute.proxyUrl,
-                dangerouslyAllowBrowser: true,
-              });
-
-              // 获取模型列表
-              const response = await openai.models.list();
-
-              if (response.data && Array.isArray(response.data)) {
-                // 提取模型信息
-                let apiModels = response.data.map((model) => ({
-                  value: model.id,
-                  label: model.id,
-                }));
-
-                // 获取当前存储的自定义模型
-                const currentCustomModels = state.customModels.filter(
-                  (model) =>
-                    !apiModels.some(
-                      (apiModel) => apiModel.value === model.value,
-                    ),
-                );
-
-                // 合并自定义模型和API模型
-                const mergedModels = [...currentCustomModels, ...apiModels];
-
-                set({ customModels: mergedModels });
-              }
-            } catch (error) {
-              console.error("Failed to fetch custom models:", error);
-              // 失败时不清空现有模型，保留手动添加的模型
-            }
-          },
-
-          addCustomModel: (model: string, label?: string) => {
-            // 如果model为空，不添加
-            if (!model.trim()) return;
-
-            set((state) => {
-              // 检查模型是否已存在
-              const modelExists = state.customModels.some(
-                (m) => m.value === model,
-              );
-
-              if (modelExists) {
-                // 如果模型已存在，不需要添加
-                return state;
-              }
-
-              // 创建新的模型对象
-              const newModel = {
-                value: model,
-                label: label || model, // 如果没有提供标签，就使用模型名称作为标签
-              };
-
-              // 添加到列表前面
-              return {
-                ...state,
-                customModels: [newModel, ...state.customModels],
-              };
-            });
-
-            // 保存到存储，只保存可序列化的数据
-            storage
-              .setItem(BD_OPENAI_CONFIG_KEY, getSerializableState())
-              .catch((err) =>
-                console.error("Failed to save custom model:", err),
-              );
-          },
-
-          removeCustomModel: (model: string) => {
-            set((state) => {
-              // 过滤掉要删除的模型
-              const filteredModels = state.customModels.filter(
-                (m) => m.value !== model,
-              );
-
-              return {
-                ...state,
-                customModels: filteredModels,
-              };
-            });
-
-            // 保存到存储，只保存可序列化的数据
-            storage
-              .setItem(BD_OPENAI_CONFIG_KEY, getSerializableState())
-              .catch((err) =>
-                console.error(
-                  "Failed to save after removing custom model:",
-                  err,
-                ),
-              );
-          },
-
-          addSsooaiModel: (model: string, label?: string) => {
-            // 如果model为空，不添加
-            if (!model.trim()) return;
-
-            set((state) => {
-              // 检查模型是否已存在
-              const modelExists = state.ssooaiModels.some(
-                (m) => m.value === model,
-              );
-
-              if (modelExists) {
-                // 如果模型已存在，不需要添加
-                return state;
-              }
-
-              // 创建新的模型对象
-              const newModel = {
-                value: model,
-                label: label || model, // 如果没有提供标签，就使用模型名称作为标签
-              };
-
-              // 添加到列表前面
-              return {
-                ...state,
-                ssooaiModels: [newModel, ...state.ssooaiModels],
-              };
-            });
-
-            // 保存到存储，只保存可序列化的数据
-            storage
-              .setItem(BD_OPENAI_CONFIG_KEY, getSerializableState())
-              .catch((err) =>
-                console.error("Failed to save SSOOAI model:", err),
-              );
-          },
-
-          removeSsooaiModel: (model: string) => {
-            set((state) => {
-              // 过滤掉要删除的模型
-              const filteredModels = state.ssooaiModels.filter(
-                (m) => m.value !== model,
-              );
-
-              return {
-                ...state,
-                ssooaiModels: filteredModels,
-              };
-            });
-
-            // 保存到存储，只保存可序列化的数据
-            storage
-              .setItem(BD_OPENAI_CONFIG_KEY, getSerializableState())
-              .catch((err) =>
-                console.error(
-                  "Failed to save after removing SSOOAI model:",
-                  err,
-                ),
-              );
           },
 
           // 获取当前线路的配置
@@ -575,7 +443,11 @@ export const useOpenAIConfigStore = create<OpenAIConfigStore>()(
           getCurrentModel: () => {
             const config = get().getCurrentRouteConfig();
 
-            return config.model;
+            return getAIModels(get(), get().routeType).some(
+              (model) => model.value === config.model,
+            )
+              ? config.model
+              : "";
           },
         };
       },

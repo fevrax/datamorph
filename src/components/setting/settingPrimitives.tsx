@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
 
-import { cn } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { cn } from "@/components/ui";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * 设置页视觉原语（Apple 系统风）。
  *
- * 设计语言：浅灰底（default-50）+ 纯白圆角分组卡片 + 彩色圆角图标块 +
- * macOS 胶囊开关 + 小号大写分组标题。所有颜色走 HeroUI 语义色，暗色模式自动适配。
+ * 设计语言：浅灰底（muted）+ 纯白圆角分组卡片 + 彩色圆角图标块 +
+ * macOS 胶囊开关 + 小号大写分组标题。所有颜色走 设计系统 语义色，暗色模式自动适配。
  */
 
 /** 图标圆角块的色调 —— Apple 系统设置风格的彩色方块 */
@@ -28,7 +28,7 @@ const TONE_CLASSES: Record<SettingTone, string> = {
   danger: "bg-danger text-white",
   info: "bg-blue-500 text-white",
   violet: "bg-purple-500 text-white",
-  neutral: "bg-default-200 text-default-700",
+  neutral: "bg-border text-foreground",
 };
 
 interface SectionHeaderProps {
@@ -40,11 +40,11 @@ interface SectionHeaderProps {
 export function SectionHeader({ title, description }: SectionHeaderProps) {
   return (
     <div className="mb-5">
-      <h2 className="text-lg font-semibold tracking-normal text-default-900 sm:text-xl">
+      <h2 className="text-lg font-semibold tracking-normal text-foreground sm:text-xl">
         {title}
       </h2>
       {description ? (
-        <p className="mt-1 text-[12.5px] leading-relaxed text-default-500 sm:text-[13px]">
+        <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground sm:text-[13px]">
           {description}
         </p>
       ) : null}
@@ -59,7 +59,7 @@ interface GroupLabelProps {
 /** 分组小标题：小号大写灰字，仿 macOS 设置的分组标签 */
 export function GroupLabel({ children }: GroupLabelProps) {
   return (
-    <h4 className="mb-2 mt-5 px-3 text-[11.5px] font-medium text-default-500 first:mt-0">
+    <h4 className="mb-2 mt-5 px-3 text-[11.5px] font-medium text-muted-foreground first:mt-0">
       {children}
     </h4>
   );
@@ -83,8 +83,8 @@ export function SectionCard({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-lg border border-default-200/70 bg-background shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:bg-default-50/30",
-        divided && "divide-y divide-default-200/60",
+        "overflow-hidden rounded-lg border border-border/70 bg-background shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:bg-muted/30",
+        divided && "divide-y divide-border/60",
         className,
       )}
     >
@@ -115,7 +115,7 @@ export function SettingRow({
   return (
     <div
       className={cn(
-        "flex min-h-[60px] flex-col gap-3 px-3 py-3 transition-colors hover:bg-default-50/80 sm:flex-row sm:items-center sm:justify-between sm:px-4",
+        "flex min-h-[60px] flex-col gap-3 px-3 py-3 transition-colors hover:bg-muted/80 sm:flex-row sm:items-center sm:justify-between sm:px-4",
         className,
       )}
     >
@@ -129,9 +129,9 @@ export function SettingRow({
           <Icon icon={icon} width={18} />
         </div>
         <div className="min-w-0">
-          <p className="text-[13px] font-medium text-default-900">{title}</p>
+          <p className="text-[13px] font-medium text-foreground">{title}</p>
           {description ? (
-            <p className="mt-0.5 text-[12px] leading-relaxed text-default-500">
+            <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">
               {description}
             </p>
           ) : null}
@@ -170,7 +170,7 @@ export function InfoNote({
           ? "border-warning/20 bg-warning/10"
           : tone === "primary"
             ? "border-primary/20 bg-primary/10"
-            : "border-default-200 bg-default-100/50",
+            : "border-border bg-secondary/50",
         className,
       )}
     >
@@ -181,12 +181,12 @@ export function InfoNote({
             ? "text-warning"
             : tone === "primary"
               ? "text-primary"
-              : "text-default-500",
+              : "text-muted-foreground",
         )}
         icon={icon}
         width={18}
       />
-      <div className="text-[12px] leading-relaxed text-default-700">
+      <div className="text-[12px] leading-relaxed text-foreground">
         {title ? (
           <p
             className={cn(
@@ -228,7 +228,7 @@ export function ChoiceCard({
         "relative cursor-pointer rounded-lg border p-3 transition-colors",
         selected
           ? "border-primary bg-primary/5 shadow-sm"
-          : "border-default-200/70 bg-background hover:border-default-300 hover:bg-default-50/50",
+          : "border-border/70 bg-background hover:border-input hover:bg-muted/50",
         className,
       )}
       role="button"
@@ -290,17 +290,17 @@ export function FormField({
   return (
     <div className="space-y-2">
       <label
-        className="flex items-center gap-2 text-[12.5px] font-medium text-default-800"
+        className="flex items-center gap-2 text-[12.5px] font-medium text-foreground"
         htmlFor={id}
       >
         {icon ? (
-          <Icon className="text-default-500" icon={icon} width={15} />
+          <Icon className="text-muted-foreground" icon={icon} width={15} />
         ) : null}
         {label}
       </label>
       {children}
       {description ? (
-        <div className="text-xs leading-relaxed text-default-500">
+        <div className="text-xs leading-relaxed text-muted-foreground">
           {description}
         </div>
       ) : null}
@@ -310,7 +310,7 @@ export function FormField({
 
 export function InlineCode({ children }: { children: ReactNode }) {
   return (
-    <code className="rounded bg-default-100 px-1.5 py-0.5 font-mono text-[11px] text-default-700">
+    <code className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[11px] text-foreground">
       {children}
     </code>
   );

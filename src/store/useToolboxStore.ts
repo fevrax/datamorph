@@ -19,6 +19,15 @@ interface ToolboxState {
 
 const demoTools: Tool[] = [
   {
+    id: "jsonPath",
+    name: "JSONPath 查询",
+    icon: "mdi:filter",
+    description:
+      "使用 JSONPath 提取字段、筛选数组和递归查询，提供交互示例与语法指南",
+    path: "/toolbox/jsonPath",
+    category: ["数据处理", "查询"],
+  },
+  {
     id: "jsonAIRepair",
     name: "JSON AI 修复",
     icon: "fluent-emoji-flat:magic-wand",
@@ -63,8 +72,7 @@ const demoTools: Tool[] = [
     id: "encodingConverter",
     name: "编码转换",
     icon: "solar:code-square-bold",
-    description:
-      "实时转换 Base64、Base64URL、URL、Unicode、Hex 和 Binary 编码",
+    description: "实时转换 Base64、Base64URL、URL、Unicode、Hex 和 Binary 编码",
     path: "/toolbox/encodingConverter",
     category: ["编码转换", "数据处理"],
   },

@@ -4,22 +4,22 @@ import { FontSize } from "@/store/useSettingsStore";
 export const FONT_SIZE_CONFIG = {
   small: {
     // 基础字体大小
-    base: "14px",
+    base: "12px",
     // 标题字体大小
-    h1: "24px",
-    h2: "20px",
-    h3: "18px",
-    h4: "16px",
-    h5: "14px",
+    h1: "18px",
+    h2: "16px",
+    h3: "15px",
+    h4: "14px",
+    h5: "13px",
     h6: "12px",
     // 正文字体大小
-    text: "13px",
+    text: "12px",
     // 按钮字体大小
-    button: "13px",
+    button: "12px",
     // 标签页字体大小
     tab: "12px",
     // 输入框字体大小
-    input: "13px",
+    input: "12px",
     // 图标大小
     icon: "18px",
     // 间距缩放比例
@@ -29,22 +29,22 @@ export const FONT_SIZE_CONFIG = {
   },
   medium: {
     // 基础字体大小
-    base: "16px",
+    base: "13px",
     // 标题字体大小
-    h1: "28px",
-    h2: "24px",
-    h3: "20px",
-    h4: "18px",
-    h5: "16px",
+    h1: "20px",
+    h2: "18px",
+    h3: "16px",
+    h4: "15px",
+    h5: "14px",
     h6: "14px",
     // 正文字体大小
-    text: "15px",
+    text: "13px",
     // 按钮字体大小
-    button: "15px",
+    button: "13px",
     // 标签页字体大小
     tab: "14px",
     // 输入框字体大小
-    input: "15px",
+    input: "13px",
     // 图标大小
     icon: "20px",
     // 间距缩放比例
@@ -54,22 +54,22 @@ export const FONT_SIZE_CONFIG = {
   },
   large: {
     // 基础字体大小
-    base: "18px",
+    base: "15px",
     // 标题字体大小
-    h1: "32px",
-    h2: "28px",
-    h3: "24px",
-    h4: "20px",
-    h5: "18px",
+    h1: "24px",
+    h2: "22px",
+    h3: "20px",
+    h4: "18px",
+    h5: "17px",
     h6: "16px",
     // 正文字体大小
-    text: "17px",
+    text: "15px",
     // 按钮字体大小
-    button: "17px",
+    button: "15px",
     // 标签页字体大小
     tab: "16px",
     // 输入框字体大小
-    input: "17px",
+    input: "15px",
     // 图标大小
     icon: "22px",
     // 间距缩放比例
@@ -77,22 +77,25 @@ export const FONT_SIZE_CONFIG = {
     // 行高
     lineHeight: 1.6,
   },
-} as const satisfies Record<FontSize, {
-  base: string;
-  h1: string;
-  h2: string;
-  h3: string;
-  h4: string;
-  h5: string;
-  h6: string;
-  text: string;
-  button: string;
-  tab: string;
-  input: string;
-  icon: string;
-  spacingScale: number;
-  lineHeight: number;
-}>;
+} as const satisfies Record<
+  FontSize,
+  {
+    base: string;
+    h1: string;
+    h2: string;
+    h3: string;
+    h4: string;
+    h5: string;
+    h6: string;
+    text: string;
+    button: string;
+    tab: string;
+    input: string;
+    icon: string;
+    spacingScale: number;
+    lineHeight: number;
+  }
+>;
 
 // Tailwind CSS 类名映射
 export const FONT_SIZE_TAILWIND_CLASSES = {
@@ -196,7 +199,7 @@ export function generateFontSizeCSSVariables(fontSize: FontSize): string {
     }
     
     /* 应用全局字体大小 */
-    html, body {
+    body {
       font-size: var(--font-size-base);
       line-height: var(--line-height);
     }

@@ -1,0 +1,91 @@
+/* Dedicated tree engine adapter: use the same tokens as the workbench. */
+.vanilla-json-editor {
+  --jse-theme-color: var(--primary);
+  --jse-theme-color-highlight: var(--primary);
+  --jse-background-color: var(--background);
+  --jse-text-color: var(--foreground);
+  --jse-panel-background: var(--muted);
+  --jse-panel-background-border: 1px solid var(--border);
+  --jse-panel-color: var(--foreground);
+  --jse-menu-color: var(--foreground);
+  --jse-main-border: 1px solid var(--border);
+  --jse-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "PingFang SC", sans-serif;
+  --jse-font-family-mono: "SFMono-Regular", Consolas, monospace;
+  --jse-font-size: 13px;
+  --jse-font-size-mono: 14px;
+  --jse-font-size-main-menu: 13px;
+  --jse-content-background-color: var(--background);
+  --jse-modal-background: var(--popover);
+  --jse-modal-code-background: var(--muted);
+  --jse-context-menu-background: var(--popover);
+  --jse-context-menu-background-highlight: var(--accent);
+  --jse-context-menu-color: var(--foreground);
+  --jse-context-menu-color-disabled: var(--muted-foreground);
+  --jse-context-menu-separator-color: var(--border);
+  --jse-tag-background: var(--secondary);
+  --jse-tag-color: var(--muted-foreground);
+  --jse-selection-background-color: var(--accent);
+  --jse-selection-background-inactive-color: var(--muted);
+  --jse-hover-background-color: var(--muted);
+  --jse-input-background: var(--background);
+  --jse-input-border: 1px solid var(--input);
+  --jse-input-radius: 6px;
+  --jse-button-primary-background: var(--primary);
+  --jse-button-primary-color: var(--primary-foreground);
+  --jse-button-secondary-background: var(--secondary);
+  --jse-button-secondary-color: var(--foreground);
+}
+.vanilla-json-editor .jse-contents {
+  border: 0;
+}
+.vanilla-json-editor .jse-menu {
+  background: var(--muted);
+  color: var(--foreground);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 4px 10px;
+  gap: 3px;
+}
+.vanilla-json-editor .jse-menu .jse-button,
+.vanilla-json-editor .jse-menu .jse-group-button {
+  background: transparent;
+  color: var(--muted-foreground);
+  border: 0;
+  border-radius: 6px;
+  min-height: 28px;
+  margin: 0;
+}
+.vanilla-json-editor .jse-menu .jse-selected,
+.vanilla-json-editor .jse-menu .jse-button:hover,
+.vanilla-json-editor .jse-menu .jse-group-button:hover {
+  background: var(--accent);
+  color: var(--primary);
+}
+.vanilla-json-editor .jse-menu .jse-button:disabled {
+  opacity: 0.4;
+}
+.vanilla-json-editor .jse-menu .jse-separator {
+  background: var(--border);
+}
+.vanilla-json-editor .jse-menu button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+.vanilla-json-editor .jse-table-mode-welcome {
+  border: 0;
+}
+.vanilla-json-editor .jse-action {
+  border-radius: 6px;
+}
+.vanilla-json-editor .jse-menu .jse-group-button {
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--muted-foreground) !important;
+  border-radius: 6px;
+  padding: 0 8px;
+}
+.vanilla-json-editor .jse-menu .jse-group-button.jse-selected {
+  background: var(--accent) !important;
+  color: var(--primary) !important;
+}

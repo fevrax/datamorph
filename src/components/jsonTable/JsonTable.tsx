@@ -1,3 +1,5 @@
+import { useToolState } from "@/components/workspace/ToolContext";
+import { VirtualRows } from "@/components/ui/virtual-rows";
 import React, {
   useState,
   useEffect,
@@ -5,7 +7,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import { Icon } from "@iconify/react";
+import { Icon } from "@/components/ui/icon";
 import { isLosslessNumber } from "lossless-json";
 
 import JsonPathBar from "@/components/jsonTable/JsonPathBar.tsx";
@@ -77,8 +79,14 @@ const JsonTable: React.FC<JsonTableProps> = ({
   globalFilter,
   onColumnFilterChange,
 }) => {
-  const [currentPath, setCurrentPath] = useState<string>("root");
-  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [currentPath, setCurrentPath] = useToolState<string>(
+    "table:currentPath",
+    "root",
+  );
+  const [selectedPath, setSelectedPath] = useToolState<string | null>(
+    "table:selectedPath",
+    null,
+  );
   const lastAutoExpandedDataRef = useRef<any>(null);
 
   // 新增：存储每个节点的内容可见性状态的Map
@@ -436,8 +444,8 @@ const JsonTable: React.FC<JsonTableProps> = ({
     return (
       <div className="mb-1 overflow-x-auto inline-block">
         <table className="border-collapse w-auto">
-          <tbody>
-            {entries.map(([key, value]) => {
+          <VirtualRows items={entries}>
+            {([key, value]) => {
               if ((hideEmpty && value === "") || (hideNull && value === null)) {
                 return null;
               }
@@ -450,16 +458,16 @@ const JsonTable: React.FC<JsonTableProps> = ({
               return (
                 <tr
                   key={key}
-                  className={`${isSelected ? "!bg-default-200/60" : ""} hover:bg-default-50`}
+                  className={`${isSelected ? "!bg-border/60" : ""} hover:bg-muted`}
                 >
                   <td
-                    className="px-2 text-sm font-medium border border-default-300 cursor-pointer"
+                    className="px-2 text-sm font-medium border border-input cursor-pointer"
                     onClick={(e) => handleElementClick(valuePath, e)}
                   >
                     {key}
                   </td>
                   <td
-                    className="px-2 text-sm border border-default-300 cursor-pointer"
+                    className="px-2 text-sm border border-input cursor-pointer"
                     style={{ minWidth: "30px" }}
                     onClick={(e) => handleElementClick(valuePath, e)}
                   >
@@ -479,8 +487,8 @@ const JsonTable: React.FC<JsonTableProps> = ({
                   </td>
                 </tr>
               );
-            })}
-          </tbody>
+            }}
+          </VirtualRows>
         </table>
       </div>
     );
@@ -492,12 +500,12 @@ const JsonTable: React.FC<JsonTableProps> = ({
     isNested: boolean = false,
   ) => {
     // 全局搜索过滤
-    let filteredItems = data;
+    let filteredItems = data.map((item, index) => ({ item, index }));
 
     if (globalFilter) {
       const searchLower = globalFilter.toLowerCase();
 
-      filteredItems = data.filter((item, index) => {
+      filteredItems = filteredItems.filter(({ item, index }) => {
         return (
           String(index).includes(searchLower) ||
           toDisplayString(item).toLowerCase().includes(searchLower)
@@ -507,16 +515,11 @@ const JsonTable: React.FC<JsonTableProps> = ({
 
     return (
       <div
-        className={`${isNested ? "border-0" : "border border-default-300 rounded"} mb-1 overflow-x-auto inline-block`}
+        className={`${isNested ? "border-0" : "border border-input rounded"} mb-1 overflow-x-auto inline-block`}
       >
         <table className="border-collapse w-auto">
-          <tbody>
-            {filteredItems.map((item, filteredIndex) => {
-              // 使用原始 index 作为路径
-              const originalIndex = globalFilter
-                ? data.indexOf(item)
-                : filteredIndex;
-
+          <VirtualRows items={filteredItems}>
+            {({ item, index: originalIndex }) => {
               if ((hideEmpty && item === "") || (hideNull && item === null)) {
                 return null;
               }
@@ -530,16 +533,16 @@ const JsonTable: React.FC<JsonTableProps> = ({
               return (
                 <tr
                   key={originalIndex}
-                  className={`${isSelected ? "!bg-default-200/60" : ""} hover:bg-default-50`}
+                  className={`${isSelected ? "!bg-border/60" : ""} hover:bg-muted`}
                 >
                   <td
-                    className="px-2 text-sm border border-default-300 cursor-pointer"
+                    className="px-2 text-sm border border-input cursor-pointer"
                     onClick={(e) => handleElementClick(itemPath, e)}
                   >
                     {originalIndex}
                   </td>
                   <td
-                    className="px-2 text-sm border border-default-300 cursor-pointer"
+                    className="px-2 text-sm border border-input cursor-pointer"
                     style={{ minWidth: "30px" }}
                     onClick={(e) => handleElementClick(itemPath, e)}
                   >
@@ -559,8 +562,8 @@ const JsonTable: React.FC<JsonTableProps> = ({
                   </td>
                 </tr>
               );
-            })}
-          </tbody>
+            }}
+          </VirtualRows>
         </table>
       </div>
     );
@@ -599,9 +602,9 @@ const JsonTable: React.FC<JsonTableProps> = ({
       >
         <table className="border-collapse w-auto">
           <thead>
-            <tr className="bg-default-50">
+            <tr className="bg-muted">
               <th
-                className={`${isPathSelected(path) ? "!bg-default-200/60" : ""} px-2 text-left text-sm font-medium text-default-600 border border-default-300 cursor-pointer`}
+                className={`${isPathSelected(path) ? "!bg-border/60" : ""} px-2 text-left text-sm font-medium text-muted-foreground border border-input cursor-pointer`}
                 onClick={(e) => handleElementClick(path, e)}
               >
                 #
@@ -619,7 +622,7 @@ const JsonTable: React.FC<JsonTableProps> = ({
                 return (
                   <th
                     key={key}
-                    className={`${isHeaderSelected ? "!bg-default-200/60" : ""} px-2 text-left text-sm font-medium text-default-600 border border-default-300 cursor-pointer`}
+                    className={`${isHeaderSelected ? "!bg-border/60" : ""} px-2 text-left text-sm font-medium text-muted-foreground border border-input cursor-pointer`}
                     onClick={(e) => handleElementClick(headerPath, e)}
                   >
                     <div className="flex items-center gap-1">
@@ -645,8 +648,8 @@ const JsonTable: React.FC<JsonTableProps> = ({
               })}
             </tr>
           </thead>
-          <tbody>
-            {renderData.map((item: any, index: number) => {
+          <VirtualRows items={renderData}>
+            {(item: any, index: number) => {
               if ((hideEmpty && item === "") || (hideNull && item === null)) {
                 return null;
               }
@@ -661,10 +664,10 @@ const JsonTable: React.FC<JsonTableProps> = ({
               return (
                 <tr
                   key={originalIndex}
-                  className={`${isSelected ? "!bg-default-200/60" : ""} hover:bg-default-50`}
+                  className={`${isSelected ? "!bg-border/60" : ""} hover:bg-muted`}
                 >
                   <td
-                    className="px-2 text-sm border border-default-300 cursor-pointer"
+                    className="px-2 text-sm border border-input cursor-pointer"
                     onClick={(e) => handleElementClick(itemPath, e)}
                   >
                     {originalIndex}
@@ -684,7 +687,7 @@ const JsonTable: React.FC<JsonTableProps> = ({
                       return (
                         <td
                           key={key}
-                          className={`${isPathSelected(cellPath) ? "!bg-default-200/60" : ""} px-2 text-sm border border-default-300 cursor-pointer`}
+                          className={`${isPathSelected(cellPath) ? "!bg-border/60" : ""} px-2 text-sm border border-input cursor-pointer`}
                           style={{ minWidth: "30px" }}
                           onClick={(e) => handleElementClick(cellPath, e)}
                         >
@@ -696,7 +699,7 @@ const JsonTable: React.FC<JsonTableProps> = ({
                     return (
                       <td
                         key={key}
-                        className={`${isCellSelected ? "!bg-default-200/60" : ""} px-2 text-sm border border-default-300 cursor-pointer`}
+                        className={`${isCellSelected ? "!bg-border/60" : ""} px-2 text-sm border border-input cursor-pointer`}
                         style={{ minWidth: "30px" }}
                         onClick={(e) => handleElementClick(cellPath, e)}
                       >
@@ -718,8 +721,8 @@ const JsonTable: React.FC<JsonTableProps> = ({
                   })}
                 </tr>
               );
-            })}
-          </tbody>
+            }}
+          </VirtualRows>
         </table>
       </div>
     );
@@ -727,7 +730,8 @@ const JsonTable: React.FC<JsonTableProps> = ({
 
   // 渲染根表格
   const renderRootTable = () => {
-    if (!data) return <div className="text-center py-2">没有数据</div>;
+    if (data === undefined)
+      return <div className="text-center py-2">没有数据</div>;
 
     if (Array.isArray(data)) {
       if (isObjectArray(data)) {
@@ -742,7 +746,7 @@ const JsonTable: React.FC<JsonTableProps> = ({
     } else {
       return (
         <div
-          className={`p-2 border border-default-300 rounded ${isPathSelected("root") ? "bg-default-300" : ""}`}
+          className={`p-2 border border-input rounded ${isPathSelected("root") ? "bg-input" : ""}`}
           role="button"
           tabIndex={0}
           onClick={(e) => handleElementClick("root", e)}
@@ -765,7 +769,9 @@ const JsonTable: React.FC<JsonTableProps> = ({
         onCollapse={onCollapseAll}
         onExpand={onExpandAll}
       />
-      <div className="flex-auto overflow-auto p-2">{renderRootTable()}</div>
+      <div data-table-scroll className="flex-auto min-h-0 overflow-auto p-2">
+        {renderRootTable()}
+      </div>
     </div>
   );
 };

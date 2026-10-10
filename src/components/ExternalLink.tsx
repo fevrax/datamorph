@@ -1,5 +1,5 @@
 import React from "react";
-import { cn } from "@heroui/react";
+import { cn } from "@/components/ui";
 
 import { isUtoolsAvailable, openExternal } from "@/utils/env";
 
@@ -55,7 +55,7 @@ const ExternalLink: React.FC<ExternalLinkProps> = ({
       {showUrl && isUtoolsAvailable && href ? (
         <span
           className={cn(
-            "block mt-0.5 text-xs text-default-400 break-all select-all",
+            "block mt-0.5 text-xs text-muted-foreground break-all select-all",
           )}
         >
           {href}

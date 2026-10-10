@@ -1,5 +1,5 @@
-import { Button } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { Button } from "@/components/ui";
+import { Icon } from "@/components/ui/icon";
 
 export interface TestResult {
   success: boolean;

@@ -7,13 +7,16 @@ import { SyncMessage, VersionVector } from "./types";
 import { DataIntegrityChecker } from "./DataIntegrityChecker";
 
 export class MultiWindowSyncManager {
-  private channel: BroadcastChannel;
+  private channel: BroadcastChannel | null;
   private windowId: string;
   private updateHandlers: Map<string, Set<(data: any) => void>>;
   private isConnected: boolean = false;
 
   constructor(channelName: string = "json-tools-sync") {
-    this.channel = new BroadcastChannel(channelName);
+    this.channel =
+      typeof BroadcastChannel !== "undefined"
+        ? new BroadcastChannel(channelName)
+        : null;
     this.windowId = this.generateWindowId();
     this.updateHandlers = new Map();
 
@@ -31,7 +34,7 @@ export class MultiWindowSyncManager {
    * 初始化监听
    */
   private initialize(): void {
-    if (typeof BroadcastChannel === "undefined") {
+    if (!this.channel) {
       console.warn("BroadcastChannel 不可用，多窗口同步功能禁用");
 
       return;
@@ -133,7 +136,7 @@ export class MultiWindowSyncManager {
     };
 
     try {
-      this.channel.postMessage(message);
+      this.channel?.postMessage(message);
       console.log(`广播更新: ${key}`, data);
     } catch (error) {
       console.error("广播更新失败:", error);
@@ -214,7 +217,7 @@ export class MultiWindowSyncManager {
     };
 
     try {
-      this.channel.postMessage(message);
+      this.channel?.postMessage(message);
     } catch (error) {
       console.error("广播锁请求失败:", error);
     }
@@ -234,7 +237,7 @@ export class MultiWindowSyncManager {
     };
 
     try {
-      this.channel.postMessage(message);
+      this.channel?.postMessage(message);
     } catch (error) {
       console.error("广播锁释放失败:", error);
     }
@@ -252,7 +255,7 @@ export class MultiWindowSyncManager {
    */
   disconnect(): void {
     if (this.isConnected) {
-      this.channel.close();
+      this.channel?.close();
       this.isConnected = false;
       console.log("多窗口同步已断开");
     }

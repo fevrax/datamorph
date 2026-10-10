@@ -92,7 +92,7 @@ export class DataIntegrityChecker {
       JSON.stringify(data);
 
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
