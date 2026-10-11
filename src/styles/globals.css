@@ -73,6 +73,11 @@
   --destructive: #f08791;
   --success: #7dccb0;
   --warning: #e4bd75;
+  --editor-key: #a9c7f5;
+  --editor-string: #a5d6bd;
+  --editor-keyword: #c0b3ee;
+  --editor-comment: #8b96a8;
+  --editor-line-number: #7e8999;
   color-scheme: dark;
 }
 @layer base {

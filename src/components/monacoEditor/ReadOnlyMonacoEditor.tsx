@@ -1,12 +1,13 @@
 import { useEffect, useRef } from "react";
 import * as monaco from "monaco-editor";
+import { getMonacoTheme } from "./editorTheme";
 import { initMonacoGlobally } from "./decorations/decorationInit";
 import { useDataLanguage } from "@/hooks/useDataLanguage";
 import type { LanguageMode } from "@/utils/dataFormats";
 
 export default function ReadOnlyMonacoEditor({
   value,
-  theme,
+  theme: requestedTheme,
   ariaLabel,
   language = "json",
   languageMode = "manual",
@@ -19,6 +20,7 @@ export default function ReadOnlyMonacoEditor({
   languageMode?: LanguageMode;
   filename?: string;
 }) {
+  const theme = getMonacoTheme(requestedTheme);
   const effectiveLanguage = useDataLanguage(
     value,
     language,

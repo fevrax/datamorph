@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as monaco from "monaco-editor";
+import { getMonacoTheme } from "@/components/monacoEditor/editorTheme";
 import { initMonacoGlobally } from "@/components/monacoEditor/decorations/decorationInit";
 import { useDataLanguage } from "@/hooks/useDataLanguage";
 import type { LanguageMode } from "@/utils/dataFormats";
@@ -11,7 +12,7 @@ export default function HistoryDiffPreview({
   language,
   languageMode = "manual",
   filename,
-  theme,
+  theme: requestedTheme,
 }: {
   original: string;
   modified: string;
@@ -20,6 +21,7 @@ export default function HistoryDiffPreview({
   filename?: string;
   theme: string;
 }) {
+  const theme = getMonacoTheme(requestedTheme);
   const originalLanguage = useDataLanguage(
     original,
     language,

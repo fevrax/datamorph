@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 import * as monaco from "monaco-editor";
+import { getMonacoTheme } from "./editorTheme";
 import { initMonacoGlobally } from "./decorations/decorationInit";
 import { useDataLanguage } from "@/hooks/useDataLanguage";
 import { useEditorIndentation } from "@/hooks/useEditorIndentation";
@@ -117,7 +118,7 @@ export default function MonacoDiffEditor({
   languageMode,
   filename,
   onLanguagesChange,
-  theme = "vs-light",
+  theme: requestedTheme = "vs-light",
   settingsBarTarget,
   languageBarTarget,
   height = "100%",
@@ -132,6 +133,7 @@ export default function MonacoDiffEditor({
   onMount,
   ref,
 }: MonacoDiffEditorProps) {
+  const theme = getMonacoTheme(requestedTheme);
   const context = useContext(ToolContext);
   const owner = context || tabKey;
   const key = context ? `${context}::${tabKey}` : tabKey;

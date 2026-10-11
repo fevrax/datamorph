@@ -7,6 +7,7 @@ import "monaco-editor/esm/vs/basic-languages/yaml/yaml.contribution";
 import "monaco-editor/esm/vs/basic-languages/xml/xml.contribution";
 import "monaco-editor/esm/vs/basic-languages/ini/ini.contribution";
 import { registerDecoderProviders } from "./decoderEngine";
+import { registerEditorTheme } from "../editorTheme";
 let isInitialized = false;
 let baseProviderRegistered = false;
 
@@ -31,6 +32,7 @@ export const initMonacoGlobally = async () => {
 
       // 初始化Monaco实例
       const monacoInstance = await loader.init();
+      registerEditorTheme(monacoInstance);
 
       for (const { id, highlighter } of DATA_FORMATS) {
         if (highlighter === "builtin") continue;

@@ -14,6 +14,7 @@ import React, {
   useState,
 } from "react";
 import * as monaco from "monaco-editor";
+import { getMonacoTheme } from "./editorTheme";
 import { initMonacoGlobally } from "./decorations/decorationInit";
 import { useDataLanguage } from "@/hooks/useDataLanguage";
 import { useEditorIndentation } from "@/hooks/useEditorIndentation";
@@ -136,7 +137,7 @@ export default function MonacoDataEditor({
   language,
   languageMode,
   filename,
-  theme = "vs-light",
+  theme: requestedTheme = "vs-light",
   height = "100%",
   minimap = false,
   isMenu = false,
@@ -150,6 +151,7 @@ export default function MonacoDataEditor({
   onMount,
   ref,
 }: MonacoDataEditorProps) {
+  const theme = getMonacoTheme(requestedTheme);
   useTabStore((s) =>
     documentId ? s.getTabByKey(documentId)?.revision : undefined,
   );
