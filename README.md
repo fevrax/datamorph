@@ -12,6 +12,7 @@
 - 自动识别并高亮 JSON、JSONC、JSON5、YAML、TOML、XML、CSV、TSV、INI、NDJSON、HTML、CSS、SCSS、LESS、SQL、JavaScript、TypeScript、Markdown、Protobuf（含 `.yml`、`.jsonl`、`.proto`）。默认自动模式，也可手动固定语言；导入文件或明确命名的扩展名优先。
 - 空白和无法判断的内容默认 JSON，格式切换保留正文、撤销记录及光标位置。
 - 支持多格式识别、高亮、编辑和文本对比。格式化支持 JSON/JSON5、JSONC、YAML、HTML、CSS/SCSS/LESS、SQL（标准 SQL）、JavaScript/TypeScript、Markdown 和 Protobuf，可从工具栏、快捷键及对比视图使用并撤销；校验、树形、表格及 JSONPath 仍限 JSON/JSON5。TOML、XML、CSV、TSV、INI、NDJSON 暂不提供编辑器格式化；已有格式转换工具支持 JSON、JSON5、YAML、TOML、XML。
+- Protobuf 编辑视图提供“重新排序编号”：按字段出现顺序为每个 message 从 1 开始重新编号，oneof 共用所属 message 的序列，嵌套 message 独立编号，并跳过 reserved、extensions 和 19000–19999。保留排版、注释、枚举值及选项，支持撤销；此操作会改变字段在二进制协议中的标识。
 - 默认根据内容自动识别空格或 Tab 缩进，粘贴、导入和格式化时沿用已有缩进；对比视图两侧独立识别。没有可识别缩进时使用全局默认宽度，可在编辑器设置中关闭自动识别并手动指定宽度。
 - 首次升级自动迁移原有文档、历史、设置与 AI 配置，保留旧数据库；清除数据后不会重新导入。
 

@@ -29,6 +29,7 @@ import {
   Minimize2,
   ArrowDownAZ,
   ArrowUpAZ,
+  ListOrdered,
   CodeXml,
   TextQuote,
   MessageSquareOff,
@@ -277,8 +278,13 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
   useEffect(() => {
     return () => cancelJsonTask("action:" + tab.key);
   }, [tab.key, view]);
-  async function action(action: JsonTask, direction?: "asc" | "desc") {
-    if (!jsonSupported) return;
+  async function action(
+    action: JsonTask | "renumber-proto",
+    direction?: "asc" | "desc",
+  ) {
+    const language = tab.editorSettings.language;
+    if (action === "renumber-proto" ? language !== "proto" : !jsonSupported)
+      return;
     const revision = tab.revision;
     setBusy(true);
     try {
@@ -290,7 +296,11 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
         language: tab.editorSettings.language,
         direction,
       });
-      if (store.getTabByKey(tab.key)?.revision !== revision) {
+      const current = store.getTabByKey(tab.key);
+      if (
+        current?.revision !== revision ||
+        current?.editorSettings.language !== language
+      ) {
         toast.warning("内容已变化，请重新执行操作");
         return;
       }
@@ -386,6 +396,17 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
                         setWelcome(false);
                       } else void action("format");
                     },
+                  },
+                ]
+              : []),
+            ...(view === "code" && tab.editorSettings.language === "proto"
+              ? [
+                  {
+                    key: "renumber-proto",
+                    label: "重新排序编号",
+                    icon: ListOrdered,
+                    disabled: busy || !tab.content.trim(),
+                    onPress: () => void action("renumber-proto"),
                   },
                 ]
               : []),

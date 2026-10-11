@@ -1,6 +1,7 @@
 import type { FormatTaskInput } from "./formatTasks";
 import type { ConversionInput } from "./conversion";
 import type { JsonTaskInput } from "./jsonTasks";
+import type { ProtoTaskInput } from "./protoTasks";
 export type TaskResult = {
   data?: unknown;
   matchCount?: number;
@@ -47,7 +48,7 @@ export function cancelJsonTask(scope: string) {
 }
 export function runJsonTask(
   scope: string,
-  input: JsonTaskInput | ConversionInput | FormatTaskInput,
+  input: JsonTaskInput | ProtoTaskInput | ConversionInput | FormatTaskInput,
 ): Promise<TaskResult> {
   cancelJsonTask(scope);
   return new Promise((resolve, reject) => {

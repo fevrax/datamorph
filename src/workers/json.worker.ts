@@ -1,11 +1,15 @@
 import { executeJsonTask, type JsonTaskInput } from "./jsonTasks";
+import { executeProtoTask, type ProtoTaskInput } from "./protoTasks";
 self.onmessage = (
-  event: MessageEvent<{ id: number; input: JsonTaskInput }>,
+  event: MessageEvent<{ id: number; input: JsonTaskInput | ProtoTaskInput }>,
 ) => {
   try {
     self.postMessage({
       id: event.data.id,
-      result: executeJsonTask(event.data.input),
+      result:
+        event.data.input.action === "renumber-proto"
+          ? executeProtoTask(event.data.input)
+          : executeJsonTask(event.data.input),
     });
   } catch (error) {
     self.postMessage({
