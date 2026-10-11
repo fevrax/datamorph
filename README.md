@@ -204,6 +204,42 @@ pnpm test:regressions
 pnpm preview
 ```
 
+### 关于页版本信息与检查更新
+
+正式发布的版本由 GitHub Actions 中的 semantic-release 生成。发布成功后，Docker
+工作流按最终发布提交构建镜像，将同一次发布的版本、提交和 UTC 构建时间写入前端。
+关于页显示的是当前运行构建的版本；“检查更新”仅手动查询 GitHub 最新正式发布，
+不会部署镜像或刷新页面。站点部署后的 PWA 更新仍使用原有保存数据后刷新流程。
+更新检查无需 GitHub Token，成功结果在当前会话缓存 5 分钟，并显示实际检查时间。
+网络不可用时可通过“查看全部发布”访问 GitHub；当前版本信息仍然可见。
+
+普通 `pnpm dev` 和 `pnpm build` 显示“开发构建”，提交号从本地 Git 获取；无 Git 时
+显示“未知”。生产构建自动记录 UTC 构建时间，开发服务器默认不记录构建时间。
+`package.json.version` 不再用于关于页，也不需要手动更新它。
+
+从确定的正式发布提交构建静态站点或 uTools 包时，可以显式传入以下公开元数据：
+
+```bash
+APP_VERSION=1.2.3 \
+APP_COMMIT_SHA="$(git rev-parse HEAD)" \
+APP_BUILD_TIME="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+pnpm build
+```
+
+版本号不带 `v`，且必须为正式语义版本；提交必须为完整的 40 位小写 SHA；构建时间
+必须为有效 UTC ISO 时间（支持秒或毫秒精度）。无效值会使构建失败。
+正式版本构建必须能确定提交号；这些参数需要在构建时传入，运行容器后设置不会生效。
+
+Docker 源码构建使用相同参数（普通开发镜像可省略）：
+
+```bash
+docker build \
+  --build-arg APP_VERSION=1.2.3 \
+  --build-arg APP_COMMIT_SHA="$(git rev-parse HEAD)" \
+  --build-arg APP_BUILD_TIME="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+  -t datamorph:1.2.3 .
+```
+
 ## 🤝 贡献
 
 欢迎提交PR、创建Issue或提供功能建议！请查看[贡献指南](CONTRIBUTING.md)了解更多。

@@ -1,9 +1,12 @@
 // Offline checks: never invoke semantic-release's publishing API or Docker.
 // Run: node --test .github/tests/release-workflows.test.mjs
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 import yaml from 'js-yaml';
 
@@ -105,11 +108,11 @@ test('workflow wiring requires a successful release and checks out its SHA', () 
     assert.equal(docker.on.workflow_call.inputs[field].required, true);
   }
   const steps = docker.jobs.push_to_registry.steps;
-  assert.equal(steps.find((s) => s.uses.startsWith('actions/checkout@')).with.ref, '${{ inputs.sha }}');
+  assert.equal(steps.find((s) => s.uses?.startsWith('actions/checkout@')).with.ref, '${{ inputs.sha }}');
   const meta = steps.find((s) => s.id === 'meta');
   assert.match(meta.with.tags, /type=raw,value=\$\{\{ inputs.version \}\}/);
   assert.match(meta.with.tags, /type=raw,value=latest/);
-  assert.equal(steps.find((s) => s.uses.startsWith('docker/build-push-action@')).with.tags,
+  assert.equal(steps.find((s) => s.uses?.startsWith('docker/build-push-action@')).with.tags,
     '${{ steps.meta.outputs.tags }}');
   assert.doesNotMatch(read('.github/workflows/docker.yaml') + read('.github/workflows/release.yaml'),
     /head_commit|git log|npx semantic-release/);
@@ -125,4 +128,35 @@ test('lockfile dependency specifiers match package.json', () => {
       assert.equal(locked[group][name].specifier, specifier, name);
     }
   }
+});
+
+test('Docker frontend build receives the same version and final SHA as the image tag', () => {
+  const steps = docker.jobs.push_to_registry.steps;
+  const build = steps.find((s) => s.uses?.startsWith('docker/build-push-action@'));
+  const info = steps.find((s) => s.id === 'build_info');
+  assert.ok(steps.indexOf(info) < steps.indexOf(build));
+  assert.deepEqual(build.with['build-args'].trim().split('\n'), [
+    'APP_VERSION=${{ inputs.version }}',
+    'APP_COMMIT_SHA=${{ inputs.sha }}',
+    'APP_BUILD_TIME=${{ steps.build_info.outputs.built_at }}',
+  ]);
+  const temporary = mkdtempSync(join(tmpdir(), 'datamorph-build-info-'));
+  try {
+    const outputFile = join(temporary, 'output');
+    execFileSync('bash', ['-c', info.run], {
+      env: { ...process.env, GITHUB_OUTPUT: outputFile },
+    });
+    const output = readFileSync(outputFile, 'utf8');
+    assert.match(output, /^built_at=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\n$/);
+    assert.ok(Number.isFinite(Date.parse(output.trim().slice('built_at='.length))));
+  } finally {
+    rmSync(temporary, { recursive: true, force: true });
+  }
+  const builder = read('Dockerfile').split('FROM nginx:alpine')[0];
+  for (const name of ['APP_VERSION', 'APP_COMMIT_SHA', 'APP_BUILD_TIME']) {
+    assert.ok(builder.includes(`ARG ${name}\n`));
+    assert.ok(builder.includes(`${name}="$${name}"`));
+  }
+  assert.match(builder, /RUN APP_VERSION=.*pnpm build/);
+  assert.match(read('vite.config.ts'), /__APP_BUILD_INFO__: JSON.stringify\(readAppBuildInfo\(process.env, command\)\)/);
 });

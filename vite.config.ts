@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig, loadEnv } from "vite";
 import { siteAIProxy } from "./config/aiProxy";
+import { readAppBuildInfo } from "./config/appBuildInfo";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
@@ -11,6 +12,9 @@ import { VitePWA } from "vite-plugin-pwa";
 // https://vitejs.dev/config/
 
 export default defineConfig(({ mode, command }) => ({
+  define: {
+    __APP_BUILD_INFO__: JSON.stringify(readAppBuildInfo(process.env, command)),
+  },
   cacheDir: process.env.VITE_CACHE_DIR || "node_modules/.vite",
   optimizeDeps: {
     exclude: ["@wasm-fmt/clang-format"],

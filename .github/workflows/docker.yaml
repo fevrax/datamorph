@@ -55,6 +55,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Prepare build information
+        id: build_info
+        # Compute once so both image architectures have identical metadata.
+        run: echo "built_at=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
@@ -63,6 +68,10 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            APP_VERSION=${{ inputs.version }}
+            APP_COMMIT_SHA=${{ inputs.sha }}
+            APP_BUILD_TIME=${{ steps.build_info.outputs.built_at }}
           cache-from: |
             type=gha,scope=docker-main
             type=registry,ref=fevrax/datamorph:latest

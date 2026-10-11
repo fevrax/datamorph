@@ -7,7 +7,11 @@ WORKDIR /app
 COPY . .
 
 RUN pnpm install --frozen-lockfile
-RUN pnpm build
+# Release metadata is public and is baked into the static frontend, not read at runtime.
+ARG APP_VERSION
+ARG APP_COMMIT_SHA
+ARG APP_BUILD_TIME
+RUN APP_VERSION="$APP_VERSION" APP_COMMIT_SHA="$APP_COMMIT_SHA" APP_BUILD_TIME="$APP_BUILD_TIME" pnpm build
 
 FROM nginx:alpine
 
