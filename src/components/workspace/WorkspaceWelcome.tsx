@@ -2,7 +2,7 @@ import { useRef, type ReactNode } from "react";
 import {
   ArrowRight,
   FileDown,
-  FileJson2,
+  FileText,
   FlaskConical,
   FolderOpen,
   WandSparkles,
@@ -10,11 +10,11 @@ import {
 import { Button } from "@/components/ui";
 import { importFiles } from "@/components/dynamicTabs/DynamicTabs";
 import "./workspace-welcome.css";
+import { DATA_FILE_ACCEPT } from "@/utils/dataFormats";
 
 interface WorkspaceWelcomeProps {
   active: boolean;
   title: string;
-  language: string;
   hasContent: boolean;
   busy: boolean;
   onFocus: () => void;
@@ -28,7 +28,6 @@ interface WorkspaceWelcomeProps {
 export function WorkspaceWelcome({
   active,
   title,
-  language,
   hasContent,
   busy,
   onFocus,
@@ -50,7 +49,7 @@ export function WorkspaceWelcome({
         ref={file}
         type="file"
         multiple
-        accept=".json,.json5,.txt,.yaml,.yml,.xml,.toml"
+        accept={DATA_FILE_ACCEPT}
         hidden
         aria-label="选择要打开的文件"
         onChange={(event) => {
@@ -65,7 +64,7 @@ export function WorkspaceWelcome({
       >
         <span className="welcome-section-label">当前文档</span>
         <button className="welcome-document" onClick={onFocus} title={title}>
-          <FileJson2 aria-hidden="true" />
+          <FileText aria-hidden="true" />
           <span>{title}</span>
           <span className="welcome-document-dot" />
         </button>
@@ -88,12 +87,14 @@ export function WorkspaceWelcome({
         <div className="welcome-content">
           <header className="welcome-heading" hidden={!active}>
             <span className="welcome-eyebrow">YOUR NEXT DOCUMENT</span>
-            <h2>准备好，直接开始。</h2>
-            <p>在下方粘贴内容，立即整理你的 JSON。</p>
+            <h2>一源万构，形随需变</h2>
+            <p>
+              粘贴、输入或打开数据，Datamorph 自动识别格式，随需编辑与转换。
+            </p>
           </header>
           <div className="welcome-input">
             <div className="welcome-input-label" hidden={!active}>
-              <button onClick={onFocus}>输入 {language.toUpperCase()}</button>
+              <button onClick={onFocus}>粘贴或输入数据</button>
               <span>
                 粘贴 <kbd>{pasteShortcut}</kbd>
               </span>
@@ -108,7 +109,7 @@ export function WorkspaceWelcome({
                 onPress={onStart}
               >
                 <WandSparkles aria-hidden="true" />
-                {busy ? "正在格式化…" : "格式化并开始"}
+                {busy ? "正在准备…" : "开始编辑"}
               </Button>
               <Button variant="ghost" onPress={onSample}>
                 使用示例

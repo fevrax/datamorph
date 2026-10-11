@@ -1,4 +1,5 @@
 import AIAssistantHeader from "@/components/ai/AIAssistantHeader";
+import { formatEditorDocument } from "./formatDocument";
 import { applyTextChanges } from "./textChanges";
 import { Sheet } from "@/components/ui/sheet";
 import { DiffPreview } from "@/components/workspace/DiffPreview";
@@ -13,7 +14,15 @@ import React, {
   useState,
 } from "react";
 import * as monaco from "monaco-editor";
-import { loader } from "@monaco-editor/react";
+import { initMonacoGlobally } from "./decorations/decorationInit";
+import { useDataLanguage } from "@/hooks/useDataLanguage";
+import { useEditorIndentation } from "@/hooks/useEditorIndentation";
+import {
+  documentDownloadName,
+  supportsJsonOperations,
+  supportsFormatting,
+  type LanguageMode,
+} from "@/utils/dataFormats";
 import {
   Panel,
   PanelGroup,
@@ -49,7 +58,6 @@ import {
 import { updateFoldingDecorations } from "./decorations/foldingDecoration";
 import { ToolContext } from "@/components/workspace/ToolContext";
 import { useTabStore } from "@/store/useTabStore";
-import { useSettingsStore } from "@/store/useSettingsStore";
 import { runJsonTask, cancelJsonTask } from "@/workers/client";
 import type { JsonTask } from "@/workers/jsonTasks";
 import { type JsonErrorInfo } from "@/utils/json";
@@ -58,6 +66,7 @@ import clipboard from "@/utils/clipboard";
 import toast from "@/utils/toast";
 import { useDelayedVisibility } from "@/hooks/useDelayedVisibility";
 import DraggableMenu from "./DraggableMenu";
+import LanguageSelector from "./LanguageSelector";
 import ErrorModal from "./ErrorModal";
 import JsonPathHelp from "./JsonPathHelp";
 import ReadOnlyMonacoEditor from "./ReadOnlyMonacoEditor";
@@ -69,13 +78,15 @@ import PromptContainer, {
 } from "@/components/ai/PromptContainer";
 import { jsonQuickPrompts } from "@/components/ai/JsonQuickPrompts";
 import "@/styles/monaco.css";
-export interface MonacoJsonEditorProps {
+export interface MonacoDataEditorProps {
   tabTitle?: string;
   tabKey: string;
   height?: number | string;
   value?: string;
   documentId?: string;
   language?: string;
+  languageMode?: LanguageMode;
+  filename?: string;
   theme?: string;
   minimap?: boolean;
   isSetting?: boolean; // 是否显示设置按钮
@@ -84,6 +95,7 @@ export interface MonacoJsonEditorProps {
   customQuickPrompts?: QuickPrompt[]; // 自定义快捷指令
   showTimestampDecorators?: boolean; // 是否显示时间戳装饰器
   statusBarTarget?: HTMLElement | null;
+  languageBarTarget?: HTMLElement | null;
   settingsBarTarget?: HTMLElement | null;
   showJsonPathFilter?: boolean; // 是否显示 JSONPath 查询功能
   onUpdateValue: (
@@ -91,10 +103,10 @@ export interface MonacoJsonEditorProps {
     changes?: readonly monaco.editor.IModelContentChange[],
   ) => void;
   onMount?: () => void;
-  ref?: React.Ref<MonacoJsonEditorRef>;
+  ref?: React.Ref<MonacoDataEditorRef>;
 }
 
-export interface MonacoJsonEditorRef {
+export interface MonacoDataEditorRef {
   setQuery: (query: string) => void;
   focus: () => void;
   layout: () => void;
@@ -116,12 +128,14 @@ export interface MonacoJsonEditorRef {
   toggleUrlDecorators: (enabled?: boolean) => boolean; // 切换URL装饰器
   toggleImageDecorators: (enabled?: boolean) => boolean; // 切换图片装饰器
 }
-export default function MonacoJsonEditor({
+export default function MonacoDataEditor({
   value: providedValue = "",
   documentId,
   tabKey,
   tabTitle,
-  language = "json",
+  language,
+  languageMode,
+  filename,
   theme = "vs-light",
   height = "100%",
   minimap = false,
@@ -129,12 +143,13 @@ export default function MonacoJsonEditor({
   showTimestampDecorators = true,
   showJsonPathFilter = false,
   statusBarTarget,
+  languageBarTarget,
   settingsBarTarget,
   customQuickPrompts,
   onUpdateValue,
   onMount,
   ref,
-}: MonacoJsonEditorProps) {
+}: MonacoDataEditorProps) {
   useTabStore((s) =>
     documentId ? s.getTabByKey(documentId)?.revision : undefined,
   );
@@ -155,13 +170,40 @@ export default function MonacoJsonEditor({
   const [errorOpen, setErrorOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const showBusy = useDelayedVisibility(busy);
-  const settings = useSettingsStore();
   const stored = useTabStore.getState().getTabByKey(owner)?.editorSettings;
   const [fontSize, setFontSize] = useState(stored?.fontSize || 14);
-  const [indent, setIndent] = useState(
-    stored?.indentSize || settings.defaultIndentSize,
+  const indentation = useEditorIndentation(owner, ready, () => {
+    const model = editor.current?.getModel();
+    return model ? [model] : [];
+  });
+  const { indentSize: indent } = indentation;
+  const [localMode, setMode] = useState<LanguageMode>(
+    languageMode || (language ? "manual" : "auto"),
   );
-  const [currentLanguage, setLanguage] = useState(language);
+  const [manualLanguage, setManualLanguage] = useState(language || "json");
+  // Documents use their saved settings directly, including changes from other views.
+  const mode = documentId
+    ? languageMode || (language ? "manual" : "auto")
+    : localMode;
+  const currentLanguage = useDataLanguage(
+    value,
+    documentId ? language || "json" : manualLanguage,
+    mode,
+    filename,
+    modelKey,
+  );
+  const jsonSupported = supportsJsonOperations(currentLanguage);
+  function setLanguage(next: string) {
+    if (documentId) {
+      useTabStore.getState().updateEditorSettings(documentId, {
+        languageMode: next === "auto" ? "auto" : "manual",
+        ...(next === "auto" ? {} : { language: next }),
+      });
+      return;
+    }
+    setMode(next === "auto" ? "auto" : "manual");
+    if (next !== "auto") setManualLanguage(next);
+  }
   const [decoders, setDecoders] = useState({
     timestamp: stored?.timestampDecoratorsEnabled ?? showTimestampDecorators,
     base64: stored?.base64DecoratorsEnabled ?? true,
@@ -226,16 +268,23 @@ export default function MonacoJsonEditor({
     const model = editor.current?.getModel();
     if (!model || !["json", "json5"].includes(model.getLanguageId())) {
       setError(null);
+      if (model) monaco.editor.setModelMarkers(model, "datamorph", []);
       return;
     }
     const version = model.getVersionId();
+    const validatingLanguage = model.getLanguageId();
     void runJsonTask(modelKey + ":validation", {
       action: "validate",
       content: model.getValue(),
       language: model.getLanguageId(),
     })
       .then((result) => {
-        if (model.isDisposed() || model.getVersionId() !== version) return;
+        if (
+          model.isDisposed() ||
+          model.getVersionId() !== version ||
+          model.getLanguageId() !== validatingLanguage
+        )
+          return;
         const err = result.error
           ? {
               ...result.error,
@@ -253,7 +302,7 @@ export default function MonacoJsonEditor({
         setError(err);
         monaco.editor.setModelMarkers(
           model,
-          "json-tools",
+          "datamorph",
           err
             ? [
                 {
@@ -273,18 +322,25 @@ export default function MonacoJsonEditor({
   function run(action: JsonTask, direction?: "asc" | "desc") {
     const model = editor.current?.getModel();
     if (!model) return false;
+    if (!supportsJsonOperations(model.getLanguageId())) return false;
     const version = model.getVersionId();
+    const language = model.getLanguageId();
+    const options = indentation.resolve(model);
     setBusy(true);
     void runJsonTask(modelKey + ":action", {
       action,
       content: model.getValue(),
       language: model.getLanguageId(),
-      indent,
+      indent: options.tabSize,
+      insertSpaces: options.insertSpaces,
       direction,
     })
       .then((result) => {
         if (model.isDisposed() || editor.current?.getModel() !== model) return;
-        if (model.getVersionId() !== version) {
+        if (
+          model.getVersionId() !== version ||
+          model.getLanguageId() !== language
+        ) {
           toast.warning("内容已变化，请重新执行");
           return;
         }
@@ -296,6 +352,23 @@ export default function MonacoJsonEditor({
       .finally(() => setBusy(false));
     return true;
   }
+  function format() {
+    const ed = editor.current;
+    const language = ed?.getModel()?.getLanguageId() || "";
+    if (!ed || !supportsFormatting(language)) return false;
+    if (supportsJsonOperations(language)) return run("format");
+    indentation.resolve(ed.getModel()!);
+    setBusy(true);
+    void formatEditorDocument(ed)
+      .catch((error) => {
+        if (error.name !== "AbortError")
+          toast.error("格式化失败", error.message);
+      })
+      .finally(() => setBusy(false));
+    return true;
+  }
+  const formatRef = useRef(format);
+  formatRef.current = format;
   const download = () => {
     const text = editor.current?.getValue() || "";
     const url = URL.createObjectURL(
@@ -303,7 +376,7 @@ export default function MonacoJsonEditor({
     );
     const a = document.createElement("a");
     a.href = url;
-    a.download = tabTitle || "document.json";
+    a.download = documentDownloadName(tabTitle, currentLanguage, filename);
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     return true;
@@ -339,7 +412,7 @@ export default function MonacoJsonEditor({
     },
     compress: () => run("compress"),
     escape: () => run("escape"),
-    format: () => run("format"),
+    format,
     validate: () => {
       validate();
       return !error;
@@ -367,9 +440,9 @@ export default function MonacoJsonEditor({
     let decorationTimer: ReturnType<typeof setTimeout> | undefined;
     let ed: monaco.editor.IStandaloneCodeEditor | undefined;
     const subscriptions: monaco.IDisposable[] = [];
-    void loader.init().then(() => {
+    void initMonacoGlobally().then(() => {
       if (disposed || !host.current) return;
-      const model = getDocumentModel(modelKey, value, language);
+      const model = getDocumentModel(modelKey, value, currentLanguage);
       modelText.current = model.getValue();
       ed = monaco.editor.create(host.current, {
         model,
@@ -378,7 +451,6 @@ export default function MonacoJsonEditor({
         minimap: { enabled: minimap },
         fontSize,
         fontFamily: '"SFMono-Regular",Consolas,monospace',
-        tabSize: indent,
         wordWrap: "on",
         scrollBeyondLastLine: false,
         padding: { top: 12, bottom: 12 },
@@ -436,13 +508,13 @@ export default function MonacoJsonEditor({
       );
       subscriptions.push(
         ed.addAction({
-          id: "json-tools-format",
-          label: "格式化 JSON",
+          id: "datamorph-format",
+          label: "格式化数据",
           keybindings: [
             monaco.KeyMod.Alt | monaco.KeyMod.Shift | monaco.KeyCode.KeyF,
           ],
           run: () => {
-            run("format");
+            formatRef.current();
           },
         }),
       );
@@ -462,13 +534,13 @@ export default function MonacoJsonEditor({
       });
       editor.current.focus();
     };
-    window.addEventListener("json-tools:reveal", reveal);
+    window.addEventListener("datamorph:reveal", reveal);
     return () => {
       disposed = true;
       clearTimeout(validationTimer);
       clearTimeout(decorationTimer);
       subscriptions.forEach((s) => s.dispose());
-      window.removeEventListener("json-tools:reveal", reveal);
+      window.removeEventListener("datamorph:reveal", reveal);
       ["validation", "action", "query"].forEach((scope) =>
         cancelJsonTask(modelKey + ":" + scope),
       );
@@ -486,25 +558,44 @@ export default function MonacoJsonEditor({
     if (ready && modelText.current !== value) apply(value);
   }, [value, ready]);
   useEffect(() => {
-    editor.current?.updateOptions({ theme, fontSize, tabSize: indent });
+    editor.current?.updateOptions({ theme, fontSize });
     const model = editor.current?.getModel();
     if (model) monaco.editor.setModelLanguage(model, currentLanguage);
-  }, [theme, fontSize, indent, currentLanguage, ready]);
+  }, [theme, fontSize, currentLanguage, ready]);
   useEffect(() => {
-    if (language !== currentLanguage) setLanguage(language);
-  }, [language]);
+    if (!documentId && language) setManualLanguage(language);
+  }, [language, documentId]);
+  useEffect(() => {
+    if (!documentId && languageMode) setMode(languageMode);
+  }, [languageMode, documentId]);
+  useEffect(() => {
+    cancelJsonTask(modelKey + ":validation");
+    setError(null);
+    const model = editor.current?.getModel();
+    if (model) {
+      monaco.editor.setModelMarkers(model, "datamorph", []);
+      if (!jsonSupported) monaco.editor.setModelMarkers(model, "json", []);
+      if (editor.current) {
+        for (const [kind, enabled] of Object.entries(decoderState.current))
+          updateDecoder(kind as keyof typeof decoders, editor.current, {
+            enabled: enabled && jsonSupported,
+          });
+        updateFoldingDecorations(editor.current, currentLanguage, fold);
+      }
+    }
+    if (jsonSupported) validate();
+  }, [currentLanguage, ready, jsonSupported, modelKey, validate]);
   useEffect(() => {
     useTabStore.getState().updateEditorSettings(owner, {
       fontSize,
-      indentSize: indent,
-      language: currentLanguage,
+      ...(documentId ? { language: currentLanguage, languageMode: mode } : {}),
       timestampDecoratorsEnabled: decoders.timestamp,
       base64DecoratorsEnabled: decoders.base64,
       unicodeDecoratorsEnabled: decoders.unicode,
       urlDecoratorsEnabled: decoders.url,
       imageDecoratorsEnabled: decoders.image,
     });
-  }, [owner, fontSize, indent, currentLanguage, decoders]);
+  }, [owner, fontSize, currentLanguage, mode, decoders, documentId]);
   useEffect(() => {
     if (side && !narrow) sidePanel.current?.resize(38);
     else sidePanel.current?.collapse();
@@ -520,7 +611,7 @@ export default function MonacoJsonEditor({
     setQueryError("");
     setQueryResult("");
     setMatchCount(null);
-    if (!query.trim() || !showJsonPathFilter) {
+    if (!query.trim() || !showJsonPathFilter || !jsonSupported) {
       setQueryBusy(false);
       cancelJsonTask(scope);
       setSide((current) => (current === "query" ? null : current));
@@ -565,6 +656,7 @@ export default function MonacoJsonEditor({
     currentLanguage,
     ready,
     showJsonPathFilter,
+    jsonSupported,
   ]);
   const closeAssistant = () => {
     if (side === "query") setQuery("");
@@ -750,12 +842,13 @@ export default function MonacoJsonEditor({
                 toolbarTarget={settingsBarTarget}
                 containerRef={root}
                 tabKey={owner}
-                currentLanguage={currentLanguage}
                 currentFontSize={fontSize}
                 currentIndentSize={indent}
-                onLanguageChange={setLanguage}
+                currentIndentMode={indentation.indentMode}
+                insertSpaces={indentation.insertSpaces}
                 onFontSizeChange={setFontSize}
-                onIndentSizeChange={setIndent}
+                onIndentSizeChange={indentation.setSize}
+                onIndentModeChange={indentation.setMode}
                 timestampDecoratorsEnabled={decoders.timestamp}
                 onTimestampDecoratorsChange={(enabled) =>
                   toggle("timestamp", enabled)
@@ -764,8 +857,7 @@ export default function MonacoJsonEditor({
                 onImageDecoratorsChange={(enabled) => toggle("image", enabled)}
                 onReset={() => {
                   setFontSize(14);
-                  setIndent(2);
-                  setLanguage("json");
+                  indentation.reset();
                 }}
               />
             )}
@@ -799,7 +891,7 @@ export default function MonacoJsonEditor({
           {assistantContent}
         </Sheet>
       )}
-      {showJsonPathFilter && (
+      {showJsonPathFilter && jsonSupported && (
         <div className="jsonpath-query-area">
           <div className="editor-query-bar">
             <span className="jsonpath-query-icon" aria-hidden="true">
@@ -881,6 +973,13 @@ export default function MonacoJsonEditor({
             {stats.chars.toLocaleString()} 字符 · {stats.lines.toLocaleString()}{" "}
             行{stats.selected ? ` · ${stats.selected} 选中` : ""}
           </span>
+          {isMenu && languageBarTarget === undefined && (
+            <LanguageSelector
+              language={currentLanguage}
+              languageMode={mode}
+              onLanguageChange={setLanguage}
+            />
+          )}
         </div>
       ) : statusBarTarget ? (
         createPortal(
@@ -894,6 +993,16 @@ export default function MonacoJsonEditor({
           statusBarTarget,
         )
       ) : null}
+      {isMenu &&
+        languageBarTarget &&
+        createPortal(
+          <LanguageSelector
+            language={currentLanguage}
+            languageMode={mode}
+            onLanguageChange={setLanguage}
+          />,
+          languageBarTarget,
+        )}
       <AIPromptOverlay
         isOpen={promptOpen}
         prompt={prompt}

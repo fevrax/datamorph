@@ -1,6 +1,6 @@
 # 贡献指南
 
-感谢您考虑为 JSON Tools Next 做出贡献！这个项目的发展离不开社区的支持和参与。
+感谢您考虑为 Datamorph 做出贡献！这个项目的发展离不开社区的支持和参与。
 
 ## 开发环境设置
 
@@ -126,4 +126,4 @@ BREAKING CHANGE: 数据导出API现在需要认证令牌。
 
 通过贡献代码，您同意您的贡献将在 [MIT 许可证](LICENSE) 下授权。
 
-感谢您对 JSON Tools Next 的贡献！
+感谢您对 Datamorph 的贡献！

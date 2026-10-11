@@ -27,6 +27,9 @@ const enabledKey = {
 } as const;
 function active(entry: Entry, kind: DecoderKind) {
   return (
+    ["json", "json5"].includes(
+      entry.editor.getModel()?.getLanguageId() || "",
+    ) &&
     entry.enabled.get(kind) !== false &&
     useSettingsStore.getState()[enabledKey[kind]] !== false
   );
@@ -161,31 +164,31 @@ export function registerDecoderProviders() {
   if (registered) return;
   registered = true;
   monaco.editor.registerCommand(
-    "jsonTools.copyDecoded",
+    "datamorph.copyDecoded",
     (_accessor, value: string) => {
       if (typeof value === "string") void clipboard.copy(value, "已复制");
     },
   );
   monaco.editor.registerCommand(
-    "jsonTools.openDecoded",
+    "datamorph.openDecoded",
     (_accessor, value: string) => {
       if (typeof value === "string")
         useTabStore.getState().addTab("decoded.json", value);
     },
   );
   monaco.editor.registerCommand(
-    "jsonTools.openLink",
+    "datamorph.openLink",
     (_accessor, value: string) => {
       if (typeof value === "string" && /^https?:\/\//i.test(value))
         window.open(value, "_blank", "noopener,noreferrer");
     },
   );
   monaco.editor.registerCommand(
-    "jsonTools.previewImage",
+    "datamorph.previewImage",
     (_accessor, url: string) => {
       if (typeof url === "string" && /^https?:\/\//.test(url))
         window.dispatchEvent(
-          new CustomEvent("json-tools:preview-image", { detail: url }),
+          new CustomEvent("datamorph:preview-image", { detail: url }),
         );
     },
   );
@@ -214,21 +217,21 @@ export function registerDecoderProviders() {
             { value: "**" + titles[t.kind] + "**" },
             t.kind === "image"
               ? {
-                  value: `[打开图片预览](command:jsonTools.previewImage?${args})`,
-                  isTrusted: { enabledCommands: ["jsonTools.previewImage"] },
+                  value: `[打开图片预览](command:datamorph.previewImage?${args})`,
+                  isTrusted: { enabledCommands: ["datamorph.previewImage"] },
                 }
               : { value: escapeMarkdown(t.decoded.slice(0, 12000)) },
             {
               value:
-                `[复制](command:jsonTools.copyDecoded?${args}) · [新标签打开](command:jsonTools.openDecoded?${args})` +
+                `[复制](command:datamorph.copyDecoded?${args}) · [新标签打开](command:datamorph.openDecoded?${args})` +
                 (/^https?:\/\//i.test(t.decoded)
-                  ? ` · [打开链接](command:jsonTools.openLink?${args})`
+                  ? ` · [打开链接](command:datamorph.openLink?${args})`
                   : ""),
               isTrusted: {
                 enabledCommands: [
-                  "jsonTools.copyDecoded",
-                  "jsonTools.openDecoded",
-                  "jsonTools.openLink",
+                  "datamorph.copyDecoded",
+                  "datamorph.openDecoded",
+                  "datamorph.openLink",
                 ],
               },
             },

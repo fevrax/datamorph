@@ -1,26 +1,32 @@
 <div align="center">
-  <img src="public/logo.png" alt="JSON Tools Next" width="160" />
-  <h1>JSON Tools Next</h1>
-  <p><strong>强大、灵活的JSON工具集，融合AI的现代化JSON数据处理解决方案</strong></p>
+  <img src="public/logo.png" alt="Datamorph" width="160" />
+  <h1>Datamorph</h1>
+  <p><strong>一源万构，形随需变 · 数据处理工作台</strong></p>
   
-  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT) [![GitHub Stars](https://img.shields.io/github/stars/dalefengs/json-tools?style=social)](https://github.com/dalefengs/json-tools/stargazers) [![React](https://img.shields.io/badge/React-19.0-61DAFB?logo=react&logoColor=white)](https://reactjs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/) [![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/) [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/) [![Node](https://img.shields.io/badge/Node.js-%E2%89%A520-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT) [![GitHub Stars](https://img.shields.io/github/stars/fevrax/datamorph?style=social)](https://github.com/fevrax/datamorph/stargazers) [![React](https://img.shields.io/badge/React-19.0-61DAFB?logo=react&logoColor=white)](https://reactjs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/) [![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/) [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/) [![Node](https://img.shields.io/badge/Node.js-%E2%89%A520-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
   
 </div>
 
 ## ✨ 特性
 
-JSON Tools Next 是一个多功能的JSON工具集，提供了直观的界面和多种强大功能，帮助开发者处理和转换JSON数据。
+- 自动识别并高亮 JSON、JSONC、JSON5、YAML、TOML、XML、CSV、TSV、INI、NDJSON、HTML、CSS、SCSS、LESS、SQL、JavaScript、TypeScript、Markdown、Protobuf（含 `.yml`、`.jsonl`、`.proto`）。默认自动模式，也可手动固定语言；导入文件或明确命名的扩展名优先。
+- 空白和无法判断的内容默认 JSON，格式切换保留正文、撤销记录及光标位置。
+- 支持多格式识别、高亮、编辑和文本对比。格式化支持 JSON/JSON5、JSONC、YAML、HTML、CSS/SCSS/LESS、SQL（标准 SQL）、JavaScript/TypeScript、Markdown 和 Protobuf，可从工具栏、快捷键及对比视图使用并撤销；校验、树形、表格及 JSONPath 仍限 JSON/JSON5。TOML、XML、CSV、TSV、INI、NDJSON 暂不提供编辑器格式化；已有格式转换工具支持 JSON、JSON5、YAML、TOML、XML。
+- 默认根据内容自动识别空格或 Tab 缩进，粘贴、导入和格式化时沿用已有缩进；对比视图两侧独立识别。没有可识别缩进时使用全局默认宽度，可在编辑器设置中关闭自动识别并手动指定宽度。
+- 首次升级自动迁移原有文档、历史、设置与 AI 配置，保留旧数据库；清除数据后不会重新导入。
+
+Datamorph 是面向开发者的数据处理工作台。以同一份数据为源，按需求编辑、对比和转换不同结构。
 
 - 🚀 **多视图模式**：支持文本视图、树形视图、差异对比视图和表格视图
-- 🎨 **深色/浅色主题**：适应各种工作环境和个人偏好 
+- 🎨 **深色/浅色主题**：适应各种工作环境和个人偏好
 - 🔄 **视图切换**：快速在不同视图模式间切换
-- 🧩 **多标签页**：支持同时打开多个JSON文件处理
+- 🧩 **多标签页**：支持同时打开多种格式的数据文件处理
 - 🧩 **丰富工具箱**：集成多种专用JSON处理工具
 - 🔎 **JSONPath 查询**：字段提取、条件筛选、递归查询，内置交互示例与[使用指南](docs/jsonpath.md)
 - 🔍 **字符解码器**：自动识别并解码常见编码格式
 - 🤖 **AI驱动功能**：利用AI技术增强JSON处理体验
 
-## 📦 JSON 工具箱 
+## 📦 JSON 工具箱
 
 <div align="center">
   <table>
@@ -59,12 +65,12 @@ JSON Tools Next 是一个多功能的JSON工具集，提供了直观的界面和
 
 ## 🖼️ 界面预览
 
-![250419132143711.png](https://fs.ssooai.com/default/250419132143711-20250419132143726.png)
-![250419132241894.png](https://fs.ssooai.com/default/250419132241894-20250419132242640.png)
-![250419132405927.png](https://fs.ssooai.com/default/250419132405927-20250419132406260.png)
+![Datamorph 数据处理工作台](.github/assets/datamorph-workspace.png)
+![Datamorph 深色界面](.github/assets/datamorph-workspace-dark.png)
+
 ## 🔥 核心功能
 
-### 多视图JSON编辑器
+### 多格式编辑器与 JSON 结构视图
 
 - **文本视图**：基于Monaco Editor的专业代码编辑体验
 - **树形视图**：直观的树状结构展示，适合数据浏览
@@ -90,8 +96,6 @@ JSON Tools Next 是一个多功能的JSON工具集，提供了直观的界面和
 - **自动修复**：使用jsonrepair库自动修复常见格式错误
 - **AI智能修复**：借助OpenAI API进行更复杂的JSON修复
 
-
-
 ## 🐳 Docker 部署
 
 ### 使用 Docker Compose（推荐）
@@ -109,10 +113,10 @@ docker compose up -d
 
 ```bash
 # 构建镜像
-docker build -t json-tools-next .
+docker build -t datamorph .
 
 # 运行容器
-docker run -d --env-file .env -p 3300:80 --name json-tools json-tools-next
+docker run -d --env-file .env -p 3300:80 --name datamorph datamorph
 
 # 访问 http://localhost:3300
 ```
@@ -200,7 +204,6 @@ pnpm test:regressions
 pnpm preview
 ```
 
-
 ## 🤝 贡献
 
 欢迎提交PR、创建Issue或提供功能建议！请查看[贡献指南](CONTRIBUTING.md)了解更多。
@@ -245,14 +248,15 @@ BREAKING CHANGE: 修改了之前的格式化行为
 ```
 
 提交符合规范的消息后，semantic-release 会：
+
 1. 根据提交类型自动确定版本号变更（major/minor/patch）
 2. 自动生成更新日志（CHANGELOG.md）
 3. 创建Git标签
 4. 发布GitHub Release
 
-
 ## 📈 Stargazers over time
-[![Stargazers over time](https://starchart.cc/fevrax/json-tools.svg?variant=adaptive)](https://starchart.cc/fevrax/json-tools)
+
+[![Stargazers over time](https://starchart.cc/fevrax/datamorph.svg?variant=adaptive)](https://starchart.cc/fevrax/datamorph)
 
 ## 🙏 致谢
 
@@ -265,4 +269,4 @@ BREAKING CHANGE: 修改了之前的格式化行为
 
 ## 📜 许可证
 
-[MIT License](LICENSE) © 2025 json-tools
+[MIT License](LICENSE) © 2025 Datamorph

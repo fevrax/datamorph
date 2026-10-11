@@ -3,9 +3,9 @@ import { useTheme } from "next-themes";
 import { ArrowUpRight, Braces, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui";
 import { createToolStateHook } from "@/components/workspace/ToolContext";
-import MonacoJsonEditor, {
-  type MonacoJsonEditorRef,
-} from "@/components/monacoEditor/MonacoJsonEditor";
+import MonacoDataEditor, {
+  type MonacoDataEditorRef,
+} from "@/components/monacoEditor/MonacoDataEditor";
 import ToolboxPageTemplate from "@/layouts/toolboxPageTemplate";
 import { jsonPathExamples, jsonPathSample } from "@/utils/jsonPathExamples";
 import { stringifyJson } from "@/utils/json";
@@ -15,7 +15,7 @@ export default function JsonPathPage() {
   const [input, setInput] = useToolState("inputValue", () =>
     stringifyJson(jsonPathSample, 2),
   );
-  const editor = useRef<MonacoJsonEditorRef>(null);
+  const editor = useRef<MonacoDataEditorRef>(null);
   const { resolvedTheme } = useTheme();
   return (
     <ToolboxPageTemplate toolName="JSONPath 查询" toolIcon="mdi:filter">
@@ -82,7 +82,7 @@ export default function JsonPathPage() {
             </p>
           </section>
           <div className="min-h-64 overflow-hidden rounded-xl border lg:min-h-0">
-            <MonacoJsonEditor
+            <MonacoDataEditor
               ref={editor}
               tabKey="jsonpath-playground"
               tabTitle="JSONPath 查询"

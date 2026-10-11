@@ -11,7 +11,7 @@ export function getDocumentModel(
     model = monaco.editor.createModel(
       content,
       language,
-      monaco.Uri.parse("json-tools://document/" + encodeURIComponent(key)),
+      monaco.Uri.parse("datamorph://document/" + encodeURIComponent(key)),
     );
     models.set(key, model);
   } else {
@@ -57,7 +57,7 @@ export const modelRegistryStats = () => ({
   views: views.size,
 });
 if (typeof window !== "undefined")
-  window.addEventListener("json-tools:close-model", (event) => {
+  window.addEventListener("datamorph:close-model", (event) => {
     const key = (event as CustomEvent<string>).detail;
     setTimeout(() => releaseDocumentModels(key), 0);
   });

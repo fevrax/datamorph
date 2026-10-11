@@ -44,7 +44,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: fevrax/json-tools
+          images: fevrax/datamorph
           tags: |
             type=raw,value=latest
             type=raw,value=${{ inputs.version }}
@@ -65,6 +65,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: |
             type=gha,scope=docker-main
-            type=registry,ref=fevrax/json-tools:latest
+            type=registry,ref=fevrax/datamorph:latest
           cache-to: |
             type=gha,scope=docker-main,mode=max

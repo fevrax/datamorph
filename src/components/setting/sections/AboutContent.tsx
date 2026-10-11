@@ -8,24 +8,24 @@ import pkg from "@/../package.json";
 const APP_VERSION = `v${pkg.version}`;
 
 const FEATURES = [
-  { label: "JSON 格式化与验证", icon: "solar:check-circle-bold" },
+  { label: "多格式识别与语法高亮", icon: "solar:check-circle-bold" },
   { label: "智能 AI 辅助修复", icon: "solar:check-circle-bold" },
   { label: "数据格式转换", icon: "solar:check-circle-bold" },
 ];
 
 const LINKS = [
   {
-    href: "https://github.com/fevrax/json-tools",
+    href: "https://github.com/fevrax/datamorph",
     icon: "mdi:github",
     label: "GitHub 仓库",
   },
   {
-    href: "https://github.com/fevrax/json-tools/issues",
+    href: "https://github.com/fevrax/datamorph/issues",
     icon: "solar:chat-square-code-bold",
     label: "问题反馈",
   },
   {
-    href: "https://github.com/fevrax/json-tools",
+    href: "https://github.com/fevrax/datamorph",
     icon: "solar:document-bold",
     label: "使用文档",
   },
@@ -40,7 +40,7 @@ export function AboutContent() {
     <div className="h-full">
       <SectionHeader
         description="了解更多关于应用的信息"
-        title="关于 JSON Tools"
+        title="关于 Datamorph"
       />
 
       {/* 品牌信息 */}
@@ -48,14 +48,14 @@ export function AboutContent() {
         <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary">
-              <img alt="JSON Tools Logo" className="h-8 w-8" src="./logo.png" />
+              <img alt="Datamorph Logo" className="h-8 w-8" src="./logo.png" />
             </div>
             <div className="min-w-0">
               <h3 className="text-base font-semibold text-foreground">
-                JSON Tools
+                Datamorph
               </h3>
               <p className="text-[12px] text-muted-foreground">
-                强大的 JSON 处理工具集，一站式 JSON 开发者工具箱
+                一源万构，形随需变。面向开发者的数据处理工作台。
               </p>
             </div>
           </div>
@@ -116,7 +116,7 @@ export function AboutContent() {
       </div>
 
       <p className="mt-6 text-center text-[12px] text-muted-foreground">
-        © {new Date().getFullYear()} JSON Tools · 基于 React、TypeScript 和
+        © {new Date().getFullYear()} Datamorph · 基于 React、TypeScript 和
         shadcn/ui 构建
       </p>
     </div>

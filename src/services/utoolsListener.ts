@@ -62,7 +62,7 @@ class UtoolsListener {
         const store = useTabStore.getState();
         const current = store.activeTab();
         if (
-          current?.kind === "json" &&
+          current?.kind === "document" &&
           store.tabs.length === 1 &&
           current.content.trim() === ""
         ) {

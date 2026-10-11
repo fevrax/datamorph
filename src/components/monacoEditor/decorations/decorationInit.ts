@@ -1,6 +1,11 @@
 import * as monaco from "monaco-editor";
+import { registerFormatProviders } from "../formatDocument";
 import { loader } from "@monaco-editor/react";
-import { Json5LanguageDef } from "../MonacoLanguageDef";
+import { dataLanguageDefinitions } from "../dataLanguageDefinitions";
+import { DATA_FORMATS } from "@/utils/dataFormats";
+import "monaco-editor/esm/vs/basic-languages/yaml/yaml.contribution";
+import "monaco-editor/esm/vs/basic-languages/xml/xml.contribution";
+import "monaco-editor/esm/vs/basic-languages/ini/ini.contribution";
 import { registerDecoderProviders } from "./decoderEngine";
 let isInitialized = false;
 let baseProviderRegistered = false;
@@ -15,7 +20,7 @@ let initPromise: Promise<void> | null = null;
  * @returns 初始化后的Monaco实例
  */
 export const initMonacoGlobally = async () => {
-  if (isInitialized) return;
+  if (isInitialized) return monaco;
 
   if (!initPromise) {
     initPromise = (async () => {
@@ -27,24 +32,36 @@ export const initMonacoGlobally = async () => {
       // 初始化Monaco实例
       const monacoInstance = await loader.init();
 
-      // 注册JSON5语言支持
-      if (
-        !monacoInstance.languages
-          .getLanguages()
-          .some((lang) => lang.id === "json5")
-      ) {
-        monacoInstance.languages.register({ id: "json5" });
-        monacoInstance.languages.setMonarchTokensProvider(
-          "json5",
-          Json5LanguageDef,
-        );
+      for (const { id, highlighter } of DATA_FORMATS) {
+        if (highlighter === "builtin") continue;
+        const definition = dataLanguageDefinitions[highlighter];
+        if (
+          !monacoInstance.languages
+            .getLanguages()
+            .some((lang) => lang.id === id)
+        )
+          monacoInstance.languages.register({ id });
+        monacoInstance.languages.setMonarchTokensProvider(id, definition);
+        monacoInstance.languages.setLanguageConfiguration(id, {
+          brackets: [
+            ["{", "}"],
+            ["[", "]"],
+          ],
+          autoClosingPairs: [
+            { open: '"', close: '"' },
+            { open: "[", close: "]" },
+            { open: "{", close: "}" },
+          ],
+        });
       }
 
+      registerFormatProviders();
       isInitialized = true;
     })();
   }
 
   await initPromise;
+  return monaco;
 };
 
 /**

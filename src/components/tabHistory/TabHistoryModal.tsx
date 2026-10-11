@@ -28,12 +28,15 @@ import type { TabHistoryItem } from "@/store/useTabStore";
 import { snapshotBytes } from "@/store/documentHistory";
 import HistoryDiffPreview from "./HistoryDiffPreview";
 import "./tab-history.css";
+import type { LanguageMode } from "@/utils/dataFormats";
 
 interface TabHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   documentTitle: string;
   language: string;
+  languageMode?: LanguageMode;
+  filename?: string;
   currentContent: string;
   historyItems: TabHistoryItem[];
   onRestore: (historyKey: string) => void;
@@ -77,6 +80,8 @@ export default function TabHistoryModal({
   onClose,
   documentTitle,
   language,
+  languageMode,
+  filename,
   currentContent,
   historyItems,
   onRestore,
@@ -245,6 +250,8 @@ export default function TabHistoryModal({
                       value={selected.content}
                       theme={theme}
                       language={language}
+                      languageMode={languageMode}
+                      filename={filename}
                       ariaLabel="历史版本内容，只读"
                     />
                   ) : (
@@ -253,6 +260,8 @@ export default function TabHistoryModal({
                       modified={currentContent}
                       theme={theme}
                       language={language}
+                      languageMode={languageMode}
+                      filename={filename}
                     />
                   )}
                 </div>

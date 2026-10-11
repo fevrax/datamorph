@@ -965,6 +965,7 @@ export function Select({
 export function Slider({
   value,
   onChange,
+  isDisabled,
   minValue = 0,
   maxValue = 100,
   className,
@@ -973,6 +974,7 @@ export function Slider({
 }: StyleProps & {
   value: number | number[];
   onChange?: (value: number | number[]) => void;
+  isDisabled?: boolean;
   minValue?: number;
   maxValue?: number;
   className?: string;
@@ -983,12 +985,13 @@ export function Slider({
   return (
     <SliderPrimitive.Root
       className={cn(
-        "relative flex h-8 w-full touch-none items-center",
+        "relative flex h-8 w-full touch-none items-center data-[disabled]:opacity-40",
         className,
       )}
       min={minValue}
       max={maxValue}
       step={step}
+      disabled={isDisabled}
       value={Array.isArray(value) ? value : [value]}
       onValueChange={(v) => onChange?.(Array.isArray(value) ? v : v[0])}
     >

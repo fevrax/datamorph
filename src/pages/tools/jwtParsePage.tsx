@@ -18,8 +18,8 @@ import { useTheme } from "next-themes";
 import jwt from "jsonwebtoken";
 
 import MonacoEditor, {
-  MonacoJsonEditorRef,
-} from "@/components/monacoEditor/MonacoJsonEditor.tsx";
+  MonacoDataEditorRef,
+} from "@/components/monacoEditor/MonacoDataEditor.tsx";
 import ToolboxPageTemplate from "@/layouts/toolboxPageTemplate";
 import { parseJson, stringifyJson } from "@/utils/json";
 
@@ -227,11 +227,11 @@ export default function JwtParsePage() {
   const { resolvedTheme: theme } = useTheme();
 
   // 编辑器引用
-  const jwtEditorRef = useRef<MonacoJsonEditorRef>(null);
-  const headerEditorRef = useRef<MonacoJsonEditorRef>(null);
-  const payloadEditorRef = useRef<MonacoJsonEditorRef>(null);
-  const encodeHeaderEditorRef = useRef<MonacoJsonEditorRef>(null);
-  const encodePayloadEditorRef = useRef<MonacoJsonEditorRef>(null);
+  const jwtEditorRef = useRef<MonacoDataEditorRef>(null);
+  const headerEditorRef = useRef<MonacoDataEditorRef>(null);
+  const payloadEditorRef = useRef<MonacoDataEditorRef>(null);
+  const encodeHeaderEditorRef = useRef<MonacoDataEditorRef>(null);
+  const encodePayloadEditorRef = useRef<MonacoDataEditorRef>(null);
 
   // 状态管理
   const [jwtToken, setJwtToken] = useToolState("jwtToken", "");
@@ -583,14 +583,14 @@ export default function JwtParsePage() {
 
     // 使用当前时间戳作为iat，确保每次生成的JWT都不同
     const payload = {
-      username: "json-tools",
+      username: "datamorph",
       sub: "demo",
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // 30天后过期
     };
 
     // 设置密钥
-    const sampleSecret = "json-tools";
+    const sampleSecret = "datamorph";
 
     setSecret(sampleSecret);
 

@@ -30,6 +30,33 @@ test("JSON5 formatting never coerces large numbers", () => {
     new RegExp(precise),
   );
 });
+test("JSON and JSON5 formatting preserve Tab indentation and precise numbers", () => {
+  for (const language of ["json", "json5"]) {
+    const content =
+      language === "json"
+        ? `{"id":${precise},"nested":{"value":true}}`
+        : `{id:${precise},nested:{value:true}}`;
+    const result = executeJsonTask({
+      action: "format",
+      language,
+      content,
+      indent: 4,
+      insertSpaces: false,
+    }).content!;
+    assert.match(result, /\n\t"id":/);
+    assert.match(result, /\n\t\t"value":/);
+    assert.ok(result.includes(precise));
+    assert.equal(
+      executeJsonTask({
+        action: "compress",
+        language,
+        content,
+        insertSpaces: false,
+      }).content,
+      `{"id":${precise},"nested":{"value":true}}`,
+    );
+  }
+});
 test("query preserves lossless values and invalid queries fail", () => {
   assert.match(
     executeJsonTask({

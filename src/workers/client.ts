@@ -1,3 +1,4 @@
+import type { FormatTaskInput } from "./formatTasks";
 import type { ConversionInput } from "./conversion";
 import type { JsonTaskInput } from "./jsonTasks";
 export type TaskResult = {
@@ -19,7 +20,11 @@ export const getPendingScopes = () => [...pending.keys(), ...external.keys()];
 function notifyTasks() {
   subscribers.forEach((callback) => callback());
 }
-const idle: Record<string, Worker[]> = { json: [], conversion: [] };
+const idle: Record<string, Worker[]> = {
+  document: [],
+  conversion: [],
+  format: [],
+};
 
 const pending = new Map<
   string,
@@ -42,29 +47,31 @@ export function cancelJsonTask(scope: string) {
 }
 export function runJsonTask(
   scope: string,
-  input: JsonTaskInput | ConversionInput,
+  input: JsonTaskInput | ConversionInput | FormatTaskInput,
 ): Promise<TaskResult> {
   cancelJsonTask(scope);
   return new Promise((resolve, reject) => {
-    const kind = [
-      "convert",
-      "type",
-      "keys",
-      "encode",
-      "decode",
-      "export",
-    ].includes(input.action)
-      ? "conversion"
-      : "json";
+    const kind =
+      input.action === "format-code"
+        ? "format"
+        : ["convert", "type", "keys", "encode", "decode", "export"].includes(
+              input.action,
+            )
+          ? "conversion"
+          : "document";
     const worker =
       idle[kind].pop() ||
-      (kind === "conversion"
-        ? new Worker(new URL("./conversion.worker.ts", import.meta.url), {
+      (kind === "format"
+        ? new Worker(new URL("./format.worker.ts", import.meta.url), {
             type: "module",
           })
-        : new Worker(new URL("./json.worker.ts", import.meta.url), {
-            type: "module",
-          }));
+        : kind === "conversion"
+          ? new Worker(new URL("./conversion.worker.ts", import.meta.url), {
+              type: "module",
+            })
+          : new Worker(new URL("./json.worker.ts", import.meta.url), {
+              type: "module",
+            }));
     const id = ++nextId;
     pending.set(scope, { worker, reject });
     notifyTasks();

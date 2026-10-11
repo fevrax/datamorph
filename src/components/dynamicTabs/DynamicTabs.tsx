@@ -33,6 +33,7 @@ import { globalShortcutListener } from "@/utils/shortcut";
 import { validateAndDecodeBase64 } from "@/utils/base64";
 import { JsonSample } from "@/utils/jsonSample";
 import toast from "@/utils/toast";
+import { DATA_FILE_ACCEPT } from "@/utils/dataFormats";
 export interface DynamicTabsRef {
   getPositionTop: () => number;
 }
@@ -170,7 +171,7 @@ function DynamicTabs({
         ref={file}
         type="file"
         multiple
-        accept=".json,.json5,.txt,.yaml,.yml,.xml,.toml"
+        accept={DATA_FILE_ACCEPT}
         className="hidden"
         onChange={(e) => {
           void importFiles(Array.from(e.target.files || []));
@@ -195,7 +196,7 @@ function DynamicTabs({
                   onDoubleClick={() => open("rename", tab.key)}
                   className="flex min-w-0 flex-1 items-center gap-2 py-2.5"
                 >
-                  {tab.kind === "json" ? (
+                  {tab.kind === "document" ? (
                     <Braces className="size-3.5 shrink-0 text-primary" />
                   ) : (
                     <Blocks className="size-3.5 shrink-0" />
@@ -279,7 +280,7 @@ function DynamicTabs({
       <Button
         isIconOnly
         variant="ghost"
-        aria-label="新建 JSON"
+        aria-label="新建文档"
         className="mx-1"
         onPress={() => store.addTab()}
       >

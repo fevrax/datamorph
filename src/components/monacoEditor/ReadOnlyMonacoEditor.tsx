@@ -1,30 +1,41 @@
 import { useEffect, useRef } from "react";
 import * as monaco from "monaco-editor";
-import { loader } from "@monaco-editor/react";
+import { initMonacoGlobally } from "./decorations/decorationInit";
+import { useDataLanguage } from "@/hooks/useDataLanguage";
+import type { LanguageMode } from "@/utils/dataFormats";
 
 export default function ReadOnlyMonacoEditor({
   value,
   theme,
   ariaLabel,
   language = "json",
+  languageMode = "manual",
+  filename,
 }: {
   value: string;
   theme: string;
   ariaLabel: string;
   language?: string;
+  languageMode?: LanguageMode;
+  filename?: string;
 }) {
+  const effectiveLanguage = useDataLanguage(
+    value,
+    language,
+    languageMode,
+    filename,
+  );
   const host = useRef<HTMLDivElement>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const model = useRef<monaco.editor.ITextModel | null>(null);
-  const latest = useRef({ value, theme, language });
-  latest.current = { value, theme, language };
+  const latest = useRef({ value, theme, language: effectiveLanguage });
+  latest.current = { value, theme, language: effectiveLanguage };
 
   useEffect(() => {
     if (!host.current) return;
     let disposed = false;
 
-    loader.config({ monaco });
-    void loader.init().then(() => {
+    void initMonacoGlobally().then(() => {
       if (disposed || !host.current) return;
       model.current = monaco.editor.createModel(
         latest.current.value,
@@ -78,8 +89,9 @@ export default function ReadOnlyMonacoEditor({
   }, [theme]);
 
   useEffect(() => {
-    if (model.current) monaco.editor.setModelLanguage(model.current, language);
-  }, [language]);
+    if (model.current)
+      monaco.editor.setModelLanguage(model.current, effectiveLanguage);
+  }, [effectiveLanguage]);
 
   return (
     <div

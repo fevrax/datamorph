@@ -9,7 +9,7 @@ test("site route sends no browser credential and only uses the current origin", 
   Object.defineProperty(globalThis, "window", {
     configurable: true,
     value: {
-      location: { protocol: "https:", origin: "https://json-tools.example" },
+      location: { protocol: "https:", origin: "https://datamorph.example" },
     },
   });
   globalThis.fetch = async (input, init) => {
@@ -49,7 +49,7 @@ test("site route sends no browser credential and only uses the current origin", 
     assert.deepEqual(requests, [
       { url: "/api/ai/v1/models", authorization: null },
       {
-        url: "https://json-tools.example/api/ai/v1/chat/completions",
+        url: "https://datamorph.example/api/ai/v1/chat/completions",
         authorization: null,
       },
     ]);

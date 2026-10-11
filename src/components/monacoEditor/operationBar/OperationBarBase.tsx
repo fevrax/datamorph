@@ -22,6 +22,7 @@ export interface BaseButtonConfig {
   iconColor?: string;
   className?: string;
   priority?: number; // 按钮显示优先级，数字越小优先级越高
+  disabled?: boolean;
 }
 
 // 定义状态按钮接口
@@ -39,6 +40,7 @@ export interface DropdownButtonConfig extends BaseButtonConfig {
     icon: string;
     text: string;
     onClick: () => void;
+    disabled?: boolean;
   }[];
 }
 
@@ -113,6 +115,7 @@ export const renderStandardButton = (button: BaseButtonConfig) => {
           />
         }
         variant="light"
+        isDisabled={button.disabled}
         onPress={button.onClick}
       >
         {button.text}
@@ -160,6 +163,7 @@ export const renderDropdownButton = (
             />
           }
           variant="light"
+          isDisabled={button.disabled}
         >
           {button.text}
         </Button>
@@ -176,6 +180,7 @@ export const renderDropdownButton = (
             key={item.key}
             className="py-2 px-3 hover:bg-secondary rounded-md"
             textValue={item.text}
+            isDisabled={item.disabled}
             onPress={item.onClick}
           >
             <div className="flex items-center space-x-2">
@@ -241,6 +246,7 @@ export const renderMoreMenu = (
                 key={`${button.key}-${item.key}`}
                 className="py-2 px-3 hover:bg-secondary rounded-md"
                 textValue={`${button.text} - ${item.text}`}
+                isDisabled={item.disabled || button.disabled}
                 onPress={item.onClick}
               >
                 <div className="flex items-center space-x-2">
@@ -256,6 +262,7 @@ export const renderMoreMenu = (
                 key={button.key}
                 className="py-2 px-3 hover:bg-secondary rounded-md"
                 textValue={"text" in button ? button.text : ""}
+                isDisabled={button.disabled}
                 onPress={button.onClick}
               >
                 <div className="flex items-center space-x-2">

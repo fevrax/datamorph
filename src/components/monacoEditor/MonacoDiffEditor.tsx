@@ -8,8 +8,16 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import * as monaco from "monaco-editor";
-import { loader } from "@monaco-editor/react";
+import { initMonacoGlobally } from "./decorations/decorationInit";
+import { useDataLanguage } from "@/hooks/useDataLanguage";
+import { useEditorIndentation } from "@/hooks/useEditorIndentation";
+import {
+  supportsJsonOperations,
+  supportsFormatting,
+  type LanguageMode,
+} from "@/utils/dataFormats";
 import {
   PanelGroup,
   Panel,
@@ -31,6 +39,7 @@ import {
   restoreEditorView,
   saveEditorView,
 } from "./modelRegistry";
+import { formatEditorDocument } from "./formatDocument";
 import { createEditorAdapter } from "./editorAdapter";
 import {
   updateDecoder,
@@ -41,6 +50,7 @@ import { runJsonTask, cancelJsonTask } from "@/workers/client";
 import { MonacoDiffEditorEditorType as Side } from "./monacoEntity";
 import type { MonacoDiffEditorEditorType } from "./monacoEntity";
 import DraggableMenu from "./DraggableMenu";
+import LanguageSelector from "./LanguageSelector";
 import AIPromptOverlay, {
   type QuickPrompt,
 } from "@/components/ai/AIPromptOverlay";
@@ -59,8 +69,12 @@ export interface MonacoDiffEditorProps {
   originalValue: string;
   modifiedValue: string;
   language?: string;
+  languageMode?: LanguageMode;
+  filename?: string;
+  onLanguagesChange?: (languages: { left: string; right: string }) => void;
   theme?: string;
   settingsBarTarget?: HTMLElement | null;
+  languageBarTarget?: HTMLElement | null;
   customQuickPrompts?: QuickPrompt[];
   showTimestampDecorators?: boolean;
   showBase64Decorators?: boolean;
@@ -99,9 +113,13 @@ export default function MonacoDiffEditor({
   tabTitle,
   originalValue,
   modifiedValue,
-  language = "json",
+  language,
+  languageMode,
+  filename,
+  onLanguagesChange,
   theme = "vs-light",
   settingsBarTarget,
+  languageBarTarget,
   height = "100%",
   customQuickPrompts,
   showTimestampDecorators = true,
@@ -132,10 +150,53 @@ export default function MonacoDiffEditor({
   const [candidate, setCandidate] = useState<string | null>(null);
   const [candidateVersion, setCandidateVersion] = useState(0);
   const [candidateSide, setCandidateSide] = useState(Side.right);
-  const [currentLanguage, setLanguage] = useState(language);
+  const [localMode, setMode] = useState<LanguageMode>(
+    languageMode || (language ? "manual" : "auto"),
+  );
+  const [manualLanguage, setManualLanguage] = useState(language || "json");
+  const mode = context
+    ? localMode
+    : languageMode || (language ? "manual" : "auto");
+  const selectedLanguage = context ? manualLanguage : language || "json";
+  const currentLanguage = useDataLanguage(
+    originalValue,
+    selectedLanguage,
+    mode,
+    filename,
+    key + ":original",
+  );
+  const modifiedLanguage = useDataLanguage(
+    modifiedValue,
+    selectedLanguage,
+    mode,
+    undefined,
+    key + ":modified",
+  );
+  useEffect(() => {
+    onLanguagesChange?.({ left: currentLanguage, right: modifiedLanguage });
+  }, [currentLanguage, modifiedLanguage, onLanguagesChange]);
+  function setLanguage(next: string) {
+    if (!context) {
+      useTabStore.getState().updateEditorSettings(owner, {
+        languageMode: next === "auto" ? "auto" : "manual",
+        ...(next === "auto" ? {} : { language: next }),
+      });
+      return;
+    }
+    setMode(next === "auto" ? "auto" : "manual");
+    if (next !== "auto") setManualLanguage(next);
+  }
   const stored = useTabStore.getState().getTabByKey(owner)?.editorSettings;
-  const [fontSize, setFontSize] = useState(stored?.fontSize || 14),
-    [indent, setIndent] = useState(stored?.indentSize || 2);
+  const [fontSize, setFontSize] = useState(stored?.fontSize || 14);
+  const indentation = useEditorIndentation(owner, ready, () =>
+    diff.current
+      ? [
+          diff.current.getOriginalEditor().getModel()!,
+          diff.current.getModifiedEditor().getModel()!,
+        ]
+      : [],
+  );
+  const { indentSize: indent } = indentation;
   const [enabled, setEnabled] = useState<Record<DecoderKind, boolean>>({
     timestamp: stored?.timestampDecoratorsEnabled ?? showTimestampDecorators,
     base64: stored?.base64DecoratorsEnabled ?? showBase64Decorators,
@@ -185,21 +246,40 @@ export default function MonacoDiffEditor({
   ) {
     const targets = editors(side);
     if (!targets.length) return false;
+    if (
+      targets.some(
+        (ed) =>
+          !(action === "format" ? supportsFormatting : supportsJsonOperations)(
+            ed.getModel()?.getLanguageId() || "",
+          ),
+      )
+    )
+      return false;
     setBusy(true);
     void Promise.all(
       targets.map(async (ed) => {
         const model = ed.getModel();
         if (!model) return;
+        const language = model.getLanguageId();
+        const options = indentation.resolve(model);
+        if (action === "format" && !supportsJsonOperations(language)) {
+          await formatEditorDocument(ed);
+          return;
+        }
         const version = model.getVersionId();
         const result = await runJsonTask(key + ":" + ed.getId(), {
           action,
           content: model.getValue(),
-          language: currentLanguage,
-          indent,
+          language: model.getLanguageId(),
+          indent: options.tabSize,
+          insertSpaces: options.insertSpaces,
           direction,
         });
         if (model.isDisposed()) return;
-        if (model.getVersionId() !== version) {
+        if (
+          model.getVersionId() !== version ||
+          model.getLanguageId() !== language
+        ) {
           toast.warning("内容已变化，请重新执行");
           return;
         }
@@ -246,7 +326,7 @@ export default function MonacoDiffEditor({
     let instance: monaco.editor.IStandaloneDiffEditor | undefined;
     const subscriptions: monaco.IDisposable[] = [];
     const timers = new Map<string, ReturnType<typeof setTimeout>>();
-    void loader.init().then(() => {
+    void initMonacoGlobally().then(() => {
       if (disposed || !host.current) return;
       instance = monaco.editor.createDiffEditor(host.current, {
         automaticLayout: true,
@@ -264,15 +344,18 @@ export default function MonacoDiffEditor({
       });
       diff.current = instance;
       instance.setModel({
-        original: getDocumentModel(key, originalValue, language),
-        modified: getDocumentModel(key + "::diff", modifiedValue, language),
+        original: getDocumentModel(key, originalValue, currentLanguage),
+        modified: getDocumentModel(
+          key + "::diff",
+          modifiedValue,
+          modifiedLanguage,
+        ),
       });
       for (const [index, ed] of [
         instance.getOriginalEditor(),
         instance.getModifiedEditor(),
       ].entries()) {
         restoreEditorView(index ? key + "::diff" : key, ed);
-        ed.updateOptions({ tabSize: indent });
         const refresh = () => {
           clearTimeout(timers.get(ed.getId()));
           timers.set(
@@ -324,26 +407,35 @@ export default function MonacoDiffEditor({
   useEffect(() => {
     monaco.editor.setTheme(theme);
     diff.current?.updateOptions({ fontSize });
-    for (const ed of editors()) {
-      ed.updateOptions({ fontSize, tabSize: indent });
+    for (const [index, ed] of editors().entries()) {
+      ed.updateOptions({ fontSize });
       const model = ed.getModel();
-      if (model) monaco.editor.setModelLanguage(model, currentLanguage);
+      if (model)
+        monaco.editor.setModelLanguage(
+          model,
+          index ? modifiedLanguage : currentLanguage,
+        );
       for (const [kind, on] of Object.entries(enabled))
         updateDecoder(kind as DecoderKind, ed, { enabled: on });
     }
-  }, [theme, fontSize, indent, currentLanguage, enabled, ready]);
+  }, [theme, fontSize, currentLanguage, modifiedLanguage, enabled, ready]);
+  useEffect(() => {
+    if (context && language) setManualLanguage(language);
+  }, [language, context]);
+  useEffect(() => {
+    if (context && languageMode) setMode(languageMode);
+  }, [languageMode, context]);
   useEffect(() => {
     useTabStore.getState().updateEditorSettings(owner, {
       fontSize,
-      indentSize: indent,
-      language: currentLanguage,
+      ...(!context ? { language: currentLanguage, languageMode: mode } : {}),
       timestampDecoratorsEnabled: enabled.timestamp,
       base64DecoratorsEnabled: enabled.base64,
       unicodeDecoratorsEnabled: enabled.unicode,
       urlDecoratorsEnabled: enabled.url,
       imageDecoratorsEnabled: enabled.image,
     });
-  }, [owner, fontSize, indent, currentLanguage, enabled]);
+  }, [owner, fontSize, currentLanguage, mode, enabled, context]);
   useEffect(() => {
     const resize = () => setNarrow(window.innerWidth < 768);
     window.addEventListener("resize", resize);
@@ -418,7 +510,10 @@ export default function MonacoDiffEditor({
           </Button>
         </div>
       )}
-      <PanelGroup direction={narrow ? "vertical" : "horizontal"}>
+      <PanelGroup
+        direction={narrow ? "vertical" : "horizontal"}
+        className="min-h-0 flex-1"
+      >
         <Panel minSize={25}>
           <div className="relative h-full">
             <div ref={host} className="h-full" />
@@ -426,20 +521,20 @@ export default function MonacoDiffEditor({
               toolbarTarget={settingsBarTarget}
               containerRef={root}
               tabKey={owner}
-              currentLanguage={currentLanguage}
               currentFontSize={fontSize}
               currentIndentSize={indent}
-              onLanguageChange={setLanguage}
+              currentIndentMode={indentation.indentMode}
+              insertSpaces={indentation.insertSpaces}
               onFontSizeChange={setFontSize}
-              onIndentSizeChange={setIndent}
+              onIndentSizeChange={indentation.setSize}
+              onIndentModeChange={indentation.setMode}
               timestampDecoratorsEnabled={enabled.timestamp}
               onTimestampDecoratorsChange={(v) => toggle("timestamp", v)}
               imageDecoratorsEnabled={enabled.image}
               onImageDecoratorsChange={(v) => toggle("image", v)}
               onReset={() => {
                 setFontSize(14);
-                setIndent(2);
-                setLanguage("json");
+                indentation.reset();
               }}
             />
           </div>
@@ -459,6 +554,24 @@ export default function MonacoDiffEditor({
           {!narrow && assistantContent}
         </Panel>
       </PanelGroup>
+      {languageBarTarget === undefined ? (
+        <div className="editor-local-status">
+          <LanguageSelector
+            language={currentLanguage}
+            languageMode={mode}
+            onLanguageChange={setLanguage}
+          />
+        </div>
+      ) : languageBarTarget ? (
+        createPortal(
+          <LanguageSelector
+            language={currentLanguage}
+            languageMode={mode}
+            onLanguageChange={setLanguage}
+          />,
+          languageBarTarget,
+        )
+      ) : null}
       {narrow && (
         <Sheet open={assistant} onOpenChange={setAssistant} title="AI 助手">
           {assistantContent}

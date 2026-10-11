@@ -8,8 +8,8 @@ import { useTheme } from "next-themes";
 
 import toast from "@/utils/toast";
 import MonacoEditor, {
-  MonacoJsonEditorRef,
-} from "@/components/monacoEditor/MonacoJsonEditor.tsx";
+  MonacoDataEditorRef,
+} from "@/components/monacoEditor/MonacoDataEditor.tsx";
 import ToolboxPageTemplate from "@/layouts/toolboxPageTemplate";
 import {
   KeyNamingCollisionError,
@@ -115,8 +115,8 @@ const useToolState = createToolStateHook("jsonKeyNaming");
 
 export default function JsonKeyNamingPage() {
   const { resolvedTheme: theme } = useTheme();
-  const inputEditorRef = useRef<MonacoJsonEditorRef>(null);
-  const outputEditorRef = useRef<MonacoJsonEditorRef>(null);
+  const inputEditorRef = useRef<MonacoDataEditorRef>(null);
+  const outputEditorRef = useRef<MonacoDataEditorRef>(null);
 
   const [inputValue, setInputValue] = useToolState("inputValue", "");
   const [outputValue, setOutputValue] = useToolState("outputValue", "");

@@ -3,7 +3,7 @@ import localforage from "localforage";
 
 // 初始化 localforage
 localforage.config({
-  name: "json-tools",
+  name: "datamorph",
   storeName: "store",
 });
 

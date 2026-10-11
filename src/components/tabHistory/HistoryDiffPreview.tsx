@@ -1,33 +1,61 @@
 import { useEffect, useRef, useState } from "react";
 import * as monaco from "monaco-editor";
-import { loader } from "@monaco-editor/react";
+import { initMonacoGlobally } from "@/components/monacoEditor/decorations/decorationInit";
+import { useDataLanguage } from "@/hooks/useDataLanguage";
+import type { LanguageMode } from "@/utils/dataFormats";
 import { Spinner } from "@/components/ui";
 
 export default function HistoryDiffPreview({
   original,
   modified,
   language,
+  languageMode = "manual",
+  filename,
   theme,
 }: {
   original: string;
   modified: string;
   language: string;
+  languageMode?: LanguageMode;
+  filename?: string;
   theme: string;
 }) {
+  const originalLanguage = useDataLanguage(
+    original,
+    language,
+    languageMode,
+    filename,
+  );
+  const modifiedLanguage = useDataLanguage(
+    modified,
+    language,
+    languageMode,
+    filename,
+  );
   const host = useRef<HTMLDivElement>(null);
   const editor = useRef<monaco.editor.IStandaloneDiffEditor | null>(null);
   const models = useRef<monaco.editor.IDiffEditorModel | null>(null);
-  const latest = useRef({ original, modified, language, theme });
-  latest.current = { original, modified, language, theme };
+  const latest = useRef({
+    original,
+    modified,
+    originalLanguage,
+    modifiedLanguage,
+    theme,
+  });
+  latest.current = {
+    original,
+    modified,
+    originalLanguage,
+    modifiedLanguage,
+    theme,
+  };
   const [status, setStatus] = useState<"loading" | "ready" | "error">(
     "loading",
   );
 
   useEffect(() => {
     let disposed = false;
-    loader.config({ monaco });
-    void loader
-      .init()
+    void initMonacoGlobally()
       .then(() => {
         if (disposed || !host.current) return;
         const values = latest.current;
@@ -58,8 +86,14 @@ export default function HistoryDiffPreview({
           stickyScroll: { enabled: false },
         });
         const pair = {
-          original: monaco.editor.createModel(values.original, values.language),
-          modified: monaco.editor.createModel(values.modified, values.language),
+          original: monaco.editor.createModel(
+            values.original,
+            values.originalLanguage,
+          ),
+          modified: monaco.editor.createModel(
+            values.modified,
+            values.modifiedLanguage,
+          ),
         };
         editor.current = instance;
         models.current = pair;
@@ -89,9 +123,9 @@ export default function HistoryDiffPreview({
   }, [theme]);
   useEffect(() => {
     if (!models.current) return;
-    monaco.editor.setModelLanguage(models.current.original, language);
-    monaco.editor.setModelLanguage(models.current.modified, language);
-  }, [language]);
+    monaco.editor.setModelLanguage(models.current.original, originalLanguage);
+    monaco.editor.setModelLanguage(models.current.modified, modifiedLanguage);
+  }, [originalLanguage, modifiedLanguage, status]);
   return (
     <div className="history-diff-preview">
       <div className="relative min-h-0 flex-1">

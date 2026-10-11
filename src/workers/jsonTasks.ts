@@ -1,4 +1,5 @@
 import { parseDataFormat } from "@/utils/dataFormatConverter";
+import { supportsJsonOperations } from "../utils/dataFormats";
 import { jsonrepair } from "jsonrepair";
 import { queryJsonPath } from "@/utils/jsonPath";
 import {
@@ -26,6 +27,7 @@ export interface JsonTaskInput {
   content: string;
   language?: string;
   indent?: number;
+  insertSpaces?: boolean;
   direction?: "asc" | "desc";
   query?: string;
 }
@@ -36,6 +38,11 @@ export function executeJsonTask(input: JsonTaskInput): {
   error?: { message: string; line: number; column: number; detail?: string };
 } {
   const { content, action, indent = 2, language = "json" } = input;
+  const space = input.insertSpaces === false ? "\t" : indent;
+  if (action !== "validate" && !supportsJsonOperations(language))
+    throw new Error(
+      `${language.toUpperCase()} 暂不支持 JSON 专用操作，请使用数据格式转换工具`,
+    );
   if (action === "parse") return { data: parseJson(content) };
   if (action === "validate") {
     if (!content.trim() || !["json", "json5"].includes(language)) return {};
@@ -69,7 +76,7 @@ export function executeJsonTask(input: JsonTaskInput): {
     return {
       content: stringifyJson(
         parseJson(sortJson(parseJson(content), input.direction || "asc")),
-        indent,
+        space,
       ),
     };
   const value =
@@ -79,11 +86,11 @@ export function executeJsonTask(input: JsonTaskInput): {
   if (action === "query") {
     const matches = queryJsonPath(value, input.query || "");
     return {
-      content: stringifyJson(matches, indent),
+      content: stringifyJson(matches, space),
       matchCount: matches.length,
     };
   }
   return {
-    content: stringifyJson(value, action === "compress" ? undefined : indent),
+    content: stringifyJson(value, action === "compress" ? undefined : space),
   };
 }

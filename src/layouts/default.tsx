@@ -37,7 +37,7 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
   const section =
     pathname === "/settings"
       ? "settings"
-      : pathname.startsWith("/toolbox") || current?.kind !== "json"
+      : pathname.startsWith("/toolbox") || current?.kind !== "document"
         ? "tools"
         : "editor";
   useEffect(() => {
@@ -63,7 +63,7 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
       useTabStore.getState().openToolboxTab();
       navigate("/toolbox");
     } else {
-      const tab = [...tabs].reverse().find((t) => t.kind === "json");
+      const tab = [...tabs].reverse().find((t) => t.kind === "document");
       if (tab) useTabStore.getState().setActiveTab(tab.key);
       else useTabStore.getState().addTab(undefined, undefined);
       navigate("/");
@@ -78,11 +78,11 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
       <div className="nav-brand-row">
         <div className="brand">
           <span className="brand-symbol" aria-hidden="true">
-            <Braces />
+            <img src="./logo.png" alt="" width={28} height={28} />
           </span>
           {!compact && (
             <span className="brand-label">
-              JSON Tools<small>轻量 JSON 工作台</small>
+              Datamorph<small>数据处理工作台</small>
             </span>
           )}
         </div>
@@ -195,7 +195,7 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
               <span className="ml-3 font-normal text-muted-foreground">
                 {section === "settings"
                   ? "让工具适合你的习惯"
-                  : current?.title || "JSON"}
+                  : current?.title || "文档"}
               </span>
             </h1>
           </div>
@@ -243,7 +243,7 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
               }
             >
               <Plus />
-              新建 JSON
+              新建文档
             </Command.Item>
             <Command.Item onSelect={() => run(() => go("tools"))}>
               <Blocks />

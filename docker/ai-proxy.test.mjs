@@ -6,7 +6,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 function withConfig(run) {
-  const directory = mkdtempSync(join(tmpdir(), "json-tools-proxy-"));
+  const directory = mkdtempSync(join(tmpdir(), "datamorph-proxy-"));
   const path = join(directory, "ai-proxy.conf");
   const env = {
     PATH: process.env.PATH,

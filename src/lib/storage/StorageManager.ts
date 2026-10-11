@@ -19,7 +19,7 @@ import { generateUUID } from "@/utils/uuid";
 
 // 主存储实例
 const mainStorage = localforage.createInstance({
-  name: "json-tools",
+  name: "datamorph",
   storeName: "store",
 });
 

@@ -12,7 +12,7 @@ export class MultiWindowSyncManager {
   private updateHandlers: Map<string, Set<(data: any) => void>>;
   private isConnected: boolean = false;
 
-  constructor(channelName: string = "json-tools-sync") {
+  constructor(channelName: string = "datamorph-sync") {
     this.channel =
       typeof BroadcastChannel !== "undefined"
         ? new BroadcastChannel(channelName)

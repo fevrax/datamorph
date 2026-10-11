@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import * as monaco from "monaco-editor";
+import { useDataLanguage } from "@/hooks/useDataLanguage";
 export function DiffPreview({
   original,
   modified,
@@ -7,6 +8,8 @@ export function DiffPreview({
   original: string;
   modified: string;
 }) {
+  const originalLanguage = useDataLanguage(original);
+  const modifiedLanguage = useDataLanguage(modified);
   const host = useRef<HTMLDivElement>(null);
   const editor = useRef<monaco.editor.IStandaloneDiffEditor | null>(null);
   useEffect(() => {
@@ -37,6 +40,13 @@ export function DiffPreview({
     model?.original.setValue(original);
     model?.modified.setValue(modified);
   }, [original, modified]);
+  useEffect(() => {
+    const model = editor.current?.getModel();
+    if (model) {
+      monaco.editor.setModelLanguage(model.original, originalLanguage);
+      monaco.editor.setModelLanguage(model.modified, modifiedLanguage);
+    }
+  }, [originalLanguage, modifiedLanguage]);
   return (
     <div
       className="h-72 overflow-hidden rounded-md border"

@@ -13,6 +13,7 @@ import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig(({ mode, command }) => ({
   cacheDir: process.env.VITE_CACHE_DIR || "node_modules/.vite",
   optimizeDeps: {
+    exclude: ["@wasm-fmt/clang-format"],
     include: [
       "vanilla-jsoneditor-cn",
       "quicktype-core",
@@ -21,6 +22,12 @@ export default defineConfig(({ mode, command }) => ({
       "js-yaml",
       "@iarna/toml",
       "xml-js",
+      "sql-formatter",
+      "prettier/standalone",
+      "prettier/plugins/yaml",
+      "prettier/plugins/markdown",
+      "prettier/plugins/babel",
+      "prettier/plugins/estree",
     ],
   },
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
@@ -74,7 +81,7 @@ export default defineConfig(({ mode, command }) => ({
       workbox: {
         // Monaco 主包较大；完整预缓存可确保所有本地工具首次断网也可使用。
         maximumFileSizeToCacheInBytes: 16 * 1024 * 1024,
-        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,wasm}"],
         cleanupOutdatedCaches: true,
         skipWaiting: false,
         clientsClaim: false,
@@ -84,9 +91,10 @@ export default defineConfig(({ mode, command }) => ({
         type: "module",
       },
       manifest: {
-        name: "JSON Tools - 多功能JSON处理助手",
-        short_name: "JSON Tools",
-        description: "强大的JSON工具集，支持格式化、验证、转换、编辑等多种功能",
+        name: "Datamorph - 数据处理工作台",
+        short_name: "Datamorph",
+        description:
+          "一源万构，形随需变。自动识别 JSON、YAML、TOML、XML 等主流数据格式，随需编辑与转换。",
         id: "./",
         lang: "zh-CN",
         background_color: "#f4f4f5",

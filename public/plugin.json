@@ -3,11 +3,15 @@
   "logo": "logo.png",
   "features": [
     {
-      "code": "json",
-      "explain": "json 工具箱",
+      "code": "datamorph",
+      "explain": "Datamorph · 数据处理工作台",
       "cmds": [
         "json",
-        "json-tools",
+        "datamorph",
+        "yaml",
+        "toml",
+        "xml",
+        "数据转换",
         "格式化",
         {
           "type": "regex",

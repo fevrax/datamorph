@@ -55,10 +55,10 @@ export function convertLosslessToNative(value: unknown): unknown {
 /**
  * 使用 lossless-json 序列化对象为 JSON 字符串
  * @param value 要序列化的对象
- * @param space 缩进空格数
+ * @param space 缩进空格数或缩进字符串
  * @returns JSON 字符串
  */
-export function stringifyJson(value: any, space?: number): string {
+export function stringifyJson(value: any, space?: number | string): string {
   // 先将 BigInt 转换为 lossless number
   const result = losslessStringify(value, null, space);
 

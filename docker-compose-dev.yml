@@ -1,6 +1,5 @@
-
 services:
-  json-tools:
+  datamorph:
     build:
       context: .
       dockerfile: Dockerfile

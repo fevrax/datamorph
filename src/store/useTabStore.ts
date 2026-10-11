@@ -11,6 +11,11 @@ import {
   type DocumentSnapshot,
 } from "./documentHistory";
 import { generateUUID } from "@/utils/uuid";
+import {
+  UNTITLED_DOCUMENT_NAME,
+  isDefaultDocumentName,
+  type LanguageMode,
+} from "@/utils/dataFormats";
 export interface TextChange {
   rangeOffset: number;
   rangeLength: number;
@@ -74,7 +79,11 @@ export interface ToolStateById {
 export interface EditorSettings {
   fontSize: number;
   language: string;
+  languageMode: LanguageMode;
+  filename?: string;
   indentSize: number;
+  indentMode?: "auto" | "manual";
+  insertSpaces?: boolean;
   timestampDecoratorsEnabled?: boolean;
   base64DecoratorsEnabled?: boolean;
   unicodeDecoratorsEnabled?: boolean;
@@ -100,7 +109,11 @@ interface TabBase {
   source?: { key: string; revision: number; title: string };
 }
 export type TabItem = TabBase &
-  ({ kind: "json" } | { kind: "toolbox" } | { kind: "tool"; toolId: ToolId });
+  (
+    | { kind: "document" }
+    | { kind: "toolbox" }
+    | { kind: "tool"; toolId: ToolId }
+  );
 export type TabKind = TabItem["kind"];
 interface TabStore {
   tabs: TabItem[];
@@ -147,17 +160,17 @@ interface TabStore {
   clearUserData: () => Promise<void>;
 }
 const db = localforage.createInstance({
-  name: "json-tools",
+  name: "datamorph",
   storeName: "workspace_v2",
 });
 const legacy = localforage.createInstance({
-  name: "json-tools",
+  name: "datamorph",
   storeName: "store",
 });
 const windowId = generateUUID();
 const channel =
   typeof window !== "undefined" && typeof BroadcastChannel !== "undefined"
-    ? new BroadcastChannel("json-tools-workspace-v2")
+    ? new BroadcastChannel("datamorph-workspace-v2")
     : null;
 let hydration: Promise<void> | undefined;
 let remote = false;
@@ -200,10 +213,10 @@ function makeTab(
 ): TabItem {
   const id = generateUUID();
   return {
-    kind: "json",
+    kind: "document",
     key: id,
     uuid: id,
-    title: title || "未命名.json",
+    title: title || UNTITLED_DOCUMENT_NAME,
     content,
     byteLength: new TextEncoder().encode(content).byteLength,
     revision: 1,
@@ -216,7 +229,11 @@ function makeTab(
     editorSettings: {
       fontSize: 14,
       language: "json",
+      languageMode: "auto",
+      filename: title,
       indentSize: useSettingsStore.getState().defaultIndentSize,
+      indentMode: "auto",
+      insertSpaces: true,
       timestampDecoratorsEnabled: true,
       base64DecoratorsEnabled: true,
       unicodeDecoratorsEnabled: true,
@@ -237,7 +254,11 @@ function patch(key: string, update: (tab: TabItem) => TabItem) {
 }
 function recordHistory(key: string) {
   const tab = useTabStore.getState().getTabByKey(key);
-  if (!tab || tab.kind !== "json" || tab.history[0]?.content === tab.content)
+  if (
+    !tab ||
+    tab.kind !== "document" ||
+    tab.history[0]?.content === tab.content
+  )
     return;
   const snapshot = {
     key: generateUUID(),
@@ -335,7 +356,7 @@ function closeKeys(keys: string[]) {
     historyTimers.delete(key);
     if (typeof window !== "undefined")
       window.dispatchEvent(
-        new CustomEvent("json-tools:close-model", { detail: key }),
+        new CustomEvent("datamorph:close-model", { detail: key }),
       );
   }
   let tabs = store.tabs.filter((t) => !keys.includes(t.key));
@@ -362,14 +383,16 @@ function normalize(
   },
 ): TabItem {
   const tab = makeTab(
-    raw.title,
+    !raw.editorSettings?.filename && isDefaultDocumentName(raw.title)
+      ? undefined
+      : raw.title,
     (raw.vanillaVersion || 0) > (raw.monacoVersion || 0)
       ? (raw.vanilla?.text ?? raw.content ?? "")
       : (raw.content ?? raw.vanilla?.text ?? ""),
     raw.extraData,
   );
   const kind =
-    raw.kind === "tool" || raw.kind === "toolbox" ? raw.kind : "json";
+    raw.kind === "tool" || raw.kind === "toolbox" ? raw.kind : "document";
   return {
     ...tab,
     kind,
@@ -382,7 +405,18 @@ function normalize(
     revision: raw.revision || raw.monacoVersion || 1,
     view: raw.view || "code",
     toolState: raw.toolState || {},
-    editorSettings: { ...tab.editorSettings, ...raw.editorSettings },
+    editorSettings: {
+      ...tab.editorSettings,
+      ...raw.editorSettings,
+      languageMode:
+        raw.editorSettings?.languageMode ||
+        (raw.editorSettings?.language && raw.editorSettings.language !== "json"
+          ? "manual"
+          : "auto"),
+      filename:
+        raw.editorSettings?.filename ||
+        (!isDefaultDocumentName(raw.title) ? raw.title : undefined),
+    },
     history: retainHistory(
       (raw.history || [])
         .filter(
@@ -425,7 +459,7 @@ export const useTabStore = create<TabStore>((set, get) => ({
     const source = get().activeTab();
     const existing = get().tabs.find((t) => t.kind === "toolbox");
     if (existing) {
-      if (source?.kind === "json")
+      if (source?.kind === "document")
         patch(existing.key, (t) => ({
           ...t,
           source: {
@@ -441,7 +475,7 @@ export const useTabStore = create<TabStore>((set, get) => ({
     const tab = {
       ...makeTab("工具箱"),
       kind: "toolbox" as const,
-      ...(source?.kind === "json"
+      ...(source?.kind === "document"
         ? {
             source: {
               key: source.key,
@@ -462,11 +496,14 @@ export const useTabStore = create<TabStore>((set, get) => ({
         ? get().getTabByKey(active.source?.key || "")
         : active;
     const source =
-      current?.kind === "json"
+      current?.kind === "document"
         ? { key: current.key, revision: current.revision, title: current.title }
         : undefined;
     const tab: TabItem = {
-      ...makeTab(tool.name, current?.kind === "json" ? current.content : ""),
+      ...makeTab(
+        tool.name,
+        current?.kind === "document" ? current.content : "",
+      ),
       kind: "tool",
       toolId: tool.id as ToolId,
       source,
@@ -489,7 +526,13 @@ export const useTabStore = create<TabStore>((set, get) => ({
           },
     ),
   setView: (key, view) =>
-    patch(key, (t) => (t.view === view ? t : { ...t, view })),
+    patch(key, (t) =>
+      t.view === view ||
+      (["tree", "table"].includes(view) &&
+        !["json", "json5"].includes(t.editorSettings.language))
+        ? t
+        : { ...t, view },
+    ),
   setToolState: (key, name, value) =>
     patch(key, (t) =>
       Object.is(t.toolState[name], value)
@@ -500,7 +543,12 @@ export const useTabStore = create<TabStore>((set, get) => ({
     if (get().getTabByKey(key)) set({ activeTabKey: key });
   },
   renameTab: (key, title) => {
-    if (title.trim()) patch(key, (t) => ({ ...t, title: title.trim() }));
+    if (title.trim())
+      patch(key, (t) => ({
+        ...t,
+        title: title.trim(),
+        editorSettings: { ...t.editorSettings, filename: title.trim() },
+      }));
   },
   closeTab: (key) => {
     closeKeys([key]);
@@ -533,7 +581,16 @@ export const useTabStore = create<TabStore>((set, get) => ({
         ([k, v]) => t.editorSettings[k as keyof EditorSettings] === v,
       )
         ? t
-        : { ...t, editorSettings: { ...t.editorSettings, ...settings } },
+        : {
+            ...t,
+            editorSettings: { ...t.editorSettings, ...settings },
+            view:
+              settings.language &&
+              !["json", "json5"].includes(settings.language) &&
+              ["tree", "table"].includes(t.view)
+                ? "code"
+                : t.view,
+          },
     ),
   addTabHistory: recordHistory,
   restoreTabHistory: (key, id) => {
@@ -568,7 +625,7 @@ export const useTabStore = create<TabStore>((set, get) => ({
       for (const tab of get().tabs)
         if (typeof window !== "undefined")
           window.dispatchEvent(
-            new CustomEvent("json-tools:close-model", { detail: tab.key }),
+            new CustomEvent("datamorph:close-model", { detail: tab.key }),
           );
       await db.clear();
       saved.clear();
@@ -607,7 +664,12 @@ export const useTabStore = create<TabStore>((set, get) => ({
           const metadata =
             document &&
             (await db.getItem<Partial<TabItem>>("metadata:" + document.key));
-          const raw = document && { ...document, ...metadata };
+          const raw = document && {
+            ...document,
+            ...metadata,
+            content: document.content,
+            revision: document.revision,
+          };
           if (raw) {
             const history = await db.getItem<TabHistoryItem[]>(
               "history:" + raw.key,
@@ -615,13 +677,22 @@ export const useTabStore = create<TabStore>((set, get) => ({
             tabs.push(normalize({ ...raw, history: history || [] }));
           }
         }
-        const meta = await db.getItem<{
+        let meta = await db.getItem<{
           activeTabKey: string;
           order: string[];
         }>("workspace");
         if (!keys.includes("schema")) {
           const old = unwrap<TabItem[]>(await legacy.getItem("tabs"));
           if (old?.length) tabs = old.map(normalize);
+          if (!meta && old?.length) {
+            const activeTabKey = unwrap<string>(
+              await legacy.getItem("tabs_active_key"),
+            );
+            meta = {
+              activeTabKey: activeTabKey || tabs[0].key,
+              order: tabs.map((t) => t.key),
+            };
+          }
           if (tabs.length) {
             for (const t of tabs) {
               const { history, ...document } = t;
@@ -750,6 +821,11 @@ useTabStore.subscribe((state, previous) => {
     (changed || state.activeTabKey !== previous.activeTabKey) &&
     state.hydrated
   ) {
+    if (
+      useSettingsStore.getState().persistentDataEnabled &&
+      state.saveStatus !== "saving"
+    )
+      useTabStore.setState({ saveStatus: "saving" });
     clearTimeout(timer);
     timer = setTimeout(() => void flushTabStore(), 600);
   }
@@ -814,7 +890,7 @@ export async function downloadRecoveryData() {
   );
   const link = document.createElement("a");
   link.href = url;
-  link.download = "json-tools-recovery.json";
+  link.download = "datamorph-recovery.json";
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

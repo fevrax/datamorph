@@ -13,7 +13,7 @@ import {
 
 // 锁存储实例
 const lockStorage = localforage.createInstance({
-  name: "json-tools",
+  name: "datamorph",
   storeName: "locks",
 });
 

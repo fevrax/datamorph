@@ -50,13 +50,14 @@ import {
   Spinner,
 } from "@/components/ui";
 import DynamicTabs, { importFiles } from "@/components/dynamicTabs/DynamicTabs";
-import MonacoJsonEditor, {
-  type MonacoJsonEditorRef,
-} from "@/components/monacoEditor/MonacoJsonEditor";
+import MonacoDataEditor, {
+  type MonacoDataEditorRef,
+} from "@/components/monacoEditor/MonacoDataEditor";
 import MonacoDiffEditor, {
   type MonacoDiffEditorRef,
 } from "@/components/monacoEditor/MonacoDiffEditor";
 import MonacoDiffOperationBar from "@/components/monacoEditor/operationBar/MonacoDiffOperationBar";
+import LanguageSelector from "@/components/monacoEditor/LanguageSelector";
 import {
   useTabStore,
   downloadRecoveryData,
@@ -75,6 +76,11 @@ import { JsonSample } from "@/utils/jsonSample";
 import clipboard from "@/utils/clipboard";
 import toast from "@/utils/toast";
 import { useDelayedVisibility } from "@/hooks/useDelayedVisibility";
+import {
+  documentDownloadName,
+  supportsJsonOperations,
+  supportsFormatting,
+} from "@/utils/dataFormats";
 const TreeEditor = lazy(
   () => import("@/components/vanillaJsonEditor/VanillaJsonEditor"),
 );
@@ -190,7 +196,7 @@ function ToolResultActions({ tabKey }: { tabKey: string }) {
 }
 function DocumentWorkspace({ tabKey }: { tabKey: string }) {
   const tab = useTabStore((s) => s.getTabByKey(tabKey))!;
-  const editor = useRef<MonacoJsonEditorRef>(null);
+  const editor = useRef<MonacoDataEditorRef>(null);
   const diff = useRef<MonacoDiffEditorRef>(null);
   const table = useRef<JsonTableViewRef>(null);
   const [history, setHistory] = useState(false);
@@ -200,6 +206,9 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
   const [diffSettingsTarget, setDiffSettingsTarget] =
     useState<HTMLSpanElement | null>(null);
   const [statusTarget, setStatusTarget] = useState<HTMLSpanElement | null>(
+    null,
+  );
+  const [languageTarget, setLanguageTarget] = useState<HTMLSpanElement | null>(
     null,
   );
   const [busy, setBusy] = useState(false);
@@ -212,6 +221,12 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
   const theme = resolvedTheme === "dark" ? "vs-dark" : "vs-light";
   const store = useTabStore.getState();
   const view = tab.view;
+  const jsonSupported = supportsJsonOperations(tab.editorSettings.language);
+  const formatSupported = supportsFormatting(tab.editorSettings.language);
+  const [diffLanguages, setDiffLanguages] = useState({
+    left: tab.editorSettings.language,
+    right: "json",
+  });
   const treeContent = useMemo(() => ({ text: tab.content }), [tab.content]);
   const fileBytes = tab.byteLength;
   const persistence = useSettingsStore((s) => s.persistentDataEnabled);
@@ -219,7 +234,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
   const storageError = useTabStore((s) => s.storageError);
   const files = useTabMetadata();
   const viewList: [DocumentView, string, typeof Braces][] = [
-    ["code", "代码", Braces],
+    ["code", "编辑", Braces],
     ["tree", "树形", Network],
     ["table", "表格", Table2],
   ];
@@ -231,6 +246,9 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
   useEffect(() => {
     const scope = "validate:" + tab.key;
     const revision = tab.revision;
+    const validatingLanguage = tab.editorSettings.language;
+    setValidation({});
+    if (!jsonSupported) return () => cancelJsonTask(scope);
     const timer = setTimeout(
       () => {
         void runJsonTask(scope, {
@@ -240,7 +258,10 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
         })
           .then((result) => {
             if (
-              useTabStore.getState().getTabByKey(tab.key)?.revision === revision
+              useTabStore.getState().getTabByKey(tab.key)?.revision ===
+                revision &&
+              useTabStore.getState().getTabByKey(tab.key)?.editorSettings
+                .language === validatingLanguage
             )
               setValidation(result);
           })
@@ -257,6 +278,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
     return () => cancelJsonTask("action:" + tab.key);
   }, [tab.key, view]);
   async function action(action: JsonTask, direction?: "asc" | "desc") {
+    if (!jsonSupported) return;
     const revision = tab.revision;
     setBusy(true);
     try {
@@ -264,6 +286,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
         action,
         content: tab.content,
         indent: tab.editorSettings.indentSize,
+        insertSpaces: tab.editorSettings.insertSpaces,
         language: tab.editorSettings.language,
         direction,
       });
@@ -297,21 +320,23 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
     <>
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-3 py-2">
         <div className="flex shrink-0 items-center gap-1 rounded-md bg-secondary/60 p-0.5">
-          {viewList.map(([id, label, Icon]) => (
-            <Button
-              key={id}
-              size="sm"
-              variant="ghost"
-              className={
-                view === id ? "bg-background text-primary shadow-xs" : ""
-              }
-              aria-pressed={view === id}
-              onPress={() => store.setView(tab.key, id)}
-            >
-              <Icon />
-              {label}
-            </Button>
-          ))}
+          {viewList
+            .filter(([id]) => id === "code" || jsonSupported)
+            .map(([id, label, Icon]) => (
+              <Button
+                key={id}
+                size="sm"
+                variant="ghost"
+                className={
+                  view === id ? "bg-background text-primary shadow-xs" : ""
+                }
+                aria-pressed={view === id}
+                onPress={() => store.setView(tab.key, id)}
+              >
+                <Icon />
+                {label}
+              </Button>
+            ))}
           <Button
             size="sm"
             variant="ghost"
@@ -348,15 +373,24 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
                 }
               },
             },
-            ...(view !== "diff"
+            ...(view !== "diff" && formatSupported
               ? [
                   {
                     key: "format",
                     label: "格式化",
                     icon: WandSparkles,
                     disabled: busy,
-                    onPress: () => void action("format"),
+                    onPress: () => {
+                      if (view === "code") {
+                        editor.current?.format();
+                        setWelcome(false);
+                      } else void action("format");
+                    },
                   },
+                ]
+              : []),
+            ...(view !== "diff"
+              ? [
                   {
                     key: "copy",
                     label: "复制",
@@ -369,40 +403,49 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
               key: "clear",
               label: "清空",
               icon: Trash2,
-              destructive: true,
               onPress: () => {
                 if (editor.current) editor.current.clear();
                 else update("");
                 setWelcome(true);
               },
             },
-            ...(
-              [
-                ["压缩", "compress", Minimize2],
-                ["字段升序", "sort", ArrowDownAZ],
-                ["字段降序", "sort-desc", ArrowUpAZ],
-                ["转义", "escape", CodeXml],
-                ["删除转义", "unescape", TextQuote],
-                ["删除注释", "comments", MessageSquareOff],
-              ] as const
-            ).map(
-              ([label, key, icon]): DocumentAction => ({
-                key,
-                label,
-                icon,
-                disabled: busy,
-                onPress: () =>
-                  void action(
-                    key === "sort-desc" ? "sort" : key,
-                    key === "sort-desc" ? "desc" : "asc",
-                  ),
-              }),
-            ),
+            ...(jsonSupported
+              ? (
+                  [
+                    ["压缩", "compress", Minimize2],
+                    ["字段升序", "sort", ArrowDownAZ],
+                    ["字段降序", "sort-desc", ArrowUpAZ],
+                    ["转义", "escape", CodeXml],
+                    ["删除转义", "unescape", TextQuote],
+                    ["删除注释", "comments", MessageSquareOff],
+                  ] as const
+                ).map(
+                  ([label, key, icon]): DocumentAction => ({
+                    key,
+                    label,
+                    icon,
+                    disabled: busy,
+                    onPress: () =>
+                      void action(
+                        key === "sort-desc" ? "sort" : key,
+                        key === "sort-desc" ? "desc" : "asc",
+                      ),
+                  }),
+                )
+              : []),
             {
               key: "download",
               label: "下载",
               icon: Download,
-              onPress: () => downloadText(tab.content, tab.title),
+              onPress: () =>
+                downloadText(
+                  tab.content,
+                  documentDownloadName(
+                    tab.title,
+                    tab.editorSettings.language,
+                    tab.editorSettings.filename,
+                  ),
+                ),
             },
             {
               key: "history",
@@ -432,7 +475,6 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
             <WorkspaceWelcome
               active={welcome}
               title={tab.title}
-              language={tab.editorSettings.language}
               hasContent={!!tab.content.trim()}
               busy={busy}
               onFocus={() => editor.current?.focus()}
@@ -441,24 +483,30 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
                 else update(JsonSample);
                 setWelcome(false);
               }}
-              onStart={() => void action("format")}
+              onStart={() => {
+                setWelcome(false);
+                editor.current?.focus();
+              }}
               onContinue={() => {
                 setWelcome(false);
                 editor.current?.focus();
               }}
             >
-              <MonacoJsonEditor
+              <MonacoDataEditor
                 ref={editor}
                 tabKey={tab.key}
                 tabTitle={tab.title}
                 documentId={tab.key}
                 language={tab.editorSettings.language}
+                languageMode={tab.editorSettings.languageMode}
+                filename={tab.editorSettings.filename}
                 theme={theme}
                 height="100%"
                 isMenu
                 settingsBarTarget={settingsTarget}
                 showJsonPathFilter={!welcome}
                 statusBarTarget={statusTarget}
+                languageBarTarget={languageTarget}
                 onUpdateValue={update}
               />
             </WorkspaceWelcome>
@@ -487,6 +535,14 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
           {view === "diff" && (
             <div className="flex h-full flex-col">
               <MonacoDiffOperationBar
+                formatSupported={{
+                  left: supportsFormatting(diffLanguages.left),
+                  right: supportsFormatting(diffLanguages.right),
+                }}
+                jsonSupported={{
+                  left: supportsJsonOperations(diffLanguages.left),
+                  right: supportsJsonOperations(diffLanguages.right),
+                }}
                 settingsTargetRef={setDiffSettingsTarget}
                 onCopy={(type) => diff.current?.copy(type) || false}
                 onClear={(type) => diff.current?.clear(type) || false}
@@ -498,13 +554,17 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
               />
               <div className="min-h-0 flex-1">
                 <MonacoDiffEditor
+                  onLanguagesChange={setDiffLanguages}
                   ref={diff}
                   settingsBarTarget={diffSettingsTarget}
+                  languageBarTarget={languageTarget}
                   tabKey={tab.key}
                   tabTitle={tab.title}
                   originalValue={tab.content}
                   modifiedValue={tab.diffModifiedValue || ""}
                   language={tab.editorSettings.language}
+                  languageMode={tab.editorSettings.languageMode}
+                  filename={tab.editorSettings.filename}
                   theme={theme}
                   onUpdateOriginalValue={update}
                   onUpdateModifiedValue={(text) =>
@@ -533,7 +593,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
                 setTimeout(
                   () =>
                     window.dispatchEvent(
-                      new CustomEvent("json-tools:reveal", {
+                      new CustomEvent("datamorph:reveal", {
                         detail: {
                           key: tab.key,
                           line,
@@ -551,7 +611,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
               : tab.content
                 ? ["json", "json5"].includes(tab.editorSettings.language)
                   ? "✓ JSON 有效"
-                  : "文本文件"
+                  : `${tab.editorSettings.language.toUpperCase()} · 未校验`
                 : "等待输入"}
           </button>
           <button
@@ -594,11 +654,25 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
                 ? `${(fileBytes / 1024).toFixed(1)} KB`
                 : `${(fileBytes / 1048576).toFixed(1)} MB`}
           </span>
-          <span className="status-secondary" title="UTF-8 编码">
-            {tab.editorSettings.language.toUpperCase()}
+          <span key={view} ref={setLanguageTarget} className="inline-flex">
+            {(view === "tree" || view === "table") && (
+              <LanguageSelector
+                language={tab.editorSettings.language}
+                languageMode={tab.editorSettings.languageMode}
+                onLanguageChange={(language) =>
+                  store.updateEditorSettings(tab.key, {
+                    languageMode: language === "auto" ? "auto" : "manual",
+                    ...(language === "auto" ? {} : { language }),
+                  })
+                }
+              />
+            )}
           </span>
           <span className="status-secondary">
-            {tab.editorSettings.indentSize} 空格
+            {tab.editorSettings.indentMode !== "manual" && "自动 · "}
+            {tab.editorSettings.insertSpaces === false
+              ? `Tab · 宽度 ${tab.editorSettings.indentSize}`
+              : `${tab.editorSettings.indentSize} 空格`}
           </span>
         </div>
       </div>
@@ -608,6 +682,8 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
           onClose={() => setHistory(false)}
           documentTitle={tab.title}
           language={tab.editorSettings.language}
+          languageMode={tab.editorSettings.languageMode}
+          filename={tab.editorSettings.filename}
           currentContent={tab.content}
           historyItems={tab.history}
           onRestore={(id) => {
@@ -642,7 +718,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
             >
               <SelectItem key="blank">空白内容，手动粘贴</SelectItem>
               {files
-                .filter((f) => f.kind === "json" && f.key !== tab.key)
+                .filter((f) => f.kind === "document" && f.key !== tab.key)
                 .map((f) => (
                   <SelectItem key={f.key}>{f.title}</SelectItem>
                 ))}
@@ -721,7 +797,7 @@ export default function IndexPage() {
       <DynamicTabs onSwitch={onTabSwitch} />
       {!hydrated || !ready ? (
         <Loading />
-      ) : tab?.kind === "json" ? (
+      ) : tab?.kind === "document" ? (
         <DocumentWorkspace key={tab.key} tabKey={tab.key} />
       ) : (
         <Suspense fallback={<Loading />}>

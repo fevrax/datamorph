@@ -17,7 +17,7 @@ export function createEditorAdapter(
       const model = editor.getModel();
       if (!model || model.getValue() === text) return;
       editor.pushUndoStop();
-      editor.executeEdits("json-tools", [
+      editor.executeEdits("datamorph", [
         { range: model.getFullModelRange(), text, forceMoveMarkers: true },
       ]);
       editor.pushUndoStop();

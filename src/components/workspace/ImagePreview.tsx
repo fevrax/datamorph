@@ -21,8 +21,8 @@ export function ImagePreview() {
       setFailed(false);
       setUrl((event as CustomEvent<string>).detail);
     };
-    window.addEventListener("json-tools:preview-image", open);
-    return () => window.removeEventListener("json-tools:preview-image", open);
+    window.addEventListener("datamorph:preview-image", open);
+    return () => window.removeEventListener("datamorph:preview-image", open);
   }, []);
   return (
     <Modal isOpen={!!url} onClose={() => setUrl("")} size="3xl">

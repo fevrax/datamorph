@@ -6,49 +6,21 @@ import {
   Popover,
   PopoverTrigger,
   PopoverContent,
-  Select,
-  SelectItem,
   Slider,
   Switch,
 } from "@/components/ui";
 import { useSettingsStore } from "@/store/useSettingsStore";
-export const SUPPORTED_LANGUAGES = [
-  { id: "json", name: "JSON", icon: "vscode-icons:file-type-json" },
-  { id: "json5", name: "JSON5", icon: "vscode-icons:file-type-json" },
-  { id: "yaml", name: "YAML", icon: "vscode-icons:file-type-yaml" },
-  { id: "xml", name: "XML", icon: "vscode-icons:file-type-xml" },
-  { id: "toml", name: "TOML", icon: "vscode-icons:file-type-toml" },
-  { id: "go", name: "Go", icon: "vscode-icons:file-type-go" },
-  {
-    id: "javascript",
-    name: "JavaScript",
-    icon: "vscode-icons:file-type-js-official",
-  },
-  {
-    id: "typescript",
-    name: "TypeScript",
-    icon: "vscode-icons:file-type-typescript-official",
-  },
-  { id: "html", name: "HTML", icon: "vscode-icons:file-type-html" },
-  { id: "css", name: "CSS", icon: "vscode-icons:file-type-css" },
-  { id: "python", name: "Python", icon: "vscode-icons:file-type-python" },
-  { id: "java", name: "Java", icon: "vscode-icons:file-type-java" },
-  { id: "csharp", name: "C#", icon: "vscode-icons:file-type-csharp" },
-  { id: "cpp", name: "C++", icon: "vscode-icons:file-type-cpp" },
-  { id: "markdown", name: "Markdown", icon: "vscode-icons:file-type-markdown" },
-  { id: "sql", name: "SQL", icon: "vscode-icons:file-type-sql" },
-  { id: "shell", name: "Shell", icon: "vscode-icons:file-type-shell" },
-];
 interface DraggableMenuProps {
   toolbarTarget?: HTMLElement | null;
   containerRef: React.RefObject<HTMLDivElement | null>;
-  onLanguageChange: (language: string) => void;
   onFontSizeChange: (fontSize: number) => void;
   onIndentSizeChange: (indentSize: number) => void;
+  onIndentModeChange: (mode: "auto" | "manual") => void;
   onReset: () => void;
-  currentLanguage: string;
   currentFontSize: number;
   currentIndentSize: number;
+  currentIndentMode: "auto" | "manual";
+  insertSpaces: boolean;
   tabKey: string;
   timestampDecoratorsEnabled?: boolean; // 添加时间戳装饰器状态
   onTimestampDecoratorsChange?: (enabled: boolean) => void; // 添加时间戳装饰器状态变更函数
@@ -87,15 +59,6 @@ export default function DraggableMenu(props: DraggableMenuProps) {
         </PopoverTrigger>
         <PopoverContent className="w-72 space-y-4">
           <h3 className="text-sm font-semibold">编辑器设置</h3>
-          <Select
-            label="语言"
-            selectedKeys={[props.currentLanguage]}
-            onChange={(e) => props.onLanguageChange(e.target.value)}
-          >
-            {SUPPORTED_LANGUAGES.map((language) => (
-              <SelectItem key={language.id}>{language.name}</SelectItem>
-            ))}
-          </Select>
           <div>
             <div className="mb-2 flex justify-between text-xs">
               <span>字体大小</span>
@@ -112,13 +75,27 @@ export default function DraggableMenu(props: DraggableMenuProps) {
           <div>
             <div className="mb-2 flex justify-between text-xs">
               <span>缩进</span>
-              <span>{props.currentIndentSize} 空格</span>
+              <span>
+                {props.insertSpaces
+                  ? `${props.currentIndentSize} 空格`
+                  : `Tab · 宽度 ${props.currentIndentSize}`}
+              </span>
             </div>
+            <Switch
+              className="mb-3"
+              isSelected={props.currentIndentMode === "auto"}
+              onValueChange={(enabled) =>
+                props.onIndentModeChange(enabled ? "auto" : "manual")
+              }
+            >
+              自动识别缩进
+            </Switch>
             <Slider
               aria-label="缩进"
               minValue={1}
               maxValue={8}
               value={props.currentIndentSize}
+              isDisabled={props.currentIndentMode === "auto"}
               onChange={(v) => props.onIndentSizeChange(Number(v))}
             />
           </div>

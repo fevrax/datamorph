@@ -19,8 +19,8 @@ import { useTheme } from "next-themes";
 
 import toast from "@/utils/toast";
 import MonacoEditor, {
-  MonacoJsonEditorRef,
-} from "@/components/monacoEditor/MonacoJsonEditor.tsx";
+  MonacoDataEditorRef,
+} from "@/components/monacoEditor/MonacoDataEditor.tsx";
 import ToolboxPageTemplate from "@/layouts/toolboxPageTemplate";
 import ResizableEditorLayout from "@/components/layout/ResizableEditorLayout.tsx";
 import AIPromptOverlay, {
@@ -138,8 +138,8 @@ export default function JsonTypeConverterPage() {
   const { resolvedTheme: theme } = useTheme();
 
   // 编辑器引用
-  const inputEditorRef = useRef<MonacoJsonEditorRef>(null);
-  const outputEditorRef = useRef<MonacoJsonEditorRef>(null);
+  const inputEditorRef = useRef<MonacoDataEditorRef>(null);
+  const outputEditorRef = useRef<MonacoDataEditorRef>(null);
 
   // 状态管理
   const [inputValue, setInputValue] = useToolState("inputValue", "");

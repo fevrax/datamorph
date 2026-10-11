@@ -10,7 +10,7 @@ import { DataIntegrityChecker } from "./DataIntegrityChecker";
 
 // WAL 存储实例
 const walStorage = localforage.createInstance({
-  name: "json-tools",
+  name: "datamorph",
   storeName: "wal",
 });
 
@@ -98,7 +98,7 @@ export class WALManager {
         // 执行恢复操作（仅对 set 操作进行恢复）
         try {
           const mainStorage = localforage.createInstance({
-            name: "json-tools",
+            name: "datamorph",
             storeName: "store",
           });
 

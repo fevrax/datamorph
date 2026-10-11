@@ -40,7 +40,7 @@ export function cancelParse(key: string) {
   cancelJsonTask("table:" + key);
 }
 if (typeof window !== "undefined")
-  window.addEventListener("json-tools:close-model", (event) => {
+  window.addEventListener("datamorph:close-model", (event) => {
     const key = (event as CustomEvent<string>).detail;
     cache.delete(key);
     cancelParse(key);

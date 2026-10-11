@@ -23,6 +23,8 @@ interface MonacoDiffOperationBarProps {
     sort: "asc" | "desc",
   ) => boolean;
   onAiClick?: () => void;
+  jsonSupported?: { left: boolean; right: boolean };
+  formatSupported?: { left: boolean; right: boolean };
   settingsTargetRef?: React.Ref<HTMLSpanElement>;
   ref?: React.Ref<MonacoDiffOperationBarRef>;
 }
@@ -35,6 +37,8 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
   onClear,
   onFieldSort,
   onAiClick,
+  jsonSupported = { left: true, right: true },
+  formatSupported = jsonSupported,
   settingsTargetRef,
 }) => {
   const [isCopyDropdownOpen, setCopyDropdownOpen] = useState(false);
@@ -149,7 +153,7 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
           key: "format",
           icon: "ph:magic-wand-light",
           text: "格式化",
-          tooltip: "格式化JSON内容",
+          tooltip: "格式化内容",
           priority: 20,
           hasDropdown: true,
           onClick: showFormatDropdown,
@@ -301,13 +305,28 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
     },
   ];
 
-  // 使用通用的自适应按钮hook
+  // Filter unsupported operations before calculating both toolbar and overflow.
+  for (const group of actionGroups) {
+    group.buttons = group.buttons.filter((button) => {
+      if (!["format", "sort"].includes(button.key)) return true;
+      const supported =
+        button.key === "format" ? formatSupported : jsonSupported;
+      if ("hasDropdown" in button && button.hasDropdown) {
+        button.dropdownItems = button.dropdownItems.filter((item) =>
+          item.key === "all"
+            ? supported.left && supported.right
+            : item.key.startsWith("left")
+              ? supported.left
+              : supported.right,
+        );
+      }
+      return supported.left || supported.right;
+    });
+  }
   const { visibleButtons, hiddenButtons } = useAdaptiveButtons(
     containerRef,
     actionGroups,
   );
-
-  // 渲染按钮
   const renderButton = (button: ButtonConfig) => {
     // 检查按钮是否应该可见
     if (!visibleButtons.includes(button.key)) return null;

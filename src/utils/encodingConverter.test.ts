@@ -33,7 +33,7 @@ function assertThrows(action: () => void, message: string): void {
   assert(thrown, message);
 }
 
-const sample = "你好，JSON Tools 😀\npath\\value\0";
+const sample = "你好，datamorph 😀\npath\\value\0";
 const reversibleTypes: EncodingType[] = [
   "base64",
   "base64url",
