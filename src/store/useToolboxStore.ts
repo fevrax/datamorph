@@ -19,6 +19,14 @@ interface ToolboxState {
 
 const demoTools: Tool[] = [
   {
+    id: "protoSort",
+    name: "Protobuf 排序工具",
+    icon: "mdi:sort-alphabetical-ascending",
+    description: "为 Protobuf 字段重新编号，左右高亮展示排序前后的差异",
+    path: "/toolbox/protoSort",
+    category: ["数据处理", "Protobuf"],
+  },
+  {
     id: "jsonPath",
     name: "JSONPath 查询",
     icon: "mdi:filter",

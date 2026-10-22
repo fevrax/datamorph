@@ -69,6 +69,10 @@ export interface MonacoDiffEditorProps {
   height?: number | string;
   originalValue: string;
   modifiedValue: string;
+  modifiedReadOnly?: boolean;
+  useInlineViewWhenSpaceIsLimited?: boolean;
+  originalAriaLabel?: string;
+  modifiedAriaLabel?: string;
   language?: string;
   languageMode?: LanguageMode;
   filename?: string;
@@ -114,6 +118,10 @@ export default function MonacoDiffEditor({
   tabTitle,
   originalValue,
   modifiedValue,
+  modifiedReadOnly = false,
+  useInlineViewWhenSpaceIsLimited = true,
+  originalAriaLabel = "对比原文",
+  modifiedAriaLabel = "对比结果",
   language,
   languageMode,
   filename,
@@ -227,7 +235,12 @@ export default function MonacoDiffEditor({
               diff.current.getModifiedEditor(),
             ];
   const apply = (side: Side, text: string) => {
-    for (const ed of editors(side)) createEditorAdapter(key, ed).apply(text);
+    for (const ed of editors(side)) {
+      if (ed.getOption(monaco.editor.EditorOption.readOnly)) {
+        const model = ed.getModel();
+        if (model && model.getValue() !== text) model.setValue(text);
+      } else createEditorAdapter(key, ed).apply(text);
+    }
   };
   function toggle(kind: DecoderKind, value?: boolean) {
     const next = value ?? !flags.current[kind];
@@ -335,8 +348,11 @@ export default function MonacoDiffEditor({
         theme,
         fontSize,
         originalEditable: true,
+        readOnly: modifiedReadOnly,
+        originalAriaLabel,
+        modifiedAriaLabel,
         renderSideBySide: true,
-        useInlineViewWhenSpaceIsLimited: true,
+        useInlineViewWhenSpaceIsLimited,
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
         padding: { top: 12 },
@@ -406,6 +422,24 @@ export default function MonacoDiffEditor({
       apply(Side.right, modifiedValue);
     }
   }, [originalValue, modifiedValue, ready]);
+  useEffect(() => {
+    diff.current?.updateOptions({
+      readOnly: modifiedReadOnly,
+      useInlineViewWhenSpaceIsLimited,
+    });
+    diff.current
+      ?.getOriginalEditor()
+      .updateOptions({ ariaLabel: originalAriaLabel });
+    diff.current
+      ?.getModifiedEditor()
+      .updateOptions({ ariaLabel: modifiedAriaLabel });
+  }, [
+    modifiedReadOnly,
+    useInlineViewWhenSpaceIsLimited,
+    originalAriaLabel,
+    modifiedAriaLabel,
+    ready,
+  ]);
   useEffect(() => {
     monaco.editor.setTheme(theme);
     diff.current?.updateOptions({ fontSize });

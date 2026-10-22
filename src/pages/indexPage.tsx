@@ -116,6 +116,7 @@ function ToolResultActions({ tabKey }: { tabKey: string }) {
       "",
   );
   const pendingResult = useRef("");
+  const protoResult = tab.kind === "tool" && tab.toolId === "protoSort";
   if (!result) return null;
   return (
     <>
@@ -130,12 +131,21 @@ function ToolResultActions({ tabKey }: { tabKey: string }) {
           >
             复制结果
           </Button>
-          <Button size="sm" onPress={() => downloadText(result, "result.txt")}>
+          <Button
+            size="sm"
+            onPress={() =>
+              downloadText(result, protoResult ? "result.proto" : "result.txt")
+            }
+          >
             下载
           </Button>
           <Button
             size="sm"
-            onPress={() => useTabStore.getState().addTab("result.json", result)}
+            onPress={() =>
+              useTabStore
+                .getState()
+                .addTab(protoResult ? "result.proto" : "result.json", result)
+            }
           >
             新建标签
           </Button>

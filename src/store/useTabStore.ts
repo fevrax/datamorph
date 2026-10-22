@@ -24,6 +24,7 @@ export interface TextChange {
 export type TabHistoryItem = DocumentSnapshot;
 export type DocumentView = "code" | "tree" | "table" | "diff";
 export type ToolId =
+  | "protoSort"
   | "jsonPath"
   | "jsonAIRepair"
   | "jsonTypeConverter"
@@ -39,6 +40,7 @@ export type ToolStateValue =
   | Record<string, unknown>
   | unknown[];
 export interface ToolStateById {
+  protoSort: { inputValue: string; outputValue: string; hasResult: boolean };
   jsonPath: { inputValue: string };
   jsonAIRepair: { originalValue: string; fixedValue: string };
   jsonTypeConverter: {
