@@ -57,7 +57,6 @@ import MonacoDataEditor, {
 import MonacoDiffEditor, {
   type MonacoDiffEditorRef,
 } from "@/components/monacoEditor/MonacoDiffEditor";
-import MonacoDiffOperationBar from "@/components/monacoEditor/operationBar/MonacoDiffOperationBar";
 import LanguageSelector from "@/components/monacoEditor/LanguageSelector";
 import {
   useTabStore,
@@ -214,14 +213,14 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
   const [settingsTarget, setSettingsTarget] = useState<HTMLSpanElement | null>(
     null,
   );
-  const [diffSettingsTarget, setDiffSettingsTarget] =
-    useState<HTMLSpanElement | null>(null);
   const [statusTarget, setStatusTarget] = useState<HTMLSpanElement | null>(
     null,
   );
   const [languageTarget, setLanguageTarget] = useState<HTMLSpanElement | null>(
     null,
   );
+  const [indentationTarget, setIndentationTarget] =
+    useState<HTMLSpanElement | null>(null);
   const [busy, setBusy] = useState(false);
   const [welcome, setWelcome] = useState(() => !tab.content);
   const showBusy = useDelayedVisibility(busy);
@@ -234,10 +233,6 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
   const view = tab.view;
   const jsonSupported = supportsJsonOperations(tab.editorSettings.language);
   const formatSupported = supportsFormatting(tab.editorSettings.language);
-  const [diffLanguages, setDiffLanguages] = useState({
-    left: tab.editorSettings.language,
-    right: "json",
-  });
   const treeContent = useMemo(() => ({ text: tab.content }), [tab.content]);
   const fileBytes = tab.byteLength;
   const persistence = useSettingsStore((s) => s.persistentDataEnabled);
@@ -372,7 +367,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
         </div>
         <DocumentActions
           endContent={
-            view === "code" ? (
+            view === "code" || view === "diff" ? (
               <span
                 ref={setSettingsTarget}
                 className="flex shrink-0 items-center"
@@ -538,6 +533,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
                 showJsonPathFilter={!welcome}
                 statusBarTarget={statusTarget}
                 languageBarTarget={languageTarget}
+                indentationBarTarget={indentationTarget}
                 onUpdateValue={update}
               />
             </WorkspaceWelcome>
@@ -564,46 +560,24 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
             />
           )}{" "}
           {view === "diff" && (
-            <div className="flex h-full flex-col">
-              <MonacoDiffOperationBar
-                formatSupported={{
-                  left: supportsFormatting(diffLanguages.left),
-                  right: supportsFormatting(diffLanguages.right),
-                }}
-                jsonSupported={{
-                  left: supportsJsonOperations(diffLanguages.left),
-                  right: supportsJsonOperations(diffLanguages.right),
-                }}
-                settingsTargetRef={setDiffSettingsTarget}
-                onCopy={(type) => diff.current?.copy(type) || false}
-                onClear={(type) => diff.current?.clear(type) || false}
-                onFormat={(type) => diff.current?.format(type) || false}
-                onFieldSort={(type, order) =>
-                  diff.current?.fieldSort(type, order) || false
-                }
-                onAiClick={() => diff.current?.showAiPrompt()}
-              />
-              <div className="min-h-0 flex-1">
-                <MonacoDiffEditor
-                  onLanguagesChange={setDiffLanguages}
-                  ref={diff}
-                  settingsBarTarget={diffSettingsTarget}
-                  languageBarTarget={languageTarget}
-                  tabKey={tab.key}
-                  tabTitle={tab.title}
-                  originalValue={tab.content}
-                  modifiedValue={tab.diffModifiedValue || ""}
-                  language={tab.editorSettings.language}
-                  languageMode={tab.editorSettings.languageMode}
-                  filename={tab.editorSettings.filename}
-                  theme={theme}
-                  onUpdateOriginalValue={update}
-                  onUpdateModifiedValue={(text) =>
-                    store.setTabModifiedValue(tab.key, text)
-                  }
-                />
-              </div>
-            </div>
+            <MonacoDiffEditor
+              ref={diff}
+              settingsBarTarget={settingsTarget}
+              languageBarTarget={languageTarget}
+              indentationBarTarget={indentationTarget}
+              tabKey={tab.key}
+              tabTitle={tab.title}
+              originalValue={tab.content}
+              modifiedValue={tab.diffModifiedValue || ""}
+              language={tab.editorSettings.language}
+              languageMode={tab.editorSettings.languageMode}
+              filename={tab.editorSettings.filename}
+              theme={theme}
+              onUpdateOriginalValue={update}
+              onUpdateModifiedValue={(text) =>
+                store.setTabModifiedValue(tab.key, text)
+              }
+            />
           )}
         </Suspense>
       </div>
@@ -699,11 +673,19 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
               />
             )}
           </span>
-          <span className="status-secondary">
-            {tab.editorSettings.indentMode !== "manual" && "自动 · "}
-            {tab.editorSettings.insertSpaces === false
-              ? `Tab · 宽度 ${tab.editorSettings.indentSize}`
-              : `${tab.editorSettings.indentSize} 空格`}
+          <span
+            key={`indentation-${view}`}
+            ref={setIndentationTarget}
+            className="status-secondary inline-flex"
+          >
+            {(view === "tree" || view === "table") && (
+              <>
+                {tab.editorSettings.indentMode !== "manual" && "自动 · "}
+                {tab.editorSettings.insertSpaces === false
+                  ? `Tab · 宽度 ${tab.editorSettings.indentSize}`
+                  : `${tab.editorSettings.indentSize} 空格`}
+              </>
+            )}
           </span>
         </div>
       </div>

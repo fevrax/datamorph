@@ -79,6 +79,7 @@ export default function ProtoSortPage() {
   return (
     <ToolboxPageTemplate
       toolName="Protobuf 排序工具"
+      description="为字段重新编号，左右对照检查每一处变化。"
       toolIcon="mdi:sort-alphabetical-ascending"
       actions={
         <>
@@ -113,18 +114,24 @@ export default function ProtoSortPage() {
         </>
       }
       statusIndicator={
-        <span ref={setSettingsTarget} className="flex shrink-0 items-center" />
+        <div className="flex items-center gap-3">
+          <span role="status" aria-live="polite">
+            {status}
+          </span>
+          <span
+            ref={setSettingsTarget}
+            className="flex shrink-0 items-center"
+          />
+        </div>
       }
     >
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+      <details className="tool-examples">
+        <summary>编号规则 · 从 1 开始，跳过保留范围</summary>
         <p className="text-muted-foreground">
           每个 message 从 1 开始编号，oneof 共用序列，嵌套 message
           独立编号，跳过保留范围。
         </p>
-        <span role="status" aria-live="polite" className="text-primary">
-          {status}
-        </span>
-      </div>
+      </details>
       {error && (
         <p
           role="alert"
@@ -133,16 +140,13 @@ export default function ProtoSortPage() {
           排序失败：{error}
         </p>
       )}
-      <section
-        aria-label="排序前后差异"
-        className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border"
-      >
-        <div className="grid grid-cols-2 border-b bg-muted/40 text-xs font-medium">
-          <div className="flex items-center justify-between gap-2 border-r px-3 py-2">
+      <section aria-label="排序前后差异" className="tool-panel flex-1">
+        <div className="tool-diff-labels">
+          <div>
             <span>排序前</span>
             <span className="text-muted-foreground">可编辑</span>
           </div>
-          <div className="flex items-center justify-between gap-2 px-3 py-2">
+          <div>
             <span>排序后</span>
             <span className="text-muted-foreground">只读</span>
           </div>

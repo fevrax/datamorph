@@ -1,3 +1,5 @@
+import { TimeZoneSelector } from "../TimeZoneSelector";
+import { resolveTimeZone } from "@/utils/timeZone";
 import { Switch } from "@/components/ui";
 
 import {
@@ -65,6 +67,7 @@ const DECODERS: DecoderItem[] = [
 export function DecoderSettings() {
   const {
     timestampDecoderEnabled,
+    timestampTimeZone,
     base64DecoderEnabled,
     unicodeDecoderEnabled,
     urlDecoderEnabled,
@@ -133,6 +136,17 @@ export function DecoderSettings() {
             </ControlSlot>
           </SettingRow>
         ))}
+
+        <SettingRow
+          description={`当前时区：${resolveTimeZone(timestampTimeZone)}。默认跟随本地时区，修改后同步到所有时间戳提示。`}
+          icon="solar:global-bold"
+          title="时间戳时区"
+          tone="info"
+        >
+          <ControlSlot className="w-full sm:w-60 sm:shrink-0">
+            <TimeZoneSelector />
+          </ControlSlot>
+        </SettingRow>
 
         <InfoNote title="关于解码器">
           <p>

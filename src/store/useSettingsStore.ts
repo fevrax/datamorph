@@ -1,4 +1,5 @@
 import toast from "@/utils/toast";
+import { LOCAL_TIME_ZONE, normalizeTimeZone } from "@/utils/timeZone";
 // useSettingsStore.ts
 import { create } from "zustand";
 import { devtools, subscribeWithSelector } from "zustand/middleware";
@@ -28,6 +29,7 @@ export interface SettingsState {
   fontSize: FontSize;
   // 解码器设置
   timestampDecoderEnabled: boolean;
+  timestampTimeZone: string;
   base64DecoderEnabled: boolean;
   unicodeDecoderEnabled: boolean;
   urlDecoderEnabled: boolean;
@@ -46,6 +48,7 @@ export interface SettingsState {
   setChatStyle: (value: ChatStyle) => void;
   setFontSize: (value: FontSize) => void;
   setTimestampDecoderEnabled: (value: boolean) => void;
+  setTimestampTimeZone: (value: string) => void;
   setBase64DecoderEnabled: (value: boolean) => void;
   setUnicodeDecoderEnabled: (value: boolean) => void;
   setImageDecoderEnabled: (value: boolean) => void;
@@ -68,6 +71,7 @@ export const useSettingsStore = create<SettingsState>()(
         chatStyle: "bubble",
         fontSize: "medium",
         timestampDecoderEnabled: true,
+        timestampTimeZone: LOCAL_TIME_ZONE,
         base64DecoderEnabled: true,
         unicodeDecoderEnabled: true,
         urlDecoderEnabled: true,
@@ -85,6 +89,8 @@ export const useSettingsStore = create<SettingsState>()(
         setFontSize: (value: FontSize) => set({ fontSize: value }),
         setTimestampDecoderEnabled: (value: boolean) =>
           set({ timestampDecoderEnabled: value }),
+        setTimestampTimeZone: (value: string) =>
+          set({ timestampTimeZone: normalizeTimeZone(value) }),
         setBase64DecoderEnabled: (value: boolean) =>
           set({ base64DecoderEnabled: value }),
         setUnicodeDecoderEnabled: (value: boolean) =>
@@ -106,7 +112,10 @@ export const useSettingsStore = create<SettingsState>()(
           const settings = await storageManager.get<SettingsState>(DB_SETTINGS);
 
           if (settings) {
-            set(settings);
+            set({
+              ...settings,
+              timestampTimeZone: normalizeTimeZone(settings.timestampTimeZone),
+            });
           }
         },
       }),
@@ -127,6 +136,7 @@ const getPersistedSettings = (settings: SettingsState) => ({
   chatStyle: settings.chatStyle,
   fontSize: settings.fontSize,
   timestampDecoderEnabled: settings.timestampDecoderEnabled,
+  timestampTimeZone: settings.timestampTimeZone,
   base64DecoderEnabled: settings.base64DecoderEnabled,
   unicodeDecoderEnabled: settings.unicodeDecoderEnabled,
   urlDecoderEnabled: settings.urlDecoderEnabled,

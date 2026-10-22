@@ -6,6 +6,7 @@ import {
   type DecodedToken,
 } from "./detectors";
 import { useSettingsStore } from "@/store/useSettingsStore";
+import { OPEN_TIME_ZONE_EVENT, resolveTimeZone } from "@/utils/timeZone";
 import clipboard from "@/utils/clipboard";
 import { useTabStore } from "@/store/useTabStore";
 interface Entry {
@@ -56,8 +57,15 @@ function scan(entry: Entry) {
     model = editor.getModel();
   if (!model) return [];
   const ranges = editor.getVisibleRanges();
+  const timeZone = resolveTimeZone(
+    useSettingsStore.getState().timestampTimeZone,
+  );
   const signature =
-    JSON.stringify(ranges) + ":" + Math.floor(editor.getScrollLeft());
+    JSON.stringify(ranges) +
+    ":" +
+    Math.floor(editor.getScrollLeft()) +
+    ":" +
+    timeZone;
   if (entry.version === model.getVersionId() && entry.position === signature)
     return entry.tokens;
   const tokens: Entry["tokens"] = [];
@@ -80,7 +88,7 @@ function scan(entry: Entry) {
       const text = model.getValueInRange(
         new monaco.Range(line, start + 1, line, end),
       );
-      for (const token of detectTokens(text, start))
+      for (const token of detectTokens(text, start, 12000, timeZone))
         tokens.push({ ...token, line });
     }
   }
@@ -160,9 +168,26 @@ const titles = {
   url: "URL 解码",
   image: "图片预览",
 };
+
+function dismissDecoderHovers() {
+  entries.forEach(({ editor }) => {
+    // Monaco 0.52 has no public hide-hover action. Dismiss its cached content
+    // before changing zones so a sticky hover cannot offer the previous time.
+    editor
+      .getContribution<
+        monaco.editor.IEditorContribution & { _hideWidgets?: () => void }
+      >("editor.contrib.contentHover")
+      ?._hideWidgets?.();
+  });
+}
+
 export function registerDecoderProviders() {
   if (registered) return;
   registered = true;
+  monaco.editor.registerCommand("datamorph.selectTimeZone", () => {
+    dismissDecoderHovers();
+    window.dispatchEvent(new Event(OPEN_TIME_ZONE_EVENT));
+  });
   monaco.editor.registerCommand(
     "datamorph.copyDecoded",
     (_accessor, value: string) => {
@@ -202,6 +227,7 @@ export function registerDecoderProviders() {
       const matches = detectTokensAtPosition(
         model.getLineContent(position.lineNumber),
         position.column - 1,
+        resolveTimeZone(useSettingsStore.getState().timestampTimeZone),
       ).filter((t) => active(entry, t.kind));
       if (!matches.length) return null;
       return {
@@ -214,7 +240,16 @@ export function registerDecoderProviders() {
         contents: matches.flatMap((t) => {
           const args = encodeURIComponent(JSON.stringify([t.decoded]));
           return [
-            { value: "**" + titles[t.kind] + "**" },
+            {
+              value:
+                "**" +
+                titles[t.kind] +
+                "**" +
+                (t.kind === "timestamp"
+                  ? ` · ${escapeMarkdown(resolveTimeZone(useSettingsStore.getState().timestampTimeZone))} · [切换时区](command:datamorph.selectTimeZone)`
+                  : ""),
+              isTrusted: { enabledCommands: ["datamorph.selectTimeZone"] },
+            },
             t.kind === "image"
               ? {
                   value: `[打开图片预览](command:datamorph.previewImage?${args})`,
@@ -240,7 +275,11 @@ export function registerDecoderProviders() {
       };
     },
   });
-  useSettingsStore.subscribe(refreshGlobalDecoders);
+  useSettingsStore.subscribe((state, previous) => {
+    if (state.timestampTimeZone !== previous.timestampTimeZone)
+      dismissDecoderHovers();
+    refreshGlobalDecoders();
+  });
 }
 export function decoderStats() {
   return {

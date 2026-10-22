@@ -14,6 +14,7 @@ import DefaultLayout from "@/layouts/default";
 import { FontSizeManager } from "@/components/FontSizeManager";
 import UtoolsListener from "@/services/utoolsListener";
 import { PWAUpdateManager } from "@/components/pwa/PWAUpdateManager";
+import { TimeZoneDialog } from "@/components/setting/TimeZoneSelector";
 import { ThemeColorManager } from "@/components/ThemeColorManager";
 
 // 初始化存储系统
@@ -57,6 +58,7 @@ async function startApp() {
       >
         <Provider>
           <ThemeColorManager />
+          <TimeZoneDialog />
           <FontSizeManager />
           <DefaultLayout>
             <App />

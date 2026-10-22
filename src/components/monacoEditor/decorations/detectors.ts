@@ -1,3 +1,4 @@
+import { formatTimestamp } from "@/utils/timeZone";
 import { decodeBase64Strict } from "@/utils/base64";
 export type DecoderKind = "timestamp" | "base64" | "unicode" | "url" | "image";
 export interface DecodedToken {
@@ -8,15 +9,12 @@ export interface DecodedToken {
   decoded: string;
 }
 export const TIMESTAMP_BLACKLIST = ["id", "url", "size", "count", "length"];
-export function timestampToHumanReadable(timestamp: string): string {
-  const value = Number(timestamp);
-  const date = new Date(timestamp.length === 10 ? value * 1000 : value);
-  return Number.isFinite(date.getTime()) ? date.toLocaleString() : timestamp;
-}
+export const timestampToHumanReadable = formatTimestamp;
 export function detectTokens(
   text: string,
   offset = 0,
   maxValueLength = 12000,
+  timeZone = "local",
 ): DecodedToken[] {
   const results: DecodedToken[] = [];
   const strings = /"((?:[^"\\]|\\.)*)"/g;
@@ -66,7 +64,7 @@ export function detectTokens(
         ),
       )
     )
-      add("timestamp", timestampToHumanReadable(raw));
+      add("timestamp", timestampToHumanReadable(raw, timeZone));
   }
   const numbers =
     /(?:"([^"\\]+)"\s*:\s*|[\[,]\s*|^\s*)(\d{13}|\d{10})(?=\s*(?:[,}\]]|$))/g;
@@ -80,7 +78,7 @@ export function detectTokens(
       start,
       end: start + raw.length,
       raw,
-      decoded: timestampToHumanReadable(raw),
+      decoded: timestampToHumanReadable(raw, timeZone),
     });
   }
   return results;
@@ -90,6 +88,7 @@ export function detectTokens(
 export function detectTokensAtPosition(
   line: string,
   column: number,
+  timeZone = "local",
 ): DecodedToken[] {
   let opening = -1;
   let escaped = false;
@@ -111,9 +110,12 @@ export function detectTokensAtPosition(
           const key = prefix.match(/"([^"\\]+)"\s*:\s*$/)?.[0] || "";
           const text =
             key + line.slice(opening, i + 1) + line.slice(i + 1, i + 3);
-          return detectTokens(text, opening - key.length, Infinity).filter(
-            (t) => column >= t.start && column <= t.end,
-          );
+          return detectTokens(
+            text,
+            opening - key.length,
+            Infinity,
+            timeZone,
+          ).filter((t) => column >= t.start && column <= t.end);
         }
         opening = -1;
         if (i > column) break;
@@ -121,7 +123,10 @@ export function detectTokensAtPosition(
     } else if (line[i] === '"') opening = i;
   }
   const start = Math.max(0, column - 128);
-  return detectTokens(line.slice(start, column + 128), start).filter(
-    (t) => column >= t.start && column <= t.end,
-  );
+  return detectTokens(
+    line.slice(start, column + 128),
+    start,
+    12000,
+    timeZone,
+  ).filter((t) => column >= t.start && column <= t.end);
 }

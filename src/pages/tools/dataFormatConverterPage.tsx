@@ -3,18 +3,7 @@ import { useToolAI } from "@/components/workspace/useToolAI";
 import { useBackgroundTask } from "@/components/workspace/useBackgroundTask";
 import { createToolStateHook } from "@/components/workspace/ToolContext";
 import { useRef, useState, useEffect } from "react";
-import {
-  Button,
-  Card,
-  CardBody,
-  Spinner,
-  Chip,
-  Select,
-  SelectItem,
-  Tooltip,
-  Divider,
-} from "@/components/ui";
-import { Icon } from "@/components/ui/icon";
+import { Button, Spinner, Select, SelectItem } from "@/components/ui";
 import { useTheme } from "next-themes";
 
 import toast from "@/utils/toast";
@@ -22,7 +11,14 @@ import MonacoEditor, {
   MonacoDataEditorRef,
 } from "@/components/monacoEditor/MonacoDataEditor.tsx";
 import ToolboxPageTemplate from "@/layouts/toolboxPageTemplate";
-import ResizableEditorLayout from "@/components/layout/ResizableEditorLayout.tsx";
+import ToolPanel from "@/components/toolbox/ToolPanel";
+import {
+  ArrowRight,
+  ArrowLeftRight,
+  Copy,
+  RotateCcw,
+  WandSparkles,
+} from "lucide-react";
 import AIPromptOverlay, {
   QuickPrompt,
 } from "@/components/ai/AIPromptOverlay.tsx";
@@ -76,21 +72,6 @@ export default function DataFormatConverterPage() {
     inputValue + "\u0000" + inputFormat + outputFormat,
   );
   const ai = useToolAI(inputValue + "\u0000" + inputFormat + outputFormat);
-
-  // 处理编辑器布局调整
-  const handleEditorResize = (width: number) => {
-    console.log("Editor left width:", width + "%");
-  };
-
-  // 在拖动结束后更新编辑器布局
-  const handleEditorResizeComplete = (width: number) => {
-    console.log("Editor resize complete:", width + "%");
-    // 更新两个编辑器的布局
-    setTimeout(() => {
-      inputEditorRef.current?.layout();
-      outputEditorRef.current?.layout();
-    }, 50); // 给DOM更新一点时间
-  };
 
   // 处理快捷指令点击
   const handleQuickPromptClick = (quickPrompt: QuickPrompt) => {
@@ -373,325 +354,159 @@ export default function DataFormatConverterPage() {
     }
   };
 
-  // 格式转换操作按钮
-  const formatConversionButtons = (
-    <div className="flex items-center gap-2 flex-wrap">
-      <Select
-        aria-label="输入格式"
-        className="w-32 min-w-[140px]"
-        color="primary"
-        selectedKeys={[inputFormat]}
-        size="sm"
-        startContent={
-          <Icon
-            className="mr-1 text-primary"
-            icon={DATA_FORMATS.find((f) => f.value === inputFormat)?.icon || ""}
-            width={18}
-          />
-        }
-        variant="faded"
-        onChange={(e) => {
-          setInputFormat(e.target.value);
-          inputEditorRef.current?.setLanguage(e.target.value);
-        }}
-      >
-        {DATA_FORMATS.map((format) => (
-          <SelectItem
-            key={format.value}
-            startContent={
-              <Icon className="mr-2" icon={format.icon} width={18} />
-            }
-          >
-            {format.label}
-          </SelectItem>
-        ))}
-      </Select>
-
-      <Button
-        isIconOnly
-        aria-label="交换格式"
-        className="bg-secondary/50 hover:bg-border/60"
-        size="sm"
-        variant="light"
-        onPress={handleSwapFormats}
-      >
-        <Icon
-          className="text-muted-foreground"
-          icon="solar:refresh-linear"
-          width={18}
-        />
-      </Button>
-
-      <Select
-        aria-label="输出格式"
-        className="w-32 min-w-[140px]"
-        color="secondary"
-        selectedKeys={[outputFormat]}
-        size="sm"
-        startContent={
-          <Icon
-            className="mr-1 text-secondary"
-            icon={
-              DATA_FORMATS.find((f) => f.value === outputFormat)?.icon || ""
-            }
-            width={18}
-          />
-        }
-        variant="faded"
-        onChange={(e) => {
-          setOutputFormat(e.target.value);
-          outputEditorRef.current?.setLanguage(e.target.value);
-        }}
-      >
-        {DATA_FORMATS.map((format) => (
-          <SelectItem
-            key={format.value}
-            startContent={
-              <Icon className="mr-2" icon={format.icon} width={18} />
-            }
-          >
-            {format.label}
-          </SelectItem>
-        ))}
-      </Select>
-
-      <Divider className="h-6" orientation="vertical" />
-
-      <Button
-        className="font-medium"
-        color="primary"
-        isDisabled={isProcessing || isAiProcessing || !inputValue}
-        size="sm"
-        startContent={
-          isProcessing ? (
-            <Spinner color="current" size="sm" />
-          ) : (
-            <Icon icon="solar:refresh-outline" width={18} />
-          )
-        }
-        variant="flat"
-        onPress={convertDataFormat}
-      >
-        转换格式
-      </Button>
-
-      <Button
-        className="font-medium"
-        color="secondary"
-        isDisabled={isProcessing || isAiProcessing}
-        size="sm"
-        startContent={
-          isAiProcessing ? (
-            <Spinner color="current" size="sm" />
-          ) : (
-            <Icon icon="solar:magic-stick-linear" width={18} />
-          )
-        }
-        variant="flat"
-        onPress={() => setIsAiModalOpen(true)}
-      >
-        AI 转换
-      </Button>
-
-      <Button
-        className="font-medium"
-        color="danger"
-        isDisabled={isProcessing || isAiProcessing}
-        size="sm"
-        startContent={<Icon icon="solar:restart-outline" width={18} />}
-        variant="flat"
-        onPress={handleReset}
-      >
-        重置
-      </Button>
-    </div>
-  );
-
-  // 工具特定的操作按钮
-  const actionButtons = (
-    <div className="flex flex-col gap-3 w-full">
-      <div className="flex items-center gap-2 flex-wrap">
-        {formatConversionButtons}
-      </div>
-    </div>
-  );
-
-  // 状态指示器
-  const statusIndicator = processingStep ? (
-    <Chip
-      className="px-3 transition-all duration-200"
-      color={isProcessing ? "warning" : "success"}
-      startContent={
-        isProcessing ? (
-          <Spinner className="mx-1" color="warning" size="sm" />
-        ) : (
-          <Icon className="mx-1" icon="icon-park-outline:success" width={16} />
-        )
-      }
-      variant="flat"
-    >
-      {processingStep}
-    </Chip>
-  ) : null;
-
+  const busy = isProcessing || isAiProcessing;
   return (
     <ToolboxPageTemplate
-      actions={actionButtons}
-      statusIndicator={statusIndicator}
       toolIcon="token-branded:swap"
-      toolIconColor="text-primary"
-      toolName="数据格式转换工具"
+      toolName="数据格式转换"
+      description="选择输入与输出格式，在中央完成转换。"
     >
-      <div className="flex flex-col h-full relative">
+      <div className="tool-editor-workspace">
         <AIPromptOverlay
           isOpen={isAiModalOpen}
-          placeholderText="请输入您的需求，例如：'将这个 JSON 转换为 Go 结构体并添加 grom 字段定义，并添加中文注释'"
+          placeholderText="描述需要转换的格式或结构…"
           prompt={prompt}
           quickPrompts={quickPrompts}
-          tipText="提示: 您可以要求AI将数据转换为各种格式或生成各种语言的代码结构"
+          tipText="支持自定义数据结构和代码生成需求"
           onClose={() => setIsAiModalOpen(false)}
           onPromptChange={setPrompt}
           onQuickPromptClick={handleQuickPromptClick}
           onSubmit={handleAiConvert}
         />
-        {/* 可调整大小的双编辑器布局 */}
-        <div className="flex-grow h-0 overflow-hidden">
-          <ResizableEditorLayout
-            className="h-full"
-            initialLeftWidth={50}
-            maxLeftWidth={70}
-            minLeftWidth={30}
-            onResize={handleEditorResize}
-            onResizeComplete={handleEditorResizeComplete}
+        <div className="tool-conversion-layout">
+          <ToolPanel
+            title={`输入 · ${inputFormat.toUpperCase()}`}
+            actions={
+              <>
+                <Button size="sm" variant="ghost" onPress={formatInput}>
+                  格式化
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-label="复制输入"
+                  onPress={copyInput}
+                >
+                  <Copy />
+                </Button>
+              </>
+            }
           >
-            {/* 左侧编辑器面板 */}
-            <Card className="h-full overflow-hidden shadow-md border border-border transition-shadow hover:shadow-lg m-2">
-              <CardBody className="p-0 h-full flex flex-col">
-                <div className="p-2.5 bg-muted border-b border-border flex justify-between items-center">
-                  <span className="text-sm font-medium flex items-center gap-2">
-                    <Icon
-                      className="text-muted-foreground"
-                      icon="solar:document-text-outline"
-                      width={16}
-                    />
-                    输入{" "}
-                    {DATA_FORMATS.find((f) => f.value === inputFormat)?.label ||
-                      inputFormat}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <Tooltip content="格式化" placement="top">
-                      <Button
-                        isIconOnly
-                        aria-label="格式化"
-                        className="bg-secondary/50 hover:bg-border/60"
-                        size="sm"
-                        variant="light"
-                        onPress={formatInput}
-                      >
-                        <Icon
-                          className="text-muted-foreground"
-                          icon="solar:magic-stick-linear"
-                          width={18}
-                        />
-                      </Button>
-                    </Tooltip>
-                    <Tooltip content="复制" placement="top">
-                      <Button
-                        isIconOnly
-                        aria-label="复制"
-                        className="bg-secondary/50 hover:bg-border/60"
-                        size="sm"
-                        variant="light"
-                        onPress={copyInput}
-                      >
-                        <Icon
-                          className="text-muted-foreground"
-                          icon="solar:copy-outline"
-                          width={18}
-                        />
-                      </Button>
-                    </Tooltip>
-                  </div>
-                </div>
-                <div className="flex-1 w-full h-full flex-grow overflow-hidden">
-                  <MonacoEditor
-                    ref={inputEditorRef}
-                    height="100%"
-                    language={inputFormat}
-                    tabKey="input"
-                    theme={theme === "dark" ? "vs-dark" : "vs-light"}
-                    value={inputValue}
-                    onUpdateValue={(value) => setInputValue(value || "")}
-                  />
-                </div>
-              </CardBody>
-            </Card>
-
-            {/* 右侧编辑器面板 */}
-            <Card className="h-full overflow-hidden shadow-md border border-border transition-shadow hover:shadow-lg m-2">
-              <CardBody className="p-0 h-full flex flex-col">
-                <div className="p-2.5 bg-muted border-b border-border flex justify-between items-center">
-                  <span className="text-sm font-medium flex items-center gap-2">
-                    <Icon
-                      className="text-muted-foreground"
-                      icon="solar:code-square-linear"
-                      width={16}
-                    />
-                    输出{" "}
-                    {DATA_FORMATS.find((f) => f.value === outputFormat)
-                      ?.label || outputFormat}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <Tooltip content="格式化" placement="top">
-                      <Button
-                        isIconOnly
-                        aria-label="格式化"
-                        className="bg-secondary/50 hover:bg-border/60"
-                        size="sm"
-                        variant="light"
-                        onPress={formatOutput}
-                      >
-                        <Icon
-                          className="text-muted-foreground"
-                          icon="solar:magic-stick-linear"
-                          width={18}
-                        />
-                      </Button>
-                    </Tooltip>
-                    <Tooltip content="复制" placement="top">
-                      <Button
-                        isIconOnly
-                        aria-label="复制"
-                        className="bg-secondary/50 hover:bg-border/60"
-                        size="sm"
-                        variant="light"
-                        onPress={copyOutput}
-                      >
-                        <Icon
-                          className="text-muted-foreground"
-                          icon="solar:copy-outline"
-                          width={18}
-                        />
-                      </Button>
-                    </Tooltip>
-                  </div>
-                </div>
-                <div className="flex-1 h-full flex-grow overflow-hidden">
-                  <MonacoEditor
-                    ref={outputEditorRef}
-                    height="100%"
-                    language={outputFormat}
-                    tabKey="out"
-                    theme={theme === "dark" ? "vs-dark" : "vs-light"}
-                    value={outputValue}
-                    onUpdateValue={(val) => {
-                      setOutputValue(val || "");
-                    }}
-                  />
-                </div>
-              </CardBody>
-            </Card>
-          </ResizableEditorLayout>
+            <MonacoEditor
+              ref={inputEditorRef}
+              language={inputFormat}
+              tabKey="input"
+              theme={theme === "dark" ? "vs-dark" : "vs-light"}
+              value={inputValue}
+              onUpdateValue={(value) => setInputValue(value || "")}
+            />
+          </ToolPanel>
+          <aside className="tool-conversion-controls" aria-label="格式转换设置">
+            <div>
+              <span className="tool-field-label">输入格式</span>
+              <Select
+                aria-label="输入格式"
+                selectedKeys={[inputFormat]}
+                size="sm"
+                onChange={(event) => {
+                  setInputFormat(event.target.value);
+                  inputEditorRef.current?.setLanguage(event.target.value);
+                }}
+              >
+                {DATA_FORMATS.map((format) => (
+                  <SelectItem key={format.value}>{format.label}</SelectItem>
+                ))}
+              </Select>
+            </div>
+            <ArrowRight
+              className="tool-conversion-arrow size-4"
+              aria-hidden="true"
+            />
+            <div>
+              <span className="tool-field-label">输出格式</span>
+              <Select
+                aria-label="输出格式"
+                selectedKeys={[outputFormat]}
+                size="sm"
+                onChange={(event) => {
+                  setOutputFormat(event.target.value);
+                  outputEditorRef.current?.setLanguage(event.target.value);
+                }}
+              >
+                {DATA_FORMATS.map((format) => (
+                  <SelectItem key={format.value}>{format.label}</SelectItem>
+                ))}
+              </Select>
+            </div>
+            <Button
+              color="primary"
+              size="sm"
+              isDisabled={busy || !inputValue}
+              onPress={convertDataFormat}
+            >
+              {isProcessing ? <Spinner size="sm" /> : <ArrowRight />}转换格式
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              isDisabled={busy}
+              onPress={handleSwapFormats}
+            >
+              <ArrowLeftRight />
+              交换格式
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              isDisabled={busy}
+              onPress={() => setIsAiModalOpen(true)}
+            >
+              {isAiProcessing ? <Spinner size="sm" /> : <WandSparkles />}AI 转换
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              isDisabled={busy}
+              onPress={handleReset}
+            >
+              <RotateCcw />
+              重置
+            </Button>
+            <span
+              role="status"
+              aria-live="polite"
+              className="tool-workspace-status"
+            >
+              {processingStep}
+            </span>
+          </aside>
+          <ToolPanel
+            title={`输出 · ${outputFormat.toUpperCase()}`}
+            actions={
+              <>
+                <Button size="sm" variant="ghost" onPress={formatOutput}>
+                  格式化
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-label="复制输出"
+                  onPress={copyOutput}
+                >
+                  <Copy />
+                </Button>
+              </>
+            }
+          >
+            <MonacoEditor
+              ref={outputEditorRef}
+              language={outputFormat}
+              tabKey="out"
+              theme={theme === "dark" ? "vs-dark" : "vs-light"}
+              value={outputValue}
+              onUpdateValue={(value) => setOutputValue(value || "")}
+            />
+          </ToolPanel>
         </div>
       </div>
     </ToolboxPageTemplate>

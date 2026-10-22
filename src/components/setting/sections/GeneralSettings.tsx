@@ -88,6 +88,7 @@ export function GeneralSettings() {
       monacoEditorCDN: "local",
       chatStyle: "bubble",
       timestampDecoderEnabled: true,
+      timestampTimeZone: "local",
       base64DecoderEnabled: true,
       unicodeDecoderEnabled: true,
       urlDecoderEnabled: true,

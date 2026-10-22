@@ -203,7 +203,7 @@ export default function JsonKeyNamingPage() {
         {/* 左侧输入编辑器 */}
         <Card className="flex-1 h-full overflow-hidden shadow-md border border-border m-2 mr-0">
           <CardBody className="p-0 h-full flex flex-col">
-            <div className="p-2.5 bg-muted border-b border-border flex justify-between items-center">
+            <div className="tool-editor-header bg-muted border-b border-border flex shrink-0 justify-between items-center">
               <span className="text-sm font-medium flex items-center gap-2">
                 <Icon
                   className="text-muted-foreground"
@@ -339,7 +339,7 @@ export default function JsonKeyNamingPage() {
         {/* 右侧输出编辑器 */}
         <Card className="flex-1 h-full overflow-hidden shadow-md border border-border m-2 ml-0">
           <CardBody className="p-0 h-full flex flex-col">
-            <div className="p-2.5 bg-muted border-b border-border flex justify-between items-center">
+            <div className="tool-editor-header bg-muted border-b border-border flex shrink-0 justify-between items-center">
               <span className="text-sm font-medium flex items-center gap-2">
                 <Icon
                   className="text-muted-foreground"

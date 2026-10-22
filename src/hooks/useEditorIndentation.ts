@@ -90,19 +90,29 @@ export function useEditorIndentation(
     useTabStore.getState().updateEditorSettings(owner, indentation);
   }, [owner, indentation]);
 
+  function updateIndentation(next: typeof indentation) {
+    // Formatting can run in the same event as a selection, before React renders.
+    current.current = { ...next, defaultSize };
+    setIndentation(next);
+  }
+
   return {
     ...indentation,
     resolve,
     setMode: (mode: "auto" | "manual") =>
-      setIndentation((previous) => ({ ...previous, indentMode: mode })),
+      updateIndentation({
+        indentMode: mode,
+        indentSize: current.current.indentSize,
+        insertSpaces: current.current.insertSpaces,
+      }),
     setSize: (size: number) =>
-      setIndentation({
+      updateIndentation({
         indentMode: "manual",
         indentSize: size,
         insertSpaces: true,
       }),
     reset: () =>
-      setIndentation({
+      updateIndentation({
         indentMode: "auto",
         indentSize: defaultSize,
         insertSpaces: true,

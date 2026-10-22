@@ -68,6 +68,7 @@ import toast from "@/utils/toast";
 import { useDelayedVisibility } from "@/hooks/useDelayedVisibility";
 import DraggableMenu from "./DraggableMenu";
 import LanguageSelector from "./LanguageSelector";
+import IndentationSelector from "./IndentationSelector";
 import ErrorModal from "./ErrorModal";
 import JsonPathHelp from "./JsonPathHelp";
 import ReadOnlyMonacoEditor from "./ReadOnlyMonacoEditor";
@@ -97,8 +98,10 @@ export interface MonacoDataEditorProps {
   showTimestampDecorators?: boolean; // 是否显示时间戳装饰器
   statusBarTarget?: HTMLElement | null;
   languageBarTarget?: HTMLElement | null;
+  indentationBarTarget?: HTMLElement | null;
   settingsBarTarget?: HTMLElement | null;
   showJsonPathFilter?: boolean; // 是否显示 JSONPath 查询功能
+  queryLayout?: "inline" | "console";
   onUpdateValue: (
     value: string,
     changes?: readonly monaco.editor.IModelContentChange[],
@@ -143,8 +146,10 @@ export default function MonacoDataEditor({
   isMenu = false,
   showTimestampDecorators = true,
   showJsonPathFilter = false,
+  queryLayout = "inline",
   statusBarTarget,
   languageBarTarget,
+  indentationBarTarget,
   settingsBarTarget,
   customQuickPrompts,
   onUpdateValue,
@@ -228,6 +233,8 @@ export default function MonacoDataEditor({
   const [queryBusy, setQueryBusy] = useState(false);
   const [matchCount, setMatchCount] = useState<number | null>(null);
   const [side, setSide] = useState<"ai" | "query" | null>(null);
+  const inlineQuery =
+    showJsonPathFilter && queryLayout === "console" && side !== "ai";
   const sidePanel = useRef<ImperativePanelHandle>(null);
   const [narrow, setNarrow] = useState(() => window.innerWidth < 768);
   const [promptOpen, setPromptOpen] = useState(false);
@@ -599,9 +606,10 @@ export default function MonacoDataEditor({
     });
   }, [owner, fontSize, currentLanguage, mode, decoders, documentId]);
   useEffect(() => {
-    if (side && !narrow) sidePanel.current?.resize(38);
+    if ((side || inlineQuery) && (!narrow || inlineQuery))
+      sidePanel.current?.resize(inlineQuery ? 50 : 38);
     else sidePanel.current?.collapse();
-  }, [side, narrow]);
+  }, [side, narrow, inlineQuery]);
   useEffect(() => {
     const resize = () => setNarrow(window.innerWidth < 768);
     window.addEventListener("resize", resize);
@@ -673,7 +681,7 @@ export default function MonacoDataEditor({
     });
     editor.current.focus();
   };
-  const assistantContent = side && (
+  const assistantContent = (side || inlineQuery) && (
     <aside
       className={
         side === "ai"
@@ -690,7 +698,13 @@ export default function MonacoDataEditor({
           onClose={closeAssistant}
         />
       ) : (
-        <div className="flex items-center justify-between border-b bg-muted/40 px-3 py-2">
+        <div
+          className={
+            inlineQuery
+              ? "tool-panel-header"
+              : "flex items-center justify-between border-b bg-muted/40 px-3 py-2"
+          }
+        >
           <span className="flex items-center gap-2 text-xs font-medium">
             <Filter className="size-4 text-primary" />
             JSONPath 结果
@@ -700,15 +714,17 @@ export default function MonacoDataEditor({
               </span>
             )}
           </span>
-          <Button
-            size="sm"
-            isIconOnly
-            variant="ghost"
-            aria-label="关闭辅助面板"
-            onPress={closeAssistant}
-          >
-            <X />
-          </Button>
+          {!inlineQuery && (
+            <Button
+              size="sm"
+              isIconOnly
+              variant="ghost"
+              aria-label="关闭辅助面板"
+              onPress={closeAssistant}
+            >
+              <X />
+            </Button>
+          )}
         </div>
       )}
       {side === "ai" ? (
@@ -781,7 +797,11 @@ export default function MonacoDataEditor({
           <div className="border-b bg-muted/20 px-3 py-2 font-mono text-[11px] text-muted-foreground break-all">
             {query}
           </div>
-          {queryBusy ? (
+          {!query.trim() ? (
+            <div className="flex flex-1 items-center justify-center p-5 text-center text-xs text-muted-foreground">
+              输入 JSONPath 表达式，匹配结果会在这里实时显示。
+            </div>
+          ) : queryBusy ? (
             <div
               role="status"
               className="flex items-center gap-2 p-4 text-xs text-muted-foreground"
@@ -817,7 +837,7 @@ export default function MonacoDataEditor({
   return (
     <div
       ref={root}
-      className="relative flex h-full min-h-0 flex-col"
+      className={`relative flex h-full min-h-0 flex-col${queryLayout === "console" ? " query-console" : ""}`}
       style={{ height }}
     >
       {showBusy && (
@@ -836,9 +856,22 @@ export default function MonacoDataEditor({
         direction={narrow ? "vertical" : "horizontal"}
         className="min-h-0 flex-1"
       >
-        <Panel defaultSize={100} minSize={25}>
-          <div className="relative h-full">
-            <div ref={host} className="h-full w-full" />
+        <Panel defaultSize={inlineQuery ? 50 : 100} minSize={25}>
+          <div
+            className={`relative h-full${inlineQuery ? " query-console-source" : ""}`}
+          >
+            {inlineQuery && (
+              <div className="tool-panel-header">
+                <h2>源数据 · JSON</h2>
+                <Button size="sm" variant="ghost" onPress={() => run("format")}>
+                  格式化
+                </Button>
+              </div>
+            )}
+            <div
+              ref={host}
+              className={`h-full w-full${inlineQuery ? " query-console-host" : ""}`}
+            />
             {isMenu && (
               <DraggableMenu
                 toolbarTarget={settingsBarTarget}
@@ -867,22 +900,22 @@ export default function MonacoDataEditor({
         </Panel>
         <PanelResizeHandle
           className={
-            side && !narrow
+            (side || inlineQuery) && (!narrow || inlineQuery)
               ? `bg-border transition-colors hover:bg-primary ${narrow ? "h-1" : "w-1"}`
               : "hidden"
           }
         />
         <Panel
           ref={sidePanel}
-          defaultSize={0}
+          defaultSize={inlineQuery ? 50 : 0}
           minSize={20}
           collapsible
           collapsedSize={0}
         >
-          {!narrow && assistantContent}
+          {(!narrow || inlineQuery) && assistantContent}
         </Panel>
       </PanelGroup>
-      {narrow && (
+      {narrow && !inlineQuery && (
         <Sheet
           open={!!side}
           onOpenChange={(open) => {
@@ -1004,6 +1037,23 @@ export default function MonacoDataEditor({
             onLanguageChange={setLanguage}
           />,
           languageBarTarget,
+        )}
+      {indentationBarTarget &&
+        createPortal(
+          <IndentationSelector
+            indentMode={indentation.indentMode}
+            indentSize={indent}
+            insertSpaces={indentation.insertSpaces}
+            onModeChange={(mode) => {
+              indentation.setMode(mode);
+              format();
+            }}
+            onSizeChange={(size) => {
+              indentation.setSize(size);
+              format();
+            }}
+          />,
+          indentationBarTarget,
         )}
       <AIPromptOverlay
         isOpen={promptOpen}

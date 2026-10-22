@@ -52,6 +52,7 @@ import { MonacoDiffEditorEditorType as Side } from "./monacoEntity";
 import type { MonacoDiffEditorEditorType } from "./monacoEntity";
 import DraggableMenu from "./DraggableMenu";
 import LanguageSelector from "./LanguageSelector";
+import IndentationSelector from "./IndentationSelector";
 import AIPromptOverlay, {
   type QuickPrompt,
 } from "@/components/ai/AIPromptOverlay";
@@ -80,6 +81,7 @@ export interface MonacoDiffEditorProps {
   theme?: string;
   settingsBarTarget?: HTMLElement | null;
   languageBarTarget?: HTMLElement | null;
+  indentationBarTarget?: HTMLElement | null;
   customQuickPrompts?: QuickPrompt[];
   showTimestampDecorators?: boolean;
   showBase64Decorators?: boolean;
@@ -129,6 +131,7 @@ export default function MonacoDiffEditor({
   theme: requestedTheme = "vs-light",
   settingsBarTarget,
   languageBarTarget,
+  indentationBarTarget,
   height = "100%",
   customQuickPrompts,
   showTimestampDecorators = true,
@@ -608,6 +611,23 @@ export default function MonacoDiffEditor({
           languageBarTarget,
         )
       ) : null}
+      {indentationBarTarget &&
+        createPortal(
+          <IndentationSelector
+            indentMode={indentation.indentMode}
+            indentSize={indent}
+            insertSpaces={indentation.insertSpaces}
+            onModeChange={(mode) => {
+              indentation.setMode(mode);
+              process("format");
+            }}
+            onSizeChange={(size) => {
+              indentation.setSize(size);
+              process("format");
+            }}
+          />,
+          indentationBarTarget,
+        )}
       {narrow && (
         <Sheet open={assistant} onOpenChange={setAssistant} title="AI 助手">
           {assistantContent}

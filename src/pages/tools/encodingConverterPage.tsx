@@ -9,9 +9,6 @@ import {
   Card,
   CardBody,
   Chip,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
   Select,
   SelectItem,
   Spinner,
@@ -96,22 +93,6 @@ const cloneDefaultOptions = (): EncodingOptions => ({
   ...DEFAULT_ENCODING_OPTIONS,
 });
 
-function useNarrowLayout() {
-  const [isNarrow, setIsNarrow] = useState(false);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 767px)");
-    const update = () => setIsNarrow(mediaQuery.matches);
-
-    update();
-    mediaQuery.addEventListener("change", update);
-
-    return () => mediaQuery.removeEventListener("change", update);
-  }, []);
-
-  return isNarrow;
-}
-
 interface FormatOptionsProps {
   type: EncodingType;
   options: EncodingOptions;
@@ -125,177 +106,110 @@ function FormatOptions({ type, options, onChange }: FormatOptionsProps) {
   ) => onChange({ ...options, [key]: value });
 
   return (
-    <Popover placement="bottom">
-      <PopoverTrigger>
-        <Button isIconOnly aria-label="格式选项" size="sm" variant="light">
-          <Icon icon="solar:tuning-2-outline" width={18} />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-72 p-0">
-        <div className="w-full p-3">
-          <div className="mb-3 flex items-center gap-2">
-            <Icon
-              className="text-primary"
-              icon="solar:tuning-2-bold"
-              width={18}
-            />
-            <div>
-              <p className="text-sm font-semibold">格式选项</p>
-              <p className="text-muted-foreground text-xs">
-                {ENCODING_MAP.get(type)?.label}
-              </p>
-            </div>
-          </div>
+    <div>
+      <div className="w-full p-3">
+        {type === "url" && (
+          <Select
+            aria-label="URL 编码模式"
+            label="处理模式"
+            selectedKeys={[options.urlMode]}
+            size="sm"
+            onChange={(event) =>
+              setOption("urlMode", event.target.value as UrlEncodingMode)
+            }
+          >
+            <SelectItem key="component">URL Component</SelectItem>
+            <SelectItem key="full">完整 URL</SelectItem>
+            <SelectItem key="form">表单模式（空格转 +）</SelectItem>
+          </Select>
+        )}
 
-          {type === "url" && (
+        {["base64", "base64url"].includes(type) && (
+          <Switch
+            className="w-full justify-between"
+            isSelected={options.base64Padding}
+            size="sm"
+            onValueChange={(value) => setOption("base64Padding", value)}
+          >
+            保留末尾填充
+          </Switch>
+        )}
+
+        {type === "unicode" && (
+          <Switch
+            className="w-full justify-between"
+            isSelected={options.unicodeEscapeAll}
+            size="sm"
+            onValueChange={(value) => setOption("unicodeEscapeAll", value)}
+          >
+            转义全部字符
+          </Switch>
+        )}
+
+        {type === "hex" && (
+          <div className="space-y-3">
             <Select
-              aria-label="URL 编码模式"
-              label="处理模式"
-              selectedKeys={[options.urlMode]}
+              aria-label="Hex 分隔方式"
+              label="字节分隔"
+              selectedKeys={[options.hexSeparator]}
               size="sm"
               onChange={(event) =>
-                setOption("urlMode", event.target.value as UrlEncodingMode)
+                setOption(
+                  "hexSeparator",
+                  event.target.value as EncodingOptions["hexSeparator"],
+                )
               }
             >
-              <SelectItem key="component">URL Component</SelectItem>
-              <SelectItem key="full">完整 URL</SelectItem>
-              <SelectItem key="form">表单模式（空格转 +）</SelectItem>
+              <SelectItem key="space">空格分隔</SelectItem>
+              <SelectItem key="none">紧凑格式</SelectItem>
             </Select>
-          )}
-
-          {["base64", "base64url"].includes(type) && (
             <Switch
               className="w-full justify-between"
-              isSelected={options.base64Padding}
+              isSelected={options.hexUppercase}
               size="sm"
-              onValueChange={(value) => setOption("base64Padding", value)}
+              onValueChange={(value) => setOption("hexUppercase", value)}
             >
-              保留末尾填充
+              使用大写字母
             </Switch>
-          )}
-
-          {type === "unicode" && (
             <Switch
               className="w-full justify-between"
-              isSelected={options.unicodeEscapeAll}
+              isSelected={options.hexPrefix}
               size="sm"
-              onValueChange={(value) => setOption("unicodeEscapeAll", value)}
+              onValueChange={(value) => setOption("hexPrefix", value)}
             >
-              转义全部字符
+              添加 0x 前缀
             </Switch>
-          )}
+          </div>
+        )}
 
-          {type === "hex" && (
-            <div className="space-y-3">
-              <Select
-                aria-label="Hex 分隔方式"
-                label="字节分隔"
-                selectedKeys={[options.hexSeparator]}
-                size="sm"
-                onChange={(event) =>
-                  setOption(
-                    "hexSeparator",
-                    event.target.value as EncodingOptions["hexSeparator"],
-                  )
-                }
-              >
-                <SelectItem key="space">空格分隔</SelectItem>
-                <SelectItem key="none">紧凑格式</SelectItem>
-              </Select>
-              <Switch
-                className="w-full justify-between"
-                isSelected={options.hexUppercase}
-                size="sm"
-                onValueChange={(value) => setOption("hexUppercase", value)}
-              >
-                使用大写字母
-              </Switch>
-              <Switch
-                className="w-full justify-between"
-                isSelected={options.hexPrefix}
-                size="sm"
-                onValueChange={(value) => setOption("hexPrefix", value)}
-              >
-                添加 0x 前缀
-              </Switch>
-            </div>
-          )}
-
-          {type === "binary" && (
-            <div className="space-y-3">
-              <Select
-                aria-label="Binary 分隔方式"
-                label="字节分隔"
-                selectedKeys={[options.binarySeparator]}
-                size="sm"
-                onChange={(event) =>
-                  setOption(
-                    "binarySeparator",
-                    event.target.value as EncodingOptions["binarySeparator"],
-                  )
-                }
-              >
-                <SelectItem key="space">空格分隔</SelectItem>
-                <SelectItem key="none">紧凑格式</SelectItem>
-              </Select>
-              <Switch
-                className="w-full justify-between"
-                isSelected={options.binaryPrefix}
-                size="sm"
-                onValueChange={(value) => setOption("binaryPrefix", value)}
-              >
-                添加 0b 前缀
-              </Switch>
-            </div>
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-interface EncodingSelectProps {
-  type: EncodingType;
-  options: EncodingOptions;
-  onTypeChange: (type: EncodingType) => void;
-  onOptionsChange: (options: EncodingOptions) => void;
-}
-
-function EncodingSelect({
-  type,
-  options,
-  onTypeChange,
-  onOptionsChange,
-}: EncodingSelectProps) {
-  const definition = ENCODING_MAP.get(type)!;
-
-  return (
-    <div className="flex min-w-0 items-center gap-1.5">
-      <span className="text-muted-foreground hidden shrink-0 text-xs sm:inline">
-        编码类型
-      </span>
-      <Select
-        aria-label="编码类型"
-        className="w-[140px] min-w-[140px] md:w-44 md:min-w-[160px]"
-        selectedKeys={[type]}
-        size="sm"
-        startContent={
-          <Icon className="text-primary" icon={definition.icon} width={18} />
-        }
-        variant="faded"
-        onChange={(event) => onTypeChange(event.target.value as EncodingType)}
-      >
-        {ENCODINGS.map((item) => (
-          <SelectItem
-            key={item.type}
-            description={item.description}
-            startContent={<Icon icon={item.icon} width={18} />}
-          >
-            {item.label}
-          </SelectItem>
-        ))}
-      </Select>
-      <FormatOptions options={options} type={type} onChange={onOptionsChange} />
+        {type === "binary" && (
+          <div className="space-y-3">
+            <Select
+              aria-label="Binary 分隔方式"
+              label="字节分隔"
+              selectedKeys={[options.binarySeparator]}
+              size="sm"
+              onChange={(event) =>
+                setOption(
+                  "binarySeparator",
+                  event.target.value as EncodingOptions["binarySeparator"],
+                )
+              }
+            >
+              <SelectItem key="space">空格分隔</SelectItem>
+              <SelectItem key="none">紧凑格式</SelectItem>
+            </Select>
+            <Switch
+              className="w-full justify-between"
+              isSelected={options.binaryPrefix}
+              size="sm"
+              onValueChange={(value) => setOption("binaryPrefix", value)}
+            >
+              添加 0b 前缀
+            </Switch>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -333,15 +247,16 @@ function EditorPanel({
   return (
     <Card className="h-full min-h-0 overflow-hidden border border-border shadow-sm">
       <CardBody className="flex h-full min-h-0 flex-col p-0">
-        <div className="flex min-h-11 items-center justify-between border-b border-border bg-muted px-3 py-2">
+        <div className="tool-panel-header">
           <div className="flex min-w-0 items-center gap-2">
-            <Icon className="text-primary" icon={definition.icon} width={18} />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{title}</p>
-              <p className="text-muted-foreground truncate text-xs">
+            <Icon className="text-primary" icon={definition.icon} width={16} />
+            <h2 className="truncate">
+              {title}
+              <span className="text-muted-foreground font-normal">
+                {" · "}
                 {definition.label}
-              </p>
-            </div>
+              </span>
+            </h2>
           </div>
           <div className="flex items-center gap-1">
             <Tooltip content={`粘贴到${title}`}>
@@ -383,7 +298,7 @@ function EditorPanel({
         </div>
 
         {error && (
-          <div className="flex items-start gap-2 border-b border-destructive bg-destructive/70 px-3 py-2 text-destructive dark:bg-destructive/20 dark:text-destructive">
+          <div className="flex items-start gap-2 border-b border-destructive bg-destructive/5 px-3 py-2 text-destructive dark:bg-destructive/20 dark:text-destructive">
             <Icon
               className="mt-0.5 shrink-0"
               icon="solar:danger-triangle-outline"
@@ -426,7 +341,7 @@ function EditorPanel({
           />
         </div>
 
-        <div className="text-muted-foreground flex min-h-8 items-center justify-between border-t border-border bg-muted px-3 text-xs">
+        <div className="tool-panel-footer flex flex-wrap items-center justify-between gap-2">
           <span>{footerLabel}</span>
           <span>
             {characterCount.toLocaleString()} 字符 ·{" "}
@@ -468,7 +383,6 @@ export default function EncodingConverterPage() {
   const latestRequestIdRef = useRef(0);
   const plainEditorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const encodedEditorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const isNarrow = useNarrowLayout();
 
   const requestConversion = (side: EditSide, immediate: boolean) => {
     const id = ++latestRequestIdRef.current;
@@ -643,32 +557,7 @@ export default function EncodingConverterPage() {
 
   useEffect(() => {
     handleResizeComplete();
-  }, [isNarrow]);
-
-  const actions = (
-    <div className="flex min-w-max items-center gap-1.5 md:w-full md:gap-2">
-      <EncodingSelect
-        options={encodingOptions}
-        type={encodingType}
-        onOptionsChange={handleEncodingOptionsChange}
-        onTypeChange={handleEncodingTypeChange}
-      />
-
-      <div className="ml-auto">
-        <Button
-          aria-label="重置"
-          className="shrink-0"
-          isDisabled={!plainText && !encodedText && encodingType === "base64"}
-          size="sm"
-          startContent={<Icon icon="solar:restart-outline" width={17} />}
-          variant="light"
-          onPress={handleReset}
-        >
-          重置
-        </Button>
-      </div>
-    </div>
-  );
+  }, []);
 
   const activeDirection = request?.side ?? "plain";
   const statusIndicator = (
@@ -710,51 +599,92 @@ export default function EncodingConverterPage() {
 
   return (
     <ToolboxPageTemplate
-      actions={actions}
-      statusIndicator={isNarrow ? undefined : statusIndicator}
+      description="从左侧选择编码格式，编辑任一侧实时同步结果。"
+      actions={
+        <Button
+          size="sm"
+          variant="ghost"
+          onPress={handleReset}
+          isDisabled={!plainText && !encodedText && encodingType === "base64"}
+        >
+          重置
+        </Button>
+      }
+      statusIndicator={statusIndicator}
       toolIcon="solar:code-square-bold"
       toolIconColor="text-primary"
       toolName="编码转换"
     >
-      <div className="min-h-0 flex-1 overflow-hidden">
-        <ResizableEditorLayout
-          className="h-full p-1"
-          initialLeftWidth={50}
-          isStacked={isNarrow}
-          maxLeftWidth={70}
-          minLeftWidth={30}
-          onResizeComplete={handleResizeComplete}
-        >
-          <EditorPanel
-            error={errorSide === "plain" ? error : undefined}
-            footerLabel="编辑左侧，自动编码到右侧"
-            title="原始文本"
-            type="text"
-            value={plainText}
-            onChange={handlePlainTextChange}
-            onClear={() => handleClear("plain")}
-            onCopy={() => clipboard.copy(plainText, "原始文本已复制")}
-            onMount={(instance) => {
-              plainEditorRef.current = instance;
-              instance.focus();
-            }}
-            onPaste={() => handlePaste("plain")}
-          />
-          <EditorPanel
-            error={errorSide === "encoded" ? error : undefined}
-            footerLabel="编辑右侧，自动解码到左侧"
-            title={`${ENCODING_MAP.get(encodingType)?.label} 内容`}
-            type={encodingType}
-            value={encodedText}
-            onChange={handleEncodedTextChange}
-            onClear={() => handleClear("encoded")}
-            onCopy={() => clipboard.copy(encodedText, "编码内容已复制")}
-            onMount={(instance) => {
-              encodedEditorRef.current = instance;
-            }}
-            onPaste={() => handlePaste("encoded")}
-          />
-        </ResizableEditorLayout>
+      <div className="tool-sidebar-layout">
+        <aside className="tool-sidebar" aria-label="编码格式">
+          <h2 className="tool-sidebar-title">编码格式</h2>
+          <div className="tool-format-list">
+            {ENCODINGS.map((encoding) => (
+              <button
+                key={encoding.type}
+                className="tool-format-option"
+                aria-pressed={encodingType === encoding.type}
+                onClick={() => handleEncodingTypeChange(encoding.type)}
+              >
+                <Icon icon={encoding.icon} width={18} />
+                <span>
+                  {encoding.label}
+                  <small>{encoding.description}</small>
+                </span>
+              </button>
+            ))}
+          </div>
+          <details className="tool-encoding-options" open>
+            <summary className="tool-sidebar-title cursor-pointer">
+              格式选项
+            </summary>
+            <FormatOptions
+              type={encodingType}
+              options={encodingOptions}
+              onChange={handleEncodingOptionsChange}
+            />
+          </details>
+        </aside>
+        <div className="tool-editor-workspace">
+          <ResizableEditorLayout
+            className="h-full"
+            initialLeftWidth={50}
+            isStacked
+            maxLeftWidth={70}
+            minLeftWidth={30}
+            onResizeComplete={handleResizeComplete}
+          >
+            <EditorPanel
+              error={errorSide === "plain" ? error : undefined}
+              footerLabel="编辑原始文本，实时编码"
+              title="原始文本"
+              type="text"
+              value={plainText}
+              onChange={handlePlainTextChange}
+              onClear={() => handleClear("plain")}
+              onCopy={() => clipboard.copy(plainText, "原始文本已复制")}
+              onMount={(instance) => {
+                plainEditorRef.current = instance;
+                instance.focus();
+              }}
+              onPaste={() => handlePaste("plain")}
+            />
+            <EditorPanel
+              error={errorSide === "encoded" ? error : undefined}
+              footerLabel="编辑编码内容，实时解码"
+              title={`${ENCODING_MAP.get(encodingType)?.label} 内容`}
+              type={encodingType}
+              value={encodedText}
+              onChange={handleEncodedTextChange}
+              onClear={() => handleClear("encoded")}
+              onCopy={() => clipboard.copy(encodedText, "编码内容已复制")}
+              onMount={(instance) => {
+                encodedEditorRef.current = instance;
+              }}
+              onPaste={() => handlePaste("encoded")}
+            />
+          </ResizableEditorLayout>
+        </div>
       </div>
     </ToolboxPageTemplate>
   );
