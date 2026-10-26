@@ -1,3 +1,23 @@
+# [2.0.0](https://github.com/fevrax/datamorph/compare/v1.29.1...v2.0.0) (2026-10-26)
+
+
+### Features
+
+* **about:** link build version to automated releases ([dd8804d](https://github.com/fevrax/datamorph/commit/dd8804d16d75ad9dcc201b6f92d1ef4f5a2243bd))
+* **editor:** add efficient JSON smart displays ([cf60265](https://github.com/fevrax/datamorph/commit/cf60265d29c19f5716fa8ac37831945efc21c2e1))
+* **proto:** add field renumbering action ([052aa72](https://github.com/fevrax/datamorph/commit/052aa7250afda8bff12b45b5770113682004bc9a))
+* rebrand as datamorph and detect data formats automatically ([3d3f451](https://github.com/fevrax/datamorph/commit/3d3f4517af1dac541940180cb41e5d7ee479ba66))
+* Redesign UI ([7b71f4f](https://github.com/fevrax/datamorph/commit/7b71f4f945e0e2bb86909a98f87de56f4543a17f))
+* refine toolbox layouts and editor settings ([1349f2d](https://github.com/fevrax/datamorph/commit/1349f2d07fe419c1788dcf436e9f18abda43f1c2))
+* **toolbox:** add Protobuf renumbering diff tool ([5039e9c](https://github.com/fevrax/datamorph/commit/5039e9c640bf7580bf539e83849d5cb9319a8eb9))
+* **workspace:** compact navigation and refine error diagnostics ([4338f9d](https://github.com/fevrax/datamorph/commit/4338f9dd2620c64ddb59c176407e1b3ff767fa15))
+* **workspace:** move new-tab action to the left ([8e73d77](https://github.com/fevrax/datamorph/commit/8e73d779c8b0b44d72e77c200283ade7ffe85c7d))
+
+
+### BREAKING CHANGES
+
+* **workspace:** Workspace navigation now uses a compact tab bar instead of the breadcrumb header. Search is integrated into the tab bar, and the new-tab action is fixed before all tabs. Users and UI integrations must use the updated navigation layout.
+
 ## [1.29.1](https://github.com/fevrax/json-tools/compare/v1.29.0...v1.29.1) (2026-10-08)
 
 
