@@ -183,6 +183,15 @@ function DynamicTabs({
       className="workspace-tab-bar flex min-h-10 shrink-0 items-center border-b bg-muted/50"
     >
       <WorkspaceNavigationTrigger />
+      <Button
+        isIconOnly
+        variant="ghost"
+        aria-label="新建文档"
+        className="mx-1"
+        onPress={() => store.addTab()}
+      >
+        <Plus />
+      </Button>
       <input
         ref={file}
         type="file"
@@ -295,14 +304,6 @@ function DynamicTabs({
       </div>
       <div className="workspace-tab-actions flex shrink-0 items-center gap-1 px-1">
         <WorkspaceSearchTrigger />
-        <Button
-          isIconOnly
-          variant="ghost"
-          aria-label="新建文档"
-          onPress={() => store.addTab()}
-        >
-          <Plus />
-        </Button>
         <Dropdown>
           <DropdownTrigger>
             <Button isIconOnly variant="ghost" aria-label="导入与新建">
