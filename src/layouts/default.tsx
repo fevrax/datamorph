@@ -8,8 +8,6 @@ import {
   Settings2,
   PanelLeftClose,
   PanelLeftOpen,
-  Menu,
-  Search,
   Plus,
   FileJson2,
   X,
@@ -21,6 +19,7 @@ import { useSettingsStore } from "@/store/useSettingsStore";
 import { useTabStore } from "@/store/useTabStore";
 import { useToolboxStore } from "@/store/useToolboxStore";
 import { ThemeSwitch } from "@/components/button/ThemeSwitch";
+import { WorkspaceActionsContext } from "@/components/workspace/WorkspaceActions";
 export default function DefaultLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -173,39 +172,16 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
         {nav(collapsed)}
       </aside>
       <div className="workspace-frame">
-        <header className="workspace-header">
-          <div className="flex items-center gap-2">
-            <button
-              ref={mobileTrigger}
-              className="mobile-nav-toggle nav-icon-button"
-              aria-label="打开导航"
-              aria-expanded={mobile}
-              aria-controls="workspace-navigation"
-              onClick={() => setMobile(true)}
-            >
-              <Menu />
-            </button>
-            <h1>
-              {section === "settings"
-                ? "偏好设置"
-                : section === "tools"
-                  ? "开发工具"
-                  : "工作台"}
-              <span className="ml-3 text-muted-foreground/70">/</span>
-              <span className="ml-3 font-normal text-muted-foreground">
-                {section === "settings"
-                  ? "让工具适合你的习惯"
-                  : current?.title || "文档"}
-              </span>
-            </h1>
-          </div>
-          <button className="command-trigger" onClick={() => setCommands(true)}>
-            <Search className="size-3.5" />
-            <span>搜索标签与操作</span>
-            <kbd>⌘ K</kbd>
-          </button>
-        </header>
-        <main className="workspace-content">{children}</main>
+        <WorkspaceActionsContext.Provider
+          value={{
+            openSearch: () => setCommands(true),
+            openNavigation: () => setMobile(true),
+            navigationOpen: mobile,
+            navigationTrigger: mobileTrigger,
+          }}
+        >
+          <main className="workspace-content">{children}</main>
+        </WorkspaceActionsContext.Provider>
       </div>
       <Dialog.Root open={mobile} onOpenChange={setMobile}>
         <Dialog.Portal>

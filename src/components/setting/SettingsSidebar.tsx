@@ -1,5 +1,9 @@
 import { cn, Tooltip } from "@/components/ui";
 import { Icon } from "@/components/ui/icon";
+import {
+  WorkspaceNavigationTrigger,
+  WorkspaceSearchTrigger,
+} from "@/components/workspace/WorkspaceActions";
 
 /** 设置页二级导航项 */
 export interface SettingsMenuItem {
@@ -27,10 +31,12 @@ export function SettingsSidebar({
   return (
     <div className="flex h-full w-[60px] flex-shrink-0 flex-col border-r border-border/70 bg-background/80 backdrop-blur-md dark:bg-muted/20 md:w-[188px]">
       {/* 标题区 */}
-      <div className="px-2 pb-2 pt-4 md:px-3">
+      <div className="flex flex-wrap items-center justify-center gap-1 px-2 pb-2 pt-3 md:justify-between md:px-3">
+        <WorkspaceNavigationTrigger />
         <p className="hidden text-[10.5px] font-medium text-muted-foreground md:block">
           设置
         </p>
+        <WorkspaceSearchTrigger compact />
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2 md:p-2.5">

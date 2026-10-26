@@ -34,6 +34,10 @@ import { validateAndDecodeBase64 } from "@/utils/base64";
 import { JsonSample } from "@/utils/jsonSample";
 import toast from "@/utils/toast";
 import { DATA_FILE_ACCEPT } from "@/utils/dataFormats";
+import {
+  WorkspaceNavigationTrigger,
+  WorkspaceSearchTrigger,
+} from "@/components/workspace/WorkspaceActions";
 export interface DynamicTabsRef {
   getPositionTop: () => number;
 }
@@ -84,6 +88,17 @@ function DynamicTabs({
       ?.querySelector("[aria-selected=true]")
       ?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [active]);
+  useEffect(() => {
+    const list = root.current?.querySelector('[role="tablist"]');
+    if (!list) return;
+    const observer = new ResizeObserver(() => {
+      list
+        .querySelector("[aria-selected=true]")
+        ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    });
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, []);
   useEffect(() => {
     const add = () => store.addTab();
     const close = () => {
@@ -165,8 +180,9 @@ function DynamicTabs({
   return (
     <div
       ref={root}
-      className="flex min-h-10 shrink-0 items-center border-b bg-muted/50"
+      className="workspace-tab-bar flex min-h-10 shrink-0 items-center border-b bg-muted/50"
     >
+      <WorkspaceNavigationTrigger />
       <input
         ref={file}
         type="file"
@@ -277,60 +293,62 @@ function DynamicTabs({
           </ContextMenu.Root>
         ))}
       </div>
-      <Button
-        isIconOnly
-        variant="ghost"
-        aria-label="新建文档"
-        className="mx-1"
-        onPress={() => store.addTab()}
-      >
-        <Plus />
-      </Button>
-      <Dropdown>
-        <DropdownTrigger>
-          <Button isIconOnly variant="ghost" aria-label="导入与新建">
-            <ChevronDown />
-          </Button>
-        </DropdownTrigger>
-        <DropdownMenu>
-          <DropdownItem
-            startContent={<FilePlus className="size-4" />}
-            onPress={() => store.addTab()}
-          >
-            空白文档
-          </DropdownItem>
-          <DropdownItem
-            startContent={<Upload className="size-4" />}
-            onPress={() => file.current?.click()}
-          >
-            导入文件
-          </DropdownItem>
-          <DropdownItem
-            startContent={<Link className="size-4" />}
-            onPress={() => open("url")}
-          >
-            从 URL 导入
-          </DropdownItem>
-          <DropdownItem
-            startContent={<Binary className="size-4" />}
-            onPress={() => open("base64")}
-          >
-            从 Base64 导入
-          </DropdownItem>
-          <DropdownItem
-            onPress={() =>
-              store.addTab(
-                "example.json",
-                typeof JsonSample === "string"
-                  ? JsonSample
-                  : JSON.stringify(JsonSample, null, 2),
-              )
-            }
-          >
-            打开示例数据
-          </DropdownItem>
-        </DropdownMenu>
-      </Dropdown>
+      <div className="workspace-tab-actions flex shrink-0 items-center gap-1 px-1">
+        <WorkspaceSearchTrigger />
+        <Button
+          isIconOnly
+          variant="ghost"
+          aria-label="新建文档"
+          onPress={() => store.addTab()}
+        >
+          <Plus />
+        </Button>
+        <Dropdown>
+          <DropdownTrigger>
+            <Button isIconOnly variant="ghost" aria-label="导入与新建">
+              <ChevronDown />
+            </Button>
+          </DropdownTrigger>
+          <DropdownMenu>
+            <DropdownItem
+              startContent={<FilePlus className="size-4" />}
+              onPress={() => store.addTab()}
+            >
+              空白文档
+            </DropdownItem>
+            <DropdownItem
+              startContent={<Upload className="size-4" />}
+              onPress={() => file.current?.click()}
+            >
+              导入文件
+            </DropdownItem>
+            <DropdownItem
+              startContent={<Link className="size-4" />}
+              onPress={() => open("url")}
+            >
+              从 URL 导入
+            </DropdownItem>
+            <DropdownItem
+              startContent={<Binary className="size-4" />}
+              onPress={() => open("base64")}
+            >
+              从 Base64 导入
+            </DropdownItem>
+            <DropdownItem
+              onPress={() =>
+                store.addTab(
+                  "example.json",
+                  typeof JsonSample === "string"
+                    ? JsonSample
+                    : JSON.stringify(JsonSample, null, 2),
+                )
+              }
+            >
+              打开示例数据
+            </DropdownItem>
+          </DropdownMenu>
+        </Dropdown>
+      </div>
       <Modal
         isOpen={!!dialog}
         onClose={() => {

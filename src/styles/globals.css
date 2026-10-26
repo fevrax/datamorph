@@ -51,6 +51,12 @@
   --input: #d6dbe5;
   --surface: #f8f9fb;
   --destructive: #cf3d4c;
+  --diagnostic-background: #fff8f8;
+  --diagnostic-border: #eedee1;
+  --diagnostic-accent: #a94755;
+  --diagnostic-foreground: #49383e;
+  --diagnostic-muted: #79646c;
+  --diagnostic-hover: #f6e9ec;
   --success: #248168;
   --warning: #a56c14;
   --radius: 8px;
@@ -71,6 +77,12 @@
   --input: #414b5b;
   --surface: #15181e;
   --destructive: #f08791;
+  --diagnostic-background: #251f25;
+  --diagnostic-border: #44323b;
+  --diagnostic-accent: #e0a0ae;
+  --diagnostic-foreground: #e5d5dc;
+  --diagnostic-muted: #b5a0aa;
+  --diagnostic-hover: #362a33;
   --success: #7dccb0;
   --warning: #e4bd75;
   --editor-key: #a9c7f5;
@@ -342,22 +354,6 @@
   display: flex;
   flex-direction: column;
 }
-.workspace-header {
-  height: 43px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-  gap: 12px;
-}
-.workspace-header h1 {
-  font-size: 12px;
-  font-weight: 500;
-  margin: 0;
-}
 .workspace-content {
   min-height: 0;
   flex: 1;
@@ -365,19 +361,36 @@
 }
 .command-trigger {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 8px;
+  height: 28px;
   padding: 4px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--background);
   font-size: 11px;
   color: var(--muted-foreground);
+  white-space: nowrap;
+}
+.command-trigger:hover {
+  color: var(--foreground);
+  background: var(--secondary);
 }
 .command-trigger kbd {
   border-left: 1px solid var(--border);
   padding-left: 8px;
   font-size: 10px;
+}
+.command-trigger-compact {
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+.command-trigger-compact span,
+.command-trigger-compact kbd {
+  display: none;
 }
 .mobile-nav-toggle {
   display: none;
@@ -492,11 +505,18 @@
     display: none;
   }
   .mobile-nav-toggle {
-    display: inline-flex;
+    display: grid;
   }
-  .workspace-header {
-    padding: 0 8px;
+  .workspace-tab-bar > .mobile-nav-toggle {
+    margin-left: 4px;
   }
+  .command-trigger {
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+  }
+  .command-trigger span,
   .command-trigger kbd {
     display: none;
   }

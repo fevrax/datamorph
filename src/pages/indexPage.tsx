@@ -586,7 +586,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
           <button
             className={
               validation.error
-                ? "text-destructive"
+                ? "status-validation-error"
                 : tab.content
                   ? "text-success"
                   : "text-muted-foreground"

@@ -206,3 +206,110 @@
   opacity: 0.75;
   font-style: normal;
 }
+
+/* Opaque theme surfaces keep diagnostics readable without a solid red band. */
+.editor-diagnostic {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 4px 10px;
+  border-top: 1px solid var(--diagnostic-border);
+  border-left: 2px solid var(--diagnostic-accent);
+  background: var(--diagnostic-background);
+  color: var(--diagnostic-foreground);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.editor-diagnostic-icon {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  color: var(--diagnostic-accent);
+}
+.editor-diagnostic-message {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 0;
+  border-radius: 3px;
+  text-align: left;
+}
+.editor-diagnostic-title {
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.editor-diagnostic-location,
+.editor-diagnostic-description {
+  color: var(--diagnostic-muted);
+}
+.editor-diagnostic-location {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.editor-diagnostic-description {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.editor-diagnostic-message:hover .editor-diagnostic-location {
+  color: var(--diagnostic-foreground);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.editor-diagnostic-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+}
+.editor-diagnostic-actions .ui-button {
+  height: 26px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+.editor-diagnostic-actions .ui-button svg {
+  width: 13px;
+  height: 13px;
+}
+.editor-diagnostic-details {
+  color: var(--diagnostic-muted);
+}
+.editor-diagnostic-details:hover {
+  color: var(--diagnostic-foreground);
+  background: var(--diagnostic-hover);
+}
+.editor-diagnostic-repair {
+  color: var(--primary);
+  background: var(--accent);
+}
+.editor-diagnostic-repair:hover {
+  background: var(--secondary);
+}
+.editor-diagnostic-query {
+  align-items: flex-start;
+  padding-block: 8px;
+}
+.editor-diagnostic-query .editor-diagnostic-icon {
+  margin-top: 2px;
+}
+.status-validation-error {
+  color: var(--diagnostic-accent);
+}
+@media (max-width: 480px) {
+  .editor-diagnostic {
+    gap: 6px;
+    padding-inline: 8px;
+  }
+  .editor-diagnostic-message {
+    flex-wrap: wrap;
+    gap: 0 8px;
+  }
+  .editor-diagnostic-description {
+    display: none;
+  }
+}

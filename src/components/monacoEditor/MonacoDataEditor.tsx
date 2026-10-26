@@ -37,6 +37,7 @@ import {
   ArrowRight,
   LoaderCircle,
   AlertCircle,
+  WandSparkles,
   Search,
 } from "lucide-react";
 import {
@@ -966,28 +967,60 @@ export default function MonacoDataEditor({
           {queryError && (
             <div
               role="alert"
-              className="flex items-start gap-2 border-t border-destructive/15 bg-destructive/5 px-3 py-2 text-xs text-destructive"
+              className="editor-diagnostic editor-diagnostic-query"
             >
-              <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
+              <AlertCircle
+                className="editor-diagnostic-icon"
+                aria-hidden="true"
+              />
               <span className="min-w-0 break-words">{queryError}</span>
             </div>
           )}
         </div>
       )}
       {error && (
-        <div className="flex shrink-0 items-center gap-2 border-t border-destructive/20 bg-destructive/5 px-3 py-1 text-xs">
+        <div
+          className="editor-diagnostic"
+          role="status"
+          aria-label="JSON 语法错误"
+        >
+          <AlertCircle className="editor-diagnostic-icon" aria-hidden="true" />
           <button
-            className="flex-1 truncate text-left text-destructive"
+            type="button"
+            className="editor-diagnostic-message"
+            title={`第 ${error.line} 行，第 ${error.column} 列 · ${error.message}，点击定位错误`}
+            aria-label={`定位错误：第 ${error.line} 行，第 ${error.column} 列`}
             onClick={goToError}
           >
-            第 {error.line} 行，{error.column} 列 · {error.message}
+            <span className="editor-diagnostic-title">JSON 格式有误</span>
+            <span className="editor-diagnostic-location">
+              第 {error.line} 行 · 第 {error.column} 列
+            </span>
+            {!/^JSON\s*解析错误$/.test(error.message) && (
+              <span className="editor-diagnostic-description">
+                {error.message}
+              </span>
+            )}
           </button>
-          <Button size="sm" variant="ghost" onPress={() => setErrorOpen(true)}>
-            详情
-          </Button>
-          <Button size="sm" variant="ghost" onPress={() => run("repair")}>
-            修复
-          </Button>
+          <div className="editor-diagnostic-actions">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="editor-diagnostic-details"
+              onPress={() => setErrorOpen(true)}
+            >
+              详情
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="editor-diagnostic-repair"
+              onPress={() => run("repair")}
+            >
+              <WandSparkles aria-hidden="true" />
+              修复
+            </Button>
+          </div>
         </div>
       )}
       {statusBarTarget === undefined ? (
