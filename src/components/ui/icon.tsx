@@ -5,6 +5,8 @@ import {
   ArrowUp,
   ArrowLeftRight,
   Braces,
+  Palette,
+  ListTree,
   Binary,
   Boxes,
   Check,
@@ -74,6 +76,8 @@ import {
   SquareSplitHorizontal,
 } from "lucide-react";
 const rules: [RegExp, LucideIcon][] = [
+  [/palette/, Palette],
+  [/list-tree/, ListTree],
   [/copy/, Copy],
   [/clipboard/, Clipboard],
   [/chevron-down/, ChevronDown],

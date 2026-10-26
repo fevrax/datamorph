@@ -24,6 +24,27 @@ interface DecoderItem {
 
 const DECODERS: DecoderItem[] = [
   {
+    id: "embeddedJson",
+    title: "字符串内 JSON 展开",
+    description: "悬浮查看字符串中的 JSON，支持复制和新标签打开",
+    icon: "braces",
+    tone: "info",
+  },
+  {
+    id: "color",
+    title: "颜色预览",
+    description: "识别 HEX、RGB、HSL 颜色并显示色块",
+    icon: "palette",
+    tone: "violet",
+  },
+  {
+    id: "summary",
+    title: "折叠摘要",
+    description: "仅在折叠后显示 Object { len }、Array [ len ]",
+    icon: "list-tree",
+    tone: "neutral",
+  },
+  {
     id: "image",
     title: "图片预览",
     description: "识别图片链接，按需打开预览",
@@ -79,6 +100,15 @@ export function DecoderSettings() {
 
   const handleToggle = (id: string, value: boolean) => {
     switch (id) {
+      case "embeddedJson":
+        useSettingsStore.getState().setEmbeddedJsonDecoderEnabled(value);
+        break;
+      case "color":
+        useSettingsStore.getState().setColorDecoderEnabled(value);
+        break;
+      case "summary":
+        useSettingsStore.getState().setSummaryDecoderEnabled(value);
+        break;
       case "image":
         useSettingsStore.getState().setImageDecoderEnabled(value);
         break;
@@ -102,6 +132,9 @@ export function DecoderSettings() {
   };
 
   const enabledMap: Record<string, boolean> = {
+    embeddedJson: useSettingsStore((s) => s.embeddedJsonDecoderEnabled),
+    color: useSettingsStore((s) => s.colorDecoderEnabled),
+    summary: useSettingsStore((s) => s.summaryDecoderEnabled),
     image: useSettingsStore((s) => s.imageDecoderEnabled),
     timestamp: timestampDecoderEnabled,
     base64: base64DecoderEnabled,

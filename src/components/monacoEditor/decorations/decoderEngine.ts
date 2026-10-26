@@ -1,4 +1,5 @@
 import * as monaco from "monaco-editor";
+import { attachSmartDisplay, detachSmartDisplay } from "./smartDisplayEngine";
 import {
   detectTokens,
   detectTokensAtPosition,
@@ -47,6 +48,7 @@ function getEntry(editor: monaco.editor.IStandaloneCodeEditor) {
     tokens: [],
   };
   entries.set(editor.getId(), entry);
+  attachSmartDisplay(editor);
   editor.onDidDispose(() => {
     entries.delete(editor.getId());
   });
@@ -145,6 +147,7 @@ export function clearDecoder(
 export function clearEditorDecoders(
   editor: monaco.editor.IStandaloneCodeEditor,
 ) {
+  detachSmartDisplay(editor);
   const entry = entries.get(editor.getId());
   entry?.collections.forEach((c) => c.clear());
   entries.delete(editor.getId());

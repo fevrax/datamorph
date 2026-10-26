@@ -56,7 +56,6 @@ import {
   updateDecoder,
   clearEditorDecoders,
 } from "./decorations/decoderEngine";
-import { updateFoldingDecorations } from "./decorations/foldingDecoration";
 import { ToolContext } from "@/components/workspace/ToolContext";
 import { useTabStore } from "@/store/useTabStore";
 import { runJsonTask, cancelJsonTask } from "@/workers/client";
@@ -268,7 +267,6 @@ export default function MonacoDataEditor({
     ) => useTabStore.getState().setToolState(owner, messagesKey, messages),
     [owner, messagesKey],
   );
-  const fold = useRef<monaco.editor.IEditorDecorationsCollection | null>(null);
   function apply(text: string) {
     if (editor.current)
       createEditorAdapter(modelKey, editor.current).apply(text);
@@ -492,7 +490,6 @@ export default function MonacoDataEditor({
           if (!ed || disposed) return;
           for (const [kind, enabled] of Object.entries(decoderState.current))
             updateDecoder(kind as keyof typeof decoders, ed, { enabled });
-          updateFoldingDecorations(ed, model.getLanguageId(), fold);
         }, 120);
       };
       subscriptions.push(
@@ -511,9 +508,6 @@ export default function MonacoDataEditor({
         }),
         ed.onDidChangeCursorSelection(stats),
         ed.onDidScrollChange(decorate),
-        ed.onDidChangeHiddenAreas(() => {
-          if (ed) updateFoldingDecorations(ed, model.getLanguageId(), fold);
-        }),
       );
       subscriptions.push(
         ed.addAction({
@@ -556,8 +550,6 @@ export default function MonacoDataEditor({
       if (ed) {
         saveEditorView(modelKey, ed);
         clearEditorDecoders(ed);
-        fold.current?.clear();
-        fold.current = null;
         ed.dispose();
       }
       editor.current = null;
@@ -589,7 +581,6 @@ export default function MonacoDataEditor({
           updateDecoder(kind as keyof typeof decoders, editor.current, {
             enabled: enabled && jsonSupported,
           });
-        updateFoldingDecorations(editor.current, currentLanguage, fold);
       }
     }
     if (jsonSupported) validate();

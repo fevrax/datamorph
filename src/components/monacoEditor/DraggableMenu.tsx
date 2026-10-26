@@ -4,6 +4,9 @@ import {
   Binary,
   CaseSensitive,
   Clock3,
+  Braces,
+  Palette,
+  ListTree,
   Image,
   Link2,
   RotateCcw,
@@ -209,6 +212,24 @@ export default function DraggableMenu(props: DraggableMenuProps) {
               )}
             </div>
             <div className="mt-3 grid grid-cols-1 gap-x-6 gap-y-1 min-[480px]:grid-cols-2">
+              <ToggleRow
+                icon={Braces}
+                label="字符串内 JSON 展开"
+                enabled={settings.embeddedJsonDecoderEnabled}
+                onChange={settings.setEmbeddedJsonDecoderEnabled}
+              />
+              <ToggleRow
+                icon={Palette}
+                label="颜色预览"
+                enabled={settings.colorDecoderEnabled}
+                onChange={settings.setColorDecoderEnabled}
+              />
+              <ToggleRow
+                icon={ListTree}
+                label="折叠摘要"
+                enabled={settings.summaryDecoderEnabled}
+                onChange={settings.setSummaryDecoderEnabled}
+              />
               <ToggleRow
                 icon={Binary}
                 label="Base64 解码"

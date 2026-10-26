@@ -185,9 +185,24 @@
   text-decoration-color: var(--primary);
   text-underline-offset: 4px;
 }
-.json-decoded-hint,
-.json-fold-count {
+.json-decoded-hint {
   color: var(--muted-foreground);
   font-size: 11px;
   opacity: 0.85;
+}
+
+/* Bounded visible-range smart displays; alpha blends against the editor. */
+.monaco-editor .smart-color-swatch {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  margin: 0 0.35em 0 0.1em;
+  vertical-align: middle;
+  border: 1px solid var(--vscode-editor-foreground, #888);
+  border-radius: 3px;
+  box-sizing: border-box;
+}
+.monaco-editor .smart-display-hint {
+  opacity: 0.75;
+  font-style: normal;
 }

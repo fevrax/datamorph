@@ -34,6 +34,9 @@ export interface SettingsState {
   unicodeDecoderEnabled: boolean;
   urlDecoderEnabled: boolean;
   imageDecoderEnabled: boolean;
+  embeddedJsonDecoderEnabled: boolean;
+  colorDecoderEnabled: boolean;
+  summaryDecoderEnabled: boolean;
   // 编辑器默认设置
   defaultIndentSize: number;
   // 快捷键设置
@@ -52,6 +55,9 @@ export interface SettingsState {
   setBase64DecoderEnabled: (value: boolean) => void;
   setUnicodeDecoderEnabled: (value: boolean) => void;
   setImageDecoderEnabled: (value: boolean) => void;
+  setEmbeddedJsonDecoderEnabled: (value: boolean) => void;
+  setColorDecoderEnabled: (value: boolean) => void;
+  setSummaryDecoderEnabled: (value: boolean) => void;
   setUrlDecoderEnabled: (value: boolean) => void;
   setDefaultIndentSize: (value: number) => void;
   setNewTabShortcut: (value: string) => void;
@@ -76,6 +82,9 @@ export const useSettingsStore = create<SettingsState>()(
         unicodeDecoderEnabled: true,
         urlDecoderEnabled: true,
         imageDecoderEnabled: true,
+        embeddedJsonDecoderEnabled: true,
+        colorDecoderEnabled: true,
+        summaryDecoderEnabled: true,
         defaultIndentSize: 4,
         newTabShortcut: "Ctrl+Shift+T",
         closeTabShortcut: "Ctrl+Shift+W",
@@ -97,6 +106,12 @@ export const useSettingsStore = create<SettingsState>()(
           set({ unicodeDecoderEnabled: value }),
         setImageDecoderEnabled: (value: boolean) =>
           set({ imageDecoderEnabled: value }),
+        setEmbeddedJsonDecoderEnabled: (value: boolean) =>
+          set({ embeddedJsonDecoderEnabled: value }),
+        setColorDecoderEnabled: (value: boolean) =>
+          set({ colorDecoderEnabled: value }),
+        setSummaryDecoderEnabled: (value: boolean) =>
+          set({ summaryDecoderEnabled: value }),
         setUrlDecoderEnabled: (value: boolean) =>
           set({ urlDecoderEnabled: value }),
         setDefaultIndentSize: (value: number) =>
@@ -141,6 +156,9 @@ const getPersistedSettings = (settings: SettingsState) => ({
   unicodeDecoderEnabled: settings.unicodeDecoderEnabled,
   urlDecoderEnabled: settings.urlDecoderEnabled,
   imageDecoderEnabled: settings.imageDecoderEnabled,
+  embeddedJsonDecoderEnabled: settings.embeddedJsonDecoderEnabled,
+  colorDecoderEnabled: settings.colorDecoderEnabled,
+  summaryDecoderEnabled: settings.summaryDecoderEnabled,
   defaultIndentSize: settings.defaultIndentSize,
   newTabShortcut: settings.newTabShortcut,
   closeTabShortcut: settings.closeTabShortcut,

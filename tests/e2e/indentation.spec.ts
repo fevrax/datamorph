@@ -323,8 +323,17 @@ test("diff sides independently detect and preserve four and two space indentatio
       { language: "json", size: 4, spaces: true },
       { language: "yaml", size: 2, spaces: true },
     ]);
-  await page.getByRole("button", { name: "格式化", exact: true }).click();
-  await page.getByText("格式化全部", { exact: true }).click();
+  // The workspace diff toolbar no longer has a format-all button. Exercise
+  // Monaco's registered formatting action on each side with its own options.
+  await page.evaluate(async () => {
+    const path = "/src/components/monacoEditor/decorations/decorationInit.ts";
+    const { initMonacoGlobally } = await import(path);
+    const monaco = await initMonacoGlobally();
+    const diff = monaco.editor.getDiffEditors()[0];
+    for (const editor of [diff.getOriginalEditor(), diff.getModifiedEditor()]) {
+      await editor.getAction("editor.action.formatDocument")!.run();
+    }
+  });
   await expect
     .poll(async () => (await document(page)).content)
     .toContain('\n    "nested": {');

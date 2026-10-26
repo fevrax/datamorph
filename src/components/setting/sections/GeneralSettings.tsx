@@ -83,6 +83,9 @@ export function GeneralSettings() {
     useSettingsStore.setState({
       expandSidebar: true,
       imageDecoderEnabled: true,
+      embeddedJsonDecoderEnabled: true,
+      colorDecoderEnabled: true,
+      summaryDecoderEnabled: true,
       persistentDataEnabled: true,
       fontSize: "medium",
       monacoEditorCDN: "local",
