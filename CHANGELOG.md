@@ -1,3 +1,10 @@
+# [2.2.0](https://github.com/fevrax/datamorph/compare/v2.1.0...v2.2.0) (2026-11-18)
+
+
+### Features
+
+* **workspace:** simplify the editor welcome state ([78d37b2](https://github.com/fevrax/datamorph/commit/78d37b2adf481f7b8c48211c10c862a29dea21d0))
+
 # [2.1.0](https://github.com/fevrax/datamorph/compare/v2.0.1...v2.1.0) (2026-11-18)
 
 
