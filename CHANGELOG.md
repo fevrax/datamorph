@@ -1,3 +1,10 @@
+# [2.1.0](https://github.com/fevrax/datamorph/compare/v2.0.1...v2.1.0) (2026-11-18)
+
+
+### Features
+
+* **editor:** support plain text and line-end timestamp hints ([bfccc07](https://github.com/fevrax/datamorph/commit/bfccc07f54fd0386bb9410ba07f01a11046c8976))
+
 ## [2.0.1](https://github.com/fevrax/datamorph/compare/v2.0.0...v2.0.1) (2026-11-18)
 
 
