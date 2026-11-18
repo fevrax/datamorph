@@ -9,11 +9,6 @@ async function ready(page: Page) {
     const { useTabStore } = await import(path);
     await useTabStore.getState().syncTabStore();
   });
-  const enter = page.getByRole("button", {
-    name: "直接进入编辑器",
-    exact: true,
-  });
-  if (await enter.isVisible()) await enter.click();
 }
 async function replace(page: Page, source: string) {
   await page.evaluate(async (source) => {

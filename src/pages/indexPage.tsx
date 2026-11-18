@@ -223,7 +223,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
   const [indentationTarget, setIndentationTarget] =
     useState<HTMLSpanElement | null>(null);
   const [busy, setBusy] = useState(false);
-  const [welcome, setWelcome] = useState(() => !tab.content);
+  const welcome = !tab.content;
   const showBusy = useDelayedVisibility(busy);
   const [validation, setValidation] = useState<TaskResult>({});
   const [compare, setCompare] = useState(false);
@@ -313,7 +313,6 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
       if (result.content !== undefined) {
         if (editor.current) editor.current.updateValue(result.content);
         else update(result.content);
-        setWelcome(false);
       }
     } catch (error) {
       if ((error as Error).name !== "AbortError")
@@ -381,7 +380,6 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
               label: "AI 助手",
               icon: Sparkles,
               onPress: () => {
-                setWelcome(false);
                 if (view === "diff") diff.current?.showAiPrompt();
                 else {
                   if (view !== "code") store.setView(tab.key, "code");
@@ -397,10 +395,8 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
                     icon: WandSparkles,
                     disabled: busy,
                     onPress: () => {
-                      if (view === "code") {
-                        editor.current?.format();
-                        setWelcome(false);
-                      } else void action("format");
+                      if (view === "code") editor.current?.format();
+                      else void action("format");
                     },
                   },
                 ]
@@ -431,9 +427,10 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
               label: "清空",
               icon: Trash2,
               onPress: () => {
-                if (editor.current) editor.current.clear();
-                else update("");
-                setWelcome(true);
+                if (editor.current) {
+                  editor.current.clear();
+                  editor.current.focus();
+                } else update("");
               },
             },
             ...(jsonSupported
@@ -499,45 +496,36 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
       <div className="relative min-h-0 flex-1">
         <Suspense fallback={<Loading />}>
           {view === "code" && (
-            <WorkspaceWelcome
-              active={welcome}
-              title={tab.title}
-              hasContent={!!tab.content.trim()}
-              busy={busy}
-              onFocus={() => editor.current?.focus()}
-              onSample={() => {
-                if (editor.current) editor.current.updateValue(JsonSample);
-                else update(JsonSample);
-                setWelcome(false);
+            <MonacoDataEditor
+              ref={editor}
+              tabKey={tab.key}
+              tabTitle={tab.title}
+              documentId={tab.key}
+              language={tab.editorSettings.language}
+              languageMode={tab.editorSettings.languageMode}
+              filename={tab.editorSettings.filename}
+              theme={theme}
+              height="100%"
+              isMenu
+              settingsBarTarget={settingsTarget}
+              showJsonPathFilter={!welcome}
+              statusBarTarget={statusTarget}
+              languageBarTarget={languageTarget}
+              indentationBarTarget={indentationTarget}
+              onUpdateValue={update}
+              onMount={() => {
+                if (welcome && matchMedia("(pointer: fine)").matches)
+                  editor.current?.focus();
               }}
-              onStart={() => {
-                setWelcome(false);
-                editor.current?.focus();
-              }}
-              onContinue={() => {
-                setWelcome(false);
-                editor.current?.focus();
-              }}
-            >
-              <MonacoDataEditor
-                ref={editor}
-                tabKey={tab.key}
-                tabTitle={tab.title}
-                documentId={tab.key}
-                language={tab.editorSettings.language}
-                languageMode={tab.editorSettings.languageMode}
-                filename={tab.editorSettings.filename}
-                theme={theme}
-                height="100%"
-                isMenu
-                settingsBarTarget={settingsTarget}
-                showJsonPathFilter={!welcome}
-                statusBarTarget={statusTarget}
-                languageBarTarget={languageTarget}
-                indentationBarTarget={indentationTarget}
-                onUpdateValue={update}
-              />
-            </WorkspaceWelcome>
+              emptyState={
+                <WorkspaceWelcome
+                  onSample={() => {
+                    editor.current?.updateValue(JsonSample);
+                    editor.current?.focus();
+                  }}
+                />
+              }
+            />
           )}
           {view === "tree" && (
             <TreeEditor
