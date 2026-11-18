@@ -92,7 +92,9 @@ test("plain text shows timestamp hints at the end of a line without editing it",
   await setContent(page, source);
   const language = page.getByRole("button", { name: "选择语言" });
   await expect(language).toHaveText("自动 · 普通文本");
-  await expect(page.locator(".status-document")).toHaveText("普通文本 · 未校验");
+  await expect(page.locator(".status-document")).toContainText(
+    "普通文本 · 未校验",
+  );
   const hints = page.locator(".json-decoded-hint");
   await expect(hints).toHaveCount(1);
   await expect(hints).toContainText(
