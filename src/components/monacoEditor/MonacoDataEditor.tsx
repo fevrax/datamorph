@@ -101,6 +101,7 @@ export interface MonacoDataEditorProps {
   indentationBarTarget?: HTMLElement | null;
   settingsBarTarget?: HTMLElement | null;
   showJsonPathFilter?: boolean; // 是否显示 JSONPath 查询功能
+  emptyState?: React.ReactNode;
   queryLayout?: "inline" | "console";
   onUpdateValue: (
     value: string,
@@ -146,6 +147,7 @@ export default function MonacoDataEditor({
   isMenu = false,
   showTimestampDecorators = true,
   showJsonPathFilter = false,
+  emptyState,
   queryLayout = "inline",
   statusBarTarget,
   languageBarTarget,
@@ -864,6 +866,7 @@ export default function MonacoDataEditor({
               ref={host}
               className={`h-full w-full${inlineQuery ? " query-console-host" : ""}`}
             />
+            {ready && !value && emptyState}
             {isMenu && (
               <DraggableMenu
                 toolbarTarget={settingsBarTarget}

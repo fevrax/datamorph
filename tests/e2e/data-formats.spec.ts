@@ -64,7 +64,9 @@ test("detects all formats, hides unsupported operations, and clears JSON diagnos
   ).toBeEnabled();
   await expect(page.locator(".status-document")).toContainText("YAML · 未校验");
   await expect(page.locator(".status-document")).not.toContainText("错误");
-  await expect(page.locator(".welcome-actions")).toContainText("开始编辑");
+  await expect(
+    page.getByRole("heading", { name: "粘贴或输入数据" }),
+  ).toHaveCount(0);
   await setContent(page, "");
   await expect.poll(async () => (await settings(page)).language).toBe("json");
   expect(errors).toEqual([]);
@@ -74,11 +76,6 @@ test("plain text shows timestamp hints at the end of a line without editing it",
   page,
 }) => {
   await ready(page);
-  const enter = page.getByRole("button", {
-    name: "直接进入编辑器",
-    exact: true,
-  });
-  if (await enter.isVisible()) await enter.click();
   await page.evaluate(async () => {
     const path = "/src/store/useSettingsStore.ts";
     const { useSettingsStore } = await import(path);
