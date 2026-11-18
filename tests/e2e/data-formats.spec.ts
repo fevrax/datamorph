@@ -69,6 +69,54 @@ test("detects all formats, hides unsupported operations, and clears JSON diagnos
   await expect.poll(async () => (await settings(page)).language).toBe("json");
   expect(errors).toEqual([]);
 });
+
+test("plain text shows timestamp hints at the end of a line without editing it", async ({
+  page,
+}) => {
+  await ready(page);
+  const enter = page.getByRole("button", {
+    name: "直接进入编辑器",
+    exact: true,
+  });
+  if (await enter.isVisible()) await enter.click();
+  await page.evaluate(async () => {
+    const path = "/src/store/useSettingsStore.ts";
+    const { useSettingsStore } = await import(path);
+    useSettingsStore.getState().setTimestampTimeZone("UTC");
+  });
+  const source = [
+    "*************************** 1. row ***************************",
+    "            tour_id: /match/1793145599/12337/531",
+    "          timestamps: 1793145599525 1793145600 NULL",
+  ].join("\n");
+  await setContent(page, source);
+  const language = page.getByRole("button", { name: "选择语言" });
+  await expect(language).toHaveText("自动 · 普通文本");
+  await expect(page.locator(".status-document")).toHaveText("普通文本 · 未校验");
+  const hints = page.locator(".json-decoded-hint");
+  await expect(hints).toHaveCount(1);
+  await expect(hints).toContainText(
+    /2026-10-27\s+23:59:59\s+·\s+2026-10-28\s+00:00:00/,
+  );
+  await expect(page.locator(".view-line").filter({ has: hints })).toContainText(
+    /1793145600\s+NULL\s+2026-10-27/,
+  );
+  expect(await content(page)).toBe(source);
+
+  await choose(page, "YAML");
+  await expect(hints).toHaveCount(0);
+  await choose(page, "普通文本");
+  await expect(language).toHaveText("普通文本");
+  await expect(hints).toHaveCount(1);
+  await page.evaluate(async () => {
+    const path = "/src/store/useSettingsStore.ts";
+    const { useSettingsStore } = await import(path);
+    useSettingsStore.getState().setTimestampDecoderEnabled(false);
+  });
+  await expect(hints).toHaveCount(0);
+  expect(await content(page)).toBe(source);
+});
+
 test("manual choice persists through edits and refresh, returning to auto resumes detection", async ({
   page,
 }) => {

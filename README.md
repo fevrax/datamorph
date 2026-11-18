@@ -9,8 +9,8 @@
 
 ## ✨ 特性
 
-- 自动识别并高亮 JSON、JSONC、JSON5、YAML、TOML、XML、CSV、TSV、INI、NDJSON、HTML、CSS、SCSS、LESS、SQL、JavaScript、TypeScript、Markdown、Protobuf（含 `.yml`、`.jsonl`、`.proto`）。默认自动模式，也可手动固定语言；导入文件或明确命名的扩展名优先。
-- 空白和无法判断的内容默认 JSON，格式切换保留正文、撤销记录及光标位置。
+- 自动识别并高亮 JSON、JSONC、JSON5、YAML、TOML、XML、CSV、TSV、INI、NDJSON、HTML、CSS、SCSS、LESS、SQL、JavaScript、TypeScript、Markdown、Protobuf（含 `.yml`、`.jsonl`、`.proto`）。无法识别的非空内容回退为普通文本；也可手动选择普通文本。导入文件或明确命名的扩展名优先（如 `.txt`）。
+- 未命名的空白文档默认使用 JSON，格式切换保留正文、撤销记录及光标位置。
 - 支持多格式识别、高亮、编辑和文本对比。格式化支持 JSON/JSON5、JSONC、YAML、HTML、CSS/SCSS/LESS、SQL（标准 SQL）、JavaScript/TypeScript、Markdown 和 Protobuf，可从工具栏、快捷键及对比视图使用并撤销；校验、树形、表格及 JSONPath 仍限 JSON/JSON5。TOML、XML、CSV、TSV、INI、NDJSON 暂不提供编辑器格式化；已有格式转换工具支持 JSON、JSON5、YAML、TOML、XML。
 - Protobuf 编辑视图提供“重新排序编号”：按字段出现顺序为每个 message 从 1 开始重新编号，oneof 共用所属 message 的序列，嵌套 message 独立编号，并跳过 reserved、extensions 和 19000–19999。保留排版、注释、枚举值及选项，支持撤销；此操作会改变字段在二进制协议中的标识。
 - 工具箱提供“Protobuf 排序工具”：左侧编辑原文，右侧只读显示重新编号后的结果，使用并排差异高亮；支持复制结果、导出 `.proto`、新建文档和预览后替换来源。修改输入会清除旧结果。
@@ -87,7 +87,7 @@ Datamorph 是面向开发者的数据处理工作台。以同一份数据为源�
 
 ### 字符解码解码器
 
-- **时间戳解码器**：自动识别并将时间戳转换为可读日期时间格式
+- **时间戳解码器**：自动识别并将时间戳转换为可读日期时间格式。普通文本（如 MySQL 纵向查询结果）的时间提示显示在行末，不修改原文；Base64、Unicode、URL 和图片仍可悬停查看。
 - **Base64解码器**：检测并解码Base64编码字符串
 - **Unicode解码器**：自动解码Unicode转义序列为可读字符
 - **URL解码器**：识别并解码URL编码的字符串
@@ -140,6 +140,8 @@ docker run -d --env-file .env -p 3300:80 --name datamorph datamorph
 ```
 
 ## 🚀 快速开始
+
+空白文档打开后可直接输入或粘贴数据。顶部文档工具栏可打开文件或载入示例；已有内容时，示例会在新标签打开，不会覆盖当前文档。
 
 ### AI 线路与服务端密钥
 

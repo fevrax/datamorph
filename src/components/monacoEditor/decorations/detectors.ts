@@ -10,6 +10,92 @@ export interface DecodedToken {
 }
 export const TIMESTAMP_BLACKLIST = ["id", "url", "size", "count", "length"];
 export const timestampToHumanReadable = formatTimestamp;
+
+function decodeValue(
+  raw: string,
+  start: number,
+  maxValueLength: number,
+  results: DecodedToken[],
+  plainText = false,
+) {
+  const add = (kind: DecoderKind, decoded: string) => {
+    if (decoded && (decoded !== raw || kind === "image"))
+      results.push({ kind, start, end: start + raw.length, raw, decoded });
+  };
+  if (/\\u[0-9a-f]{4}/i.test(raw)) {
+    try {
+      add(
+        "unicode",
+        plainText
+          ? raw.replace(/\\u([0-9a-f]{4})/gi, (_, hex: string) =>
+              String.fromCharCode(parseInt(hex, 16)),
+            )
+          : JSON.parse('"' + raw + '"'),
+      );
+    } catch {
+      /* malformed escape */
+    }
+  }
+  if (/%[0-9a-f]{2}/i.test(raw)) {
+    try {
+      add("url", decodeURIComponent(raw));
+    } catch {
+      /* malformed URL */
+    }
+  }
+  if (
+    raw.length >= 8 &&
+    raw.length <= maxValueLength &&
+    (!plainText || /[a-z]/i.test(raw)) &&
+    /^[a-z\d+/_-]+={0,2}$/i.test(raw)
+  )
+    add("base64", decodeBase64Strict(raw));
+  if (
+    /^https?:\/\/[^\s]+\.(?:png|jpe?g|gif|webp|svg|bmp|ico)(?:[?#].*)?$/i.test(
+      raw,
+    )
+  )
+    add("image", raw);
+}
+
+export function detectPlainTextTokens(
+  text: string,
+  offset = 0,
+  timeZone = "local",
+  column?: number,
+): DecodedToken[] {
+  const results: DecodedToken[] = [];
+  const values = /(?:([\w.-]+)(?::(?!\/\/)\s*|=(?=[^=\s])))?(\S+)/g;
+  for (const match of text.matchAll(values)) {
+    const value = match[2];
+    const unwrapped = value.replace(/^["'([{]+/, "");
+    const raw = unwrapped.replace(/["'\])},;]+$/, "");
+    const start = offset + match.index + match[0].length - unwrapped.length;
+    const end = start + raw.length;
+    if (column !== undefined && column < start) break;
+    if (!raw || (column !== undefined && column >= end)) continue;
+    if (/^\d{10}(?:\d{3})?$/.test(raw)) {
+      if (!TIMESTAMP_BLACKLIST.includes(match[1]?.toLowerCase()))
+        results.push({
+          kind: "timestamp",
+          start,
+          end,
+          raw,
+          decoded: timestampToHumanReadable(raw, timeZone),
+        });
+    } else
+      decodeValue(
+        raw,
+        start,
+        column === undefined ? 12000 : Infinity,
+        results,
+        true,
+      );
+    if (results.length >= 250 || column !== undefined) break;
+  }
+  return results;
+}
+
 export function detectTokens(
   text: string,
   offset = 0,
@@ -29,33 +115,7 @@ export function detectTokens(
       if (decoded && decoded !== raw)
         results.push({ kind, start, end, raw, decoded });
     };
-    if (/\\u[0-9a-f]{4}/i.test(raw)) {
-      try {
-        add("unicode", JSON.parse('"' + raw + '"'));
-      } catch {
-        /* malformed escape */
-      }
-    }
-    if (/%[0-9a-f]{2}/i.test(raw)) {
-      try {
-        add("url", decodeURIComponent(raw));
-      } catch {
-        /* malformed URL */
-      }
-    }
-    if (
-      raw.length >= 8 &&
-      raw.length <= maxValueLength &&
-      /^[a-z\d+/_-]+={0,2}$/i.test(raw)
-    ) {
-      add("base64", decodeBase64Strict(raw));
-    }
-    if (
-      /^https?:\/\/[^\s]+\.(?:png|jpe?g|gif|webp|svg|bmp|ico)(?:[?#].*)?$/i.test(
-        raw,
-      )
-    )
-      results.push({ kind: "image", start, end, raw, decoded: raw });
+    decodeValue(raw, start, maxValueLength, results);
     if (
       /^\d{10}(?:\d{3})?$/.test(raw) &&
       !TIMESTAMP_BLACKLIST.some((key) =>

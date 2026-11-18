@@ -65,7 +65,7 @@ export function useDataLanguage(
       worker.onerror = () => {
         worker?.terminate();
         if (active && session.accepts(ticket))
-          setDetected(previous.current || "json");
+          setDetected("plaintext");
       };
       worker.postMessage({
         ...ticket,

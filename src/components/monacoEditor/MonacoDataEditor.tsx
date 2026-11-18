@@ -580,7 +580,7 @@ export default function MonacoDataEditor({
       if (editor.current) {
         for (const [kind, enabled] of Object.entries(decoderState.current))
           updateDecoder(kind as keyof typeof decoders, editor.current, {
-            enabled: enabled && jsonSupported,
+            enabled,
           });
       }
     }

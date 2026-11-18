@@ -152,6 +152,7 @@ export function detectDataFormat(
   if (hinted) return hinted;
   const text = content.replace(/^\uFEFF/, "").trim();
   if (!text) return "json";
+  if (/^\*+ \d+\. row \*+(?:\r?\n|$)/.test(text)) return "plaintext";
   if (accepts(() => JSON.parse(text))) return "json";
   if (
     /^[{\[/]/.test(text) &&
@@ -235,5 +236,5 @@ export function detectDataFormat(
   if (isDelimited(text, "\t")) return "tsv";
   if (isDelimited(text, ",")) return "csv";
   if (/^(?:#{1,6}\s+\S|```[\w-]*\s*\n)/.test(text)) return "markdown";
-  return looksIncomplete(text, previous) && previous ? previous : "json";
+  return looksIncomplete(text, previous) && previous ? previous : "plaintext";
 }

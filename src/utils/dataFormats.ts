@@ -138,13 +138,18 @@ export const DATA_FORMATS = [
     extensions: ["proto"],
     jsonOperations: false,
   },
+  {
+    id: "plaintext",
+    highlighter: "builtin",
+    name: "普通文本",
+    extensions: ["txt"],
+    jsonOperations: false,
+  },
 ] as const;
 export type DataFormat = (typeof DATA_FORMATS)[number]["id"];
 export const DATA_FILE_ACCEPT = DATA_FORMATS.flatMap((f) =>
   f.extensions.map((ext) => "." + ext),
-)
-  .concat(".txt")
-  .join(",");
+).join(",");
 export function formatFromFilename(filename?: string): DataFormat | undefined {
   const ext = filename?.split(/[?#]/)[0].split(".").pop()?.toLowerCase();
   return DATA_FORMATS.find((f) => f.extensions.some((e: string) => e === ext))
