@@ -77,6 +77,7 @@ import clipboard from "@/utils/clipboard";
 import toast from "@/utils/toast";
 import { useDelayedVisibility } from "@/hooks/useDelayedVisibility";
 import {
+  DATA_FORMATS,
   documentDownloadName,
   supportsJsonOperations,
   supportsFormatting,
@@ -616,7 +617,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
               : tab.content
                 ? ["json", "json5"].includes(tab.editorSettings.language)
                   ? "✓ JSON 有效"
-                  : `${tab.editorSettings.language.toUpperCase()} · 未校验`
+                  : `${DATA_FORMATS.find(({ id }) => id === tab.editorSettings.language)?.name ?? tab.editorSettings.language.toUpperCase()} · 未校验`
                 : "等待输入"}
           </button>
           <button

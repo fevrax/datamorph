@@ -68,7 +68,7 @@ export const initMonacoGlobally = async () => {
 
 /**
  * 注册Base64、Unicode、URL全局悬停提供者
- * 这些提供者将在所有JSON和JSON5编辑器中共享使用
+ * 这些提供者将在 JSON、JSON5 和普通文本编辑器中共享使用
  */
 export const registerGlobalBase64Provider = () => {
   if (baseProviderRegistered) return;

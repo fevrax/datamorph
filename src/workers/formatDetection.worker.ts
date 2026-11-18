@@ -8,6 +8,6 @@ self.onmessage = (event) => {
       language: detectDataFormat(content, filename, previous),
     });
   } catch {
-    self.postMessage({ documentId, version, language: previous || "json" });
+    self.postMessage({ documentId, version, language: "plaintext" });
   }
 };

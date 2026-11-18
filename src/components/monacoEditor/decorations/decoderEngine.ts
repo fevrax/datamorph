@@ -1,6 +1,7 @@
 import * as monaco from "monaco-editor";
 import { attachSmartDisplay, detachSmartDisplay } from "./smartDisplayEngine";
 import {
+  detectPlainTextTokens,
   detectTokens,
   detectTokensAtPosition,
   type DecoderKind,
@@ -27,11 +28,10 @@ const enabledKey = {
   url: "urlDecoderEnabled",
   image: "imageDecoderEnabled",
 } as const;
+const decoderLanguages = ["json", "json5", "plaintext"];
 function active(entry: Entry, kind: DecoderKind) {
   return (
-    ["json", "json5"].includes(
-      entry.editor.getModel()?.getLanguageId() || "",
-    ) &&
+    decoderLanguages.includes(entry.editor.getModel()?.getLanguageId() || "") &&
     entry.enabled.get(kind) !== false &&
     useSettingsStore.getState()[enabledKey[kind]] !== false
   );
@@ -58,16 +58,18 @@ function scan(entry: Entry) {
   const editor = entry.editor,
     model = editor.getModel();
   if (!model) return [];
+  const language = model.getLanguageId();
   const ranges = editor.getVisibleRanges();
   const timeZone = resolveTimeZone(
     useSettingsStore.getState().timestampTimeZone,
   );
-  const signature =
-    JSON.stringify(ranges) +
-    ":" +
-    Math.floor(editor.getScrollLeft()) +
-    ":" +
-    timeZone;
+  const signature = JSON.stringify([
+    model.id,
+    language,
+    ranges,
+    Math.floor(editor.getScrollLeft()),
+    timeZone,
+  ]);
   if (entry.version === model.getVersionId() && entry.position === signature)
     return entry.tokens;
   const tokens: Entry["tokens"] = [];
@@ -86,12 +88,25 @@ function scan(entry: Entry) {
         line === range.startLineNumber ? Math.max(0, range.startColumn - 1) : 0;
       const horizontal = Math.floor(editor.getScrollLeft() / 8);
       const start = Math.max(0, column + horizontal - 1000);
-      const end = Math.min(model.getLineMaxColumn(line), start + 8000);
+      const maxColumn = model.getLineMaxColumn(line);
+      if (start >= maxColumn - 1) continue;
+      const end = Math.min(maxColumn, start + 8000);
       const text = model.getValueInRange(
         new monaco.Range(line, start + 1, line, end),
       );
-      for (const token of detectTokens(text, start, 12000, timeZone))
-        tokens.push({ ...token, line });
+      const from =
+        language === "plaintext" && start > 0
+          ? (text.match(/^\S*/)?.[0].length ?? 0)
+          : 0;
+      const to =
+        language === "plaintext" && end < maxColumn
+          ? (text.match(/(?:^|\s)\S*$/)?.index ?? text.length)
+          : text.length;
+      const detected =
+        language === "plaintext"
+          ? detectPlainTextTokens(text.slice(from, to), start + from, timeZone)
+          : detectTokens(text, start, 12000, timeZone);
+      for (const token of detected) tokens.push({ ...token, line });
     }
   }
   entry.version = model.getVersionId();
@@ -117,23 +132,36 @@ export function updateDecoder(
     return;
   }
   const tokens = scan(entry).filter((t) => t.kind === kind);
-  collection.set(
-    tokens.map((t) => ({
+  const model = editor.getModel()!;
+  const lineEnd = kind === "timestamp" && model.getLanguageId() === "plaintext";
+  const lineHints = new Map<number, string[]>();
+  const hint = (content: string): monaco.editor.InjectedTextOptions => ({
+    content: "  " + content,
+    inlineClassName: "json-decoded-hint",
+    cursorStops: monaco.editor.InjectedTextCursorStops.None,
+  });
+  const decorations: monaco.editor.IModelDeltaDecoration[] = tokens.map((t) => {
+    if (lineEnd) {
+      const labels = lineHints.get(t.line) || [];
+      labels.push(t.decoded);
+      lineHints.set(t.line, labels);
+    }
+    return {
       range: new monaco.Range(t.line, t.start + 1, t.line, t.end + 1),
       options: {
         inlineClassName: "json-decoded-value",
-        ...(kind === "timestamp"
-          ? {
-              after: {
-                content: "  " + t.decoded,
-                inlineClassName: "json-decoded-hint",
-                cursorStops: monaco.editor.InjectedTextCursorStops.None,
-              },
-            }
-          : {}),
+        after: kind === "timestamp" && !lineEnd ? hint(t.decoded) : undefined,
       },
-    })),
-  );
+    };
+  });
+  for (const [line, labels] of lineHints) {
+    const column = model.getLineMaxColumn(line);
+    decorations.push({
+      range: new monaco.Range(line, column, line, column),
+      options: { showIfCollapsed: true, after: hint(labels.join(" · ")) },
+    });
+  }
+  collection.set(decorations);
 }
 export function clearDecoder(
   editor: monaco.editor.IStandaloneCodeEditor | null,
@@ -220,17 +248,22 @@ export function registerDecoderProviders() {
         );
     },
   );
-  monaco.languages.registerHoverProvider(["json", "json5"], {
+  monaco.languages.registerHoverProvider(decoderLanguages, {
     provideHover(model, position) {
       const entry =
         [...entries.values()].find(
           (e) => e.editor.getModel() === model && e.editor.hasTextFocus(),
         ) || [...entries.values()].find((e) => e.editor.getModel() === model);
       if (!entry) return null;
-      const matches = detectTokensAtPosition(
-        model.getLineContent(position.lineNumber),
-        position.column - 1,
-        resolveTimeZone(useSettingsStore.getState().timestampTimeZone),
+      const text = model.getLineContent(position.lineNumber);
+      const column = position.column - 1;
+      const timeZone = resolveTimeZone(
+        useSettingsStore.getState().timestampTimeZone,
+      );
+      const matches = (
+        model.getLanguageId() === "plaintext"
+          ? detectPlainTextTokens(text, 0, timeZone, column)
+          : detectTokensAtPosition(text, column, timeZone)
       ).filter((t) => active(entry, t.kind));
       if (!matches.length) return null;
       return {

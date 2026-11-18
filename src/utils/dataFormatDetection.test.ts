@@ -28,6 +28,7 @@ const samples = {
   yaml: "user:\n  name: Ada\n  active: true",
   csv: "name,age\nAda,42",
   tsv: "name\tage\nAda\t42",
+  plaintext: "This is an ordinary text document.",
 } as const;
 for (const [language, sample] of Object.entries(samples))
   test(`detect ${language} without filename`, () =>
@@ -41,7 +42,7 @@ test("extensions take priority, including empty files, aliases and URL queries",
       );
   assert.equal(detectDataFormat("", "empty.yml"), "yaml");
   assert.equal(formatFromFilename("data.jsonl?download=1"), "ndjson");
-  assert.equal(detectDataFormat(samples.yaml, "unknown.txt"), "yaml");
+  assert.equal(detectDataFormat(samples.yaml, "unknown.txt"), "plaintext");
 });
 test("NDJSON accepts all JSON values, not only objects", () => {
   assert.equal(detectDataFormat('42\ntrue\n"hello"\nnull'), "ndjson");
@@ -61,7 +62,7 @@ test("JSON subsets are distinguished without mistaking string contents for synta
     '{"x":"/* keep */"}         ',
   );
 });
-test("YAML needs structure and plain text uses the JSON fallback", () => {
+test("YAML needs structure and unrecognized content falls back to plain text", () => {
   assert.equal(detectDataFormat("user: {name: Ada}"), "yaml");
   assert.equal(detectDataFormat('<?xml version="1.0"?><html/>'), "xml");
   for (const text of [
@@ -69,10 +70,9 @@ test("YAML needs structure and plain text uses the JSON fallback", () => {
     "hello\nworld",
     "https://host/path",
     "a,b",
-    "",
-    " \n ",
   ])
-    assert.equal(detectDataFormat(text), "json");
+    assert.equal(detectDataFormat(text), "plaintext");
+  assert.equal(detectDataFormat(" \n "), "json");
   assert.equal(detectDataFormat('["a","b"]'), "json");
   assert.equal(detectDataFormat("- a\n- b"), "yaml");
   assert.equal(detectDataFormat('a = "value"'), "toml");
@@ -86,7 +86,7 @@ test("quoted delimiter fields, embedded newlines, escaped quotes and column coun
     'a,b\nc,"unfinished',
     'a,b\nc,"text"garbage',
   ])
-    assert.equal(detectDataFormat(text), "json");
+    assert.equal(detectDataFormat(text), "plaintext");
 });
 test("malformed YAML blocks retain their language even on the first paste", () => {
   const source =
@@ -108,7 +108,23 @@ test("incomplete edits retain their language, clearing and unrelated text reset 
   assert.equal(detectDataFormat("{name:", undefined, "json5"), "json5");
   assert.equal(detectDataFormat("<root>", undefined, "xml"), "xml");
   assert.equal(detectDataFormat("", undefined, "yaml"), "json");
-  assert.equal(detectDataFormat("plain words", undefined, "yaml"), "json");
+  assert.equal(
+    detectDataFormat("plain words", undefined, "yaml"),
+    "plaintext",
+  );
+});
+
+test("MySQL vertical results are plain text even after editing YAML", () => {
+  const result = [
+    "*************************** 1. row ***************************",
+    "                 id: 59419",
+    "    tournament_name: 5 | 0 Blitz Qualifier",
+    "       trigger_time: 1793145599525",
+    "announce_start_time: 1793145600",
+    "            tour_id: /match/1793145599/12337/531",
+  ].join("\n");
+  assert.equal(detectDataFormat(result), "plaintext");
+  assert.equal(detectDataFormat(result, undefined, "yaml"), "plaintext");
 });
 
 test("Protobuf headers and definitions do not fall through to TOML, JavaScript or CSS", () => {
@@ -127,6 +143,7 @@ test("Protobuf headers and definitions do not fall through to TOML, JavaScript o
   assert.equal(detectDataFormat('import "module.js";'), "javascript");
 });
 test("download preserves supplied names and uses detected format for untitled documents", () => {
+  assert.equal(documentDownloadName("未命名", "plaintext"), "未命名.txt");
   assert.equal(documentDownloadName("未命名", "yaml"), "未命名.yaml");
   assert.equal(documentDownloadName("未命名.json", "yaml"), "未命名.yaml");
   assert.equal(documentDownloadName("未命名", "json", "未命名"), "未命名");
