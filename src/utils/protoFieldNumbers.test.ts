@@ -24,7 +24,7 @@ message Other { bool active = 100; }`;
   assert.equal(renumberProtoFields(expected), expected);
 });
 
-test("preserves options, defaults, enum values, RPCs, comments and CRLF formatting", () => {
+test("preserves options, defaults, RPCs, comments and CRLF formatting", () => {
   const source = [
     'syntax="proto2";',
     "// optional string ignored = 30; {",
@@ -39,8 +39,60 @@ test("preserves options, defaults, enum values, RPCs, comments and CRLF formatti
   ].join("\r\n");
   assert.equal(
     renumberProtoFields(source),
-    source.replace("*/ 9 [", "*/ 1 [").replace("id = 4 [", "id = 2 ["),
+    source
+      .replace("ACTIVE = 10", "ACTIVE = 1")
+      .replace("*/ 9 [", "*/ 1 [")
+      .replace("id = 4 [", "id = 2 ["),
   );
+});
+
+test("renumbers an enum-only schema with duplicate values in declaration order", () => {
+  const source = `enum CycleType {
+  CYCLE_TYPE_UNKNOWN = 0;
+  CYCLE_TYPE_NONE = 0; // 不循环
+  CYCLE_TYPE_HOURLY = 1; // 每小时
+  CYCLE_TYPE_DAILY = 2; // 每天
+  CYCLE_TYPE_WEEKLY = 3; // 每周
+  CYCLE_TYPE_MONTHLY = 4; // 每月
+  CYCLE_TYPE_YEARLY = 5; // 每年
+}`;
+  const expected = `enum CycleType {
+  CYCLE_TYPE_UNKNOWN = 0;
+  CYCLE_TYPE_NONE = 1; // 不循环
+  CYCLE_TYPE_HOURLY = 2; // 每小时
+  CYCLE_TYPE_DAILY = 3; // 每天
+  CYCLE_TYPE_WEEKLY = 4; // 每周
+  CYCLE_TYPE_MONTHLY = 5; // 每月
+  CYCLE_TYPE_YEARLY = 6; // 每年
+}`;
+  assert.equal(renumberProtoFields(source), expected);
+  assert.equal(renumberProtoFields(expected), expected);
+});
+
+test("uses independent enum sequences, skipping reservations and retaining explicit aliases", () => {
+  const source = `message Sample {
+  int32 first = 9;
+  enum Status {
+    UNKNOWN = 0;
+    FIRST = -/* sign */2147483648 [deprecated = true];
+    OTHER = 2147483647 [(custom) = { value: 44 }];
+    ALIAS = -2147483648;
+    option allow_alias = true;
+    reserved -5 to -1, 1, 3 to 4;
+    reserved "OLD";
+  }
+  enum Mode { DEFAULT = 0xA; NEXT = 013; }
+  int32 second = 8;
+}`;
+  const expected = source
+    .replace("first = 9", "first = 1")
+    .replace("-/* sign */2147483648", "/* sign */2")
+    .replace("OTHER = 2147483647", "OTHER = 5")
+    .replace("ALIAS = -2147483648", "ALIAS = 2")
+    .replace("DEFAULT = 0xA; NEXT = 013", "DEFAULT = 0; NEXT = 1")
+    .replace("second = 8", "second = 2");
+  assert.equal(renumberProtoFields(source), expected);
+  assert.equal(renumberProtoFields(expected), expected);
 });
 
 test("uses reserved and extension ranges declared anywhere in the message", () => {
@@ -135,16 +187,19 @@ test("rejects incomplete declarations and exhausted ranges without returning par
     "message M { string a = 9; string b = ; }",
     "message M { reserved 5 to 2; string a = 9; }",
     "message M { reserved 1 to max; string a = 9; }",
+    "enum E { ZERO = 0; BAD = -; }",
+    "enum E { ZERO = 0; BAD = 2147483648; }",
+    "enum E { ZERO = 0; NEXT = 5; reserved 1 to max; }",
   ]) {
     assert.throws(() => renumberProtoFields(source), /Protobuf/);
   }
 });
 
-test("empty input and schemas without message fields stay unchanged", () => {
+test("empty input and schemas without declarations to renumber stay unchanged", () => {
   for (const source of [
     "",
     " \r\n",
-    "enum Status { ZERO = 0; OK = 9; }",
+    "enum Status { option deprecated = true; }",
     "message M { option deprecated = true; }",
   ]) {
     assert.equal(renumberProtoFields(source), source);

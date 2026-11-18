@@ -17,7 +17,8 @@ const expected = source
   .replace("name = 8", "name = 1")
   .replace("email = 5", "email = 3")
   .replace("city = 9", "city = 1")
-  .replace("address = 7", "address = 5");
+  .replace("address = 7", "address = 5")
+  .replace("ACTIVE = 10", "ACTIVE = 1");
 
 async function openTool(page: Page) {
   await page.goto("/");
