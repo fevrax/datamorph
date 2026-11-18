@@ -1,3 +1,10 @@
+## [2.0.1](https://github.com/fevrax/datamorph/compare/v2.0.0...v2.0.1) (2026-11-18)
+
+
+### Bug Fixes
+
+* **proto:** renumber enum values ([51e5806](https://github.com/fevrax/datamorph/commit/51e5806db98eb5826b892af3d8b4384ee0e9210c)), closes [#18](https://github.com/fevrax/datamorph/issues/18)
+
 # [2.0.0](https://github.com/fevrax/datamorph/compare/v1.29.1...v2.0.0) (2026-10-26)
 
 
