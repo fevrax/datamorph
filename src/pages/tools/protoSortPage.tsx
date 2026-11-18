@@ -23,6 +23,7 @@ message User {
     string city = 9;
   }
   Address address = 7;
+  enum Status { UNKNOWN = 0; ACTIVE = 10; }
 }`;
 
 export default function ProtoSortPage() {
@@ -79,7 +80,7 @@ export default function ProtoSortPage() {
   return (
     <ToolboxPageTemplate
       toolName="Protobuf 排序工具"
-      description="为字段重新编号，左右对照检查每一处变化。"
+      description="为字段和枚举值重新编号，左右对照检查每一处变化。"
       toolIcon="mdi:sort-alphabetical-ascending"
       actions={
         <>
@@ -126,10 +127,11 @@ export default function ProtoSortPage() {
       }
     >
       <details className="tool-examples">
-        <summary>编号规则 · 从 1 开始，跳过保留范围</summary>
+        <summary>编号规则 · 字段从 1 开始，枚举从 0 开始</summary>
         <p className="text-muted-foreground">
           每个 message 从 1 开始编号，oneof 共用序列，嵌套 message
-          独立编号，跳过保留范围。
+          独立编号；每个 enum 从 0 开始编号。均跳过保留范围，并保留声明了
+          allow_alias 的枚举别名。
         </p>
       </details>
       {error && (
