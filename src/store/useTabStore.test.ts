@@ -45,3 +45,24 @@ assert(
   tabs.filter((tab) => tab.kind === "tool").length === 2,
   "tool tabs should be marked with tool kind",
 );
+assert(
+  tabs[0].title === "New Tab 1",
+  `initial tab should be named New Tab 1, got ${tabs[0].title}`,
+);
+
+useTabStore.getState().addTab();
+assert(
+  useTabStore.getState().activeTab().title === "New Tab 2",
+  "second default tab should be named New Tab 2",
+);
+useTabStore.getState().addTab("opened.json", "{}");
+useTabStore.getState().addTab();
+assert(
+  useTabStore.getState().activeTab().title === "New Tab 3",
+  "explicitly named tabs should not skip default tab numbers",
+);
+useTabStore.getState().closeAllTabs();
+assert(
+  useTabStore.getState().activeTab().title === "New Tab 1",
+  "closing all tabs should reset default tab numbering to New Tab 1",
+);

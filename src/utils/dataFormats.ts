@@ -1,8 +1,75 @@
 import { t } from "@/i18n";
 export type LanguageMode = "auto" | "manual";
-export const UNTITLED_DOCUMENT_NAME = "未命名";
+export const DEFAULT_TAB_NAME_PREFIX = "New Tab";
+export const UNTITLED_DOCUMENT_NAME = `${DEFAULT_TAB_NAME_PREFIX} 1`;
+const DEFAULT_TAB_NAME_PATTERN = /^New Tab (\d+)$/;
+export function formatDefaultTabName(index: number): string {
+  const normalized = Number.isSafeInteger(index) && index >= 1 ? index : 1;
+  return `${DEFAULT_TAB_NAME_PREFIX} ${normalized}`;
+}
+export function parseDefaultTabNumber(title?: string): number | null {
+  if (!title) return null;
+  const match = DEFAULT_TAB_NAME_PATTERN.exec(title.trim());
+  if (!match) return null;
+  const value = Number(match[1]);
+  return Number.isSafeInteger(value) && value >= 1 ? value : null;
+}
+export function isLegacyUntitledDocumentName(title?: string): boolean {
+  return (
+    !title ||
+    title === "未命名" ||
+    title === "未命名.json" ||
+    title === "Untitled"
+  );
+}
 export function isDefaultDocumentName(title?: string): boolean {
-  return !title || title === UNTITLED_DOCUMENT_NAME || title === "未命名.json";
+  return (
+    isLegacyUntitledDocumentName(title) || parseDefaultTabNumber(title) !== null
+  );
+}
+export function maxDefaultTabNumber(
+  tabs: readonly { title?: string }[],
+): number {
+  let max = 0;
+  for (const tab of tabs) {
+    const num = parseDefaultTabNumber(tab.title);
+    if (num !== null && num > max) max = num;
+  }
+  return max;
+}
+export function nextDefaultTabNumber(
+  tabs: readonly { title?: string }[],
+  minNext = 1,
+): number {
+  return Math.max(minNext, maxDefaultTabNumber(tabs) + 1);
+}
+export function assignMissingDefaultTabNames<
+  T extends {
+    kind: string;
+    title: string;
+    autoNamed?: boolean;
+    editorSettings: { filename?: string };
+  },
+>(tabs: readonly T[]): T[] {
+  const used = new Set<number>();
+  for (const tab of tabs) {
+    const num = parseDefaultTabNumber(tab.title);
+    if (num !== null) used.add(num);
+  }
+  let next = 1;
+  const allocate = () => {
+    while (used.has(next)) next++;
+    used.add(next);
+    return formatDefaultTabName(next++);
+  };
+  return tabs.map((tab) =>
+    tab.kind === "document" &&
+    !tab.editorSettings.filename &&
+    !tab.autoNamed &&
+    isLegacyUntitledDocumentName(tab.title)
+      ? { ...tab, title: allocate() }
+      : tab,
+  );
 }
 // id is the concrete Monaco language ID; highlighter selects the bundled definition.
 export const DATA_FORMATS = [
@@ -190,9 +257,14 @@ export function documentDownloadName(
   filename?: string,
 ): string {
   if (filename) return title || filename;
-  if (title && !isDefaultDocumentName(title)) return title;
-  return (
-    "未命名." +
-    (DATA_FORMATS.find((f) => f.id === language)?.extensions[0] || "txt")
-  );
+  const extension =
+    DATA_FORMATS.find((f) => f.id === language)?.extensions[0] || "txt";
+  if (title && !isDefaultDocumentName(title)) {
+    return formatFromFilename(title) ? title : `${title}.${extension}`;
+  }
+  const base =
+    title && parseDefaultTabNumber(title) !== null
+      ? title.trim()
+      : UNTITLED_DOCUMENT_NAME;
+  return `${base}.${extension}`;
 }

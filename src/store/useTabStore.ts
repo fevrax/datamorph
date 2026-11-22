@@ -14,7 +14,11 @@ import {
 import { generateUUID } from "@/utils/uuid";
 import {
   UNTITLED_DOCUMENT_NAME,
+  assignMissingDefaultTabNames,
+  formatDefaultTabName,
   isDefaultDocumentName,
+  nextDefaultTabNumber,
+  parseDefaultTabNumber,
   supportsJsonOperations,
   type LanguageMode,
 } from "@/utils/dataFormats";
@@ -100,6 +104,7 @@ interface TabBase {
   key: string;
   uuid: string;
   title: string;
+  autoNamed?: boolean;
   content: string;
   byteLength: number;
   revision: number;
@@ -151,6 +156,11 @@ interface TabStore {
   closeTab: (key: string) => void;
   setActiveTab: (key: string) => void;
   renameTab: (key: string, title: string) => void;
+  applyAutoTabTitle: (
+    key: string,
+    title: string,
+    expectedRevision?: number,
+  ) => boolean;
   closeOtherTabs: (key: string) => string[];
   closeLeftTabs: (key: string) => string[];
   closeRightTabs: (key: string) => string[];
@@ -181,6 +191,9 @@ const channel =
 let hydration: Promise<void> | undefined;
 let remote = false;
 let resetting = false;
+export function isTabStoreRemoteSync(): boolean {
+  return remote;
+}
 let timer: ReturnType<typeof setTimeout> | undefined;
 let writing: Promise<void> = Promise.resolve();
 const dirty = new Set<string>();
@@ -216,13 +229,16 @@ function makeTab(
   title?: string,
   content = "",
   extraData?: Record<string, unknown>,
+  defaultTitle = UNTITLED_DOCUMENT_NAME,
 ): TabItem {
   const id = generateUUID();
+  const explicitTitle = title?.trim() || undefined;
   return {
     kind: "document",
     key: id,
     uuid: id,
-    title: title || UNTITLED_DOCUMENT_NAME,
+    title: explicitTitle ?? defaultTitle,
+    autoNamed: false,
     content,
     byteLength: new TextEncoder().encode(content).byteLength,
     revision: 1,
@@ -236,7 +252,7 @@ function makeTab(
       fontSize: 14,
       language: "json",
       languageMode: "auto",
-      filename: title,
+      filename: explicitTitle,
       indentSize: useSettingsStore.getState().defaultIndentSize,
       indentMode: "auto",
       insertSpaces: true,
@@ -366,10 +382,13 @@ function closeKeys(keys: string[]) {
       );
   }
   let tabs = store.tabs.filter((t) => !keys.includes(t.key));
-  if (!tabs.length) tabs = [makeTab()];
+  const resetToFirst = !tabs.length;
+  if (resetToFirst)
+    tabs = [makeTab(undefined, "", undefined, formatDefaultTabName(1))];
   const index = store.tabs.findIndex((t) => t.key === store.activeTabKey);
   useTabStore.setState({
     tabs,
+    nextKey: resetToFirst ? 2 : nextDefaultTabNumber(tabs, store.nextKey),
     activeTabKey: tabs.some((t) => t.key === store.activeTabKey)
       ? store.activeTabKey
       : tabs[Math.max(0, Math.min(index, tabs.length - 1))].key,
@@ -387,21 +406,35 @@ function normalize(
     vanilla?: { text?: string };
     vanillaVersion?: number;
   },
+  fallbackDefaultTitle = UNTITLED_DOCUMENT_NAME,
 ): TabItem {
+  const isDefaultTitle =
+    !raw.editorSettings?.filename &&
+    !raw.autoNamed &&
+    isDefaultDocumentName(raw.title);
+  const preservedDefaultTitle =
+    isDefaultTitle && parseDefaultTabNumber(raw.title) !== null
+      ? raw.title!.trim()
+      : fallbackDefaultTitle;
   const tab = makeTab(
-    !raw.editorSettings?.filename && isDefaultDocumentName(raw.title)
-      ? undefined
-      : raw.title,
+    isDefaultTitle ? undefined : raw.title,
     (raw.vanillaVersion || 0) > (raw.monacoVersion || 0)
       ? (raw.vanilla?.text ?? raw.content ?? "")
       : (raw.content ?? raw.vanilla?.text ?? ""),
     raw.extraData,
+    preservedDefaultTitle,
   );
   const kind =
     raw.kind === "tool" || raw.kind === "toolbox" ? raw.kind : "document";
+  const filename =
+    raw.editorSettings?.filename ||
+    (!raw.autoNamed && !isDefaultDocumentName(raw.title)
+      ? raw.title
+      : undefined);
   return {
     ...tab,
     kind,
+    autoNamed: Boolean(raw.autoNamed && !filename),
     diffModifiedValue: raw.diffModifiedValue,
     diffRevision: raw.diffRevision,
     source: raw.source,
@@ -419,9 +452,7 @@ function normalize(
         (raw.editorSettings?.language && raw.editorSettings.language !== "json"
           ? "manual"
           : "auto"),
-      filename:
-        raw.editorSettings?.filename ||
-        (!isDefaultDocumentName(raw.title) ? raw.title : undefined),
+      filename,
     },
     history: retainHistory(
       (raw.history || [])
@@ -450,16 +481,31 @@ export const useTabStore = create<TabStore>((set, get) => ({
   activeTab: () => get().getTabByKey(get().activeTabKey) || get().tabs[0],
   getTabByKey: (key) => get().tabs.find((t) => t.key === key),
   initTab: () => {
-    const tab = makeTab();
+    const tab = makeTab(undefined, "", undefined, formatDefaultTabName(1));
     set({ tabs: [tab], activeTabKey: tab.key, nextKey: 2 });
   },
   addTab: (title, content, extraData) => {
-    const tab = makeTab(title, content, extraData);
-    set((s) => ({
-      tabs: [...s.tabs, tab],
-      activeTabKey: tab.key,
-      nextKey: s.nextKey + 1,
-    }));
+    const explicitTitle = title?.trim() || undefined;
+    set((s) => {
+      const index = explicitTitle
+        ? undefined
+        : nextDefaultTabNumber(s.tabs, s.nextKey);
+      const tab = makeTab(
+        explicitTitle,
+        content,
+        extraData,
+        index !== undefined ? formatDefaultTabName(index) : undefined,
+      );
+      const tabs = [...s.tabs, tab];
+      return {
+        tabs,
+        activeTabKey: tab.key,
+        nextKey:
+          index !== undefined
+            ? index + 1
+            : nextDefaultTabNumber(tabs, s.nextKey),
+      };
+    });
   },
   openToolboxTab: () => {
     const source = get().activeTab();
@@ -548,12 +594,38 @@ export const useTabStore = create<TabStore>((set, get) => ({
     if (get().getTabByKey(key)) set({ activeTabKey: key });
   },
   renameTab: (key, title) => {
-    if (title.trim())
+    const trimmed = title.trim();
+    if (trimmed)
       patch(key, (t) => ({
         ...t,
-        title: title.trim(),
-        editorSettings: { ...t.editorSettings, filename: title.trim() },
+        title: trimmed,
+        autoNamed: false,
+        editorSettings: { ...t.editorSettings, filename: trimmed },
       }));
+  },
+  applyAutoTabTitle: (key, title, expectedRevision) => {
+    const trimmed = title.trim();
+    if (!trimmed || isDefaultDocumentName(trimmed)) return false;
+    let applied = false;
+    patch(key, (t) => {
+      if (
+        t.kind !== "document" ||
+        t.editorSettings.filename ||
+        t.autoNamed ||
+        !isDefaultDocumentName(t.title) ||
+        !t.content.trim() ||
+        (expectedRevision !== undefined && t.revision !== expectedRevision)
+      ) {
+        return t;
+      }
+      applied = true;
+      return {
+        ...t,
+        title: trimmed,
+        autoNamed: true,
+      };
+    });
+    return applied;
   },
   closeTab: (key) => {
     closeKeys([key]);
@@ -679,16 +751,17 @@ export const useTabStore = create<TabStore>((set, get) => ({
             const history = await db.getItem<TabHistoryItem[]>(
               "history:" + raw.key,
             );
-            tabs.push(normalize({ ...raw, history: history || [] }));
+            tabs.push(normalize({ ...raw, history: history || [] }, ""));
           }
         }
         let meta = await db.getItem<{
           activeTabKey: string;
           order: string[];
+          nextKey?: number;
         }>("workspace");
         if (!keys.includes("schema")) {
           const old = unwrap<TabItem[]>(await legacy.getItem("tabs"));
-          if (old?.length) tabs = old.map(normalize);
+          if (old?.length) tabs = old.map((item) => normalize(item, ""));
           if (!meta && old?.length) {
             const activeTabKey = unwrap<string>(
               await legacy.getItem("tabs_active_key"),
@@ -698,6 +771,7 @@ export const useTabStore = create<TabStore>((set, get) => ({
               order: tabs.map((t) => t.key),
             };
           }
+          tabs = assignMissingDefaultTabNames(tabs);
           if (tabs.length) {
             for (const t of tabs) {
               const { history, ...document } = t;
@@ -707,13 +781,16 @@ export const useTabStore = create<TabStore>((set, get) => ({
           }
           await db.setItem("schema", 2);
         }
-        if (!tabs.length) tabs = [makeTab()];
         if (meta?.order)
           tabs.sort(
             (a, b) => meta.order.indexOf(a.key) - meta.order.indexOf(b.key),
           );
+        tabs = tabs.length
+          ? assignMissingDefaultTabNames(tabs)
+          : [makeTab(undefined, "", undefined, formatDefaultTabName(1))];
         set({
           tabs,
+          nextKey: nextDefaultTabNumber(tabs, meta?.nextKey || 1),
           activeTabKey: tabs.some((t) => t.key === meta?.activeTabKey)
             ? meta!.activeTabKey
             : tabs[0].key,
@@ -748,6 +825,7 @@ export async function flushTabStore(): Promise<void> {
   const meta = {
     activeTabKey: state.activeTabKey,
     order: state.tabs.map((t) => t.key),
+    nextKey: state.nextKey,
   };
   useTabStore.setState({ saveStatus: "saving" });
   writing = writing.then(async () => {
@@ -861,10 +939,17 @@ if (channel)
             title: incoming.title + " · 冲突副本",
           };
           useTabStore.setState({ tabs: [...state.tabs, conflict] });
-        } else if (!current)
-          useTabStore.setState({ tabs: [...state.tabs, incoming] });
-        else
+        } else if (!current) {
+          const tabs = [...state.tabs, incoming];
+          useTabStore.setState({
+            tabs,
+            nextKey: nextDefaultTabNumber(tabs, state.nextKey),
+          });
+        } else {
           patch(current.key, () => ({ ...incoming, history: current.history }));
+          const next = nextDefaultTabNumber([incoming], state.nextKey);
+          if (next > state.nextKey) useTabStore.setState({ nextKey: next });
+        }
       } else if (message.type === "close") closeKeys([message.key]);
     } finally {
       remote = false;

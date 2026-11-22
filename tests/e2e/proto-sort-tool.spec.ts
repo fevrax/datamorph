@@ -195,7 +195,7 @@ test("the mobile diff keeps the original editable and can apply the result to it
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("button", { name: "应用替换", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await page.getByRole("tab", { name: "未命名", exact: true }).click();
+  await page.getByRole("tab", { name: "New Tab 1", exact: true }).click();
   await expect
     .poll(async () => {
       return page.evaluate(async () => {

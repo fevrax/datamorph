@@ -4,8 +4,10 @@ import OpenAI from "openai";
 import { ChatCompletionMessageParam } from "openai/resources";
 
 import {
+  AIRequestLifecycle,
   collectOpenAIStream,
   collectUtoolsStream,
+  normalizeAIError,
   runAICompletion,
   type AICompletionCallbacks,
   type AIRequestOptions,
@@ -48,7 +50,7 @@ export class OpenAIService {
   /**
    * 从store同步配置
    */
-  public syncConfig(): void {
+  public syncConfig(silent = false): void {
     const openaiStore = useOpenAIConfigStore.getState();
 
     this.routeType = openaiStore.routeType;
@@ -57,7 +59,7 @@ export class OpenAIService {
       model: openaiStore.getCurrentModel(),
       temperature: openaiStore.getCurrentRouteConfig().temperature,
     };
-    this.initOpenAI();
+    this.initOpenAI(silent);
   }
 
   /**
@@ -108,12 +110,13 @@ export class OpenAIService {
   /**
    * 初始化OpenAI客户端
    */
-  private initOpenAI(): void {
+  private initOpenAI(silent = false): void {
     this.openai = null;
     // 如果是 utools 线路，不需要初始化 OpenAI 客户端
     if (this.routeType === "utools") {
       if (!isUtoolsAvailable) {
-        toast.error(t("uTools API 不可用，请确保在 uTools 环境中运行"));
+        if (!silent)
+          toast.error(t("uTools API 不可用，请确保在 uTools 环境中运行"));
         this.openai = null;
       }
 
@@ -182,11 +185,12 @@ export class OpenAIService {
   /**
    * 验证服务是否已准备好
    */
-  private validateService(): boolean {
+  private validateService(silent = false): boolean {
     // 如果是 utools 线路，检查 utools 是否可用
     if (this.routeType === "utools") {
       if (!isUtoolsAvailable) {
-        toast.error(t("uTools API 不可用，请确保在 uTools 环境中运行"));
+        if (!silent)
+          toast.error(t("uTools API 不可用，请确保在 uTools 环境中运行"));
 
         return false;
       }
@@ -198,15 +202,17 @@ export class OpenAIService {
       const apiKey = this.getCurrentApiKey();
 
       if (!apiKey) {
-        if (this.routeType === "custom" || this.routeType === "ssooai") {
-          toast.error(t("请在设置中输入您的 API 密钥"));
-        } else {
-          toast.error(t("站点 AI 线路不可用，请配置私有API或联系站点管理员"));
+        if (!silent) {
+          if (this.routeType === "custom" || this.routeType === "ssooai") {
+            toast.error(t("请在设置中输入您的 API 密钥"));
+          } else {
+            toast.error(t("站点 AI 线路不可用，请配置私有API或联系站点管理员"));
+          }
         }
       } else {
-        this.initOpenAI();
+        this.initOpenAI(silent);
         if (!this.openai) {
-          toast.error(t("OpenAI 服务初始化失败"));
+          if (!silent) toast.error(t("OpenAI 服务初始化失败"));
 
           return false;
         }
@@ -409,10 +415,10 @@ export class OpenAIService {
    * 创建一个预设的OpenAI服务实例
    * @returns OpenAIService实例
    */
-  public static createInstance(): OpenAIService {
+  public static createInstance(options?: { silent?: boolean }): OpenAIService {
     const service = new OpenAIService();
 
-    service.syncConfig();
+    service.syncConfig(options?.silent);
 
     return service;
   }
@@ -435,7 +441,7 @@ export class OpenAIService {
   }
 
   /**
-   * 非流式聊天请求（用于测试）
+   * 非流式聊天请求
    * @param options 聊天参数
    * @returns 聊天完成结果
    */
@@ -444,66 +450,73 @@ export class OpenAIService {
     temperature?: number;
     max_tokens?: number;
     model?: string;
+    signal?: AbortSignal;
+    timeoutMs?: number;
+    silent?: boolean;
   }): Promise<any> {
-    // 验证服务是否已初始化
-    if (!this.validateService()) {
-      throw messageError("AI服务未初始化或配置错误");
-    }
-
-    const modelToUse = options.model || (await this.resolveModel());
-    const temperature = options.temperature ?? this.getCurrentTemperature();
+    const request = new AIRequestLifecycle({
+      signal: options.signal,
+      timeoutMs: options.timeoutMs,
+    });
+    let completed = false;
 
     try {
+      request.check();
+      // 验证服务是否已初始化
+      if (!this.validateService(options.silent)) {
+        throw messageError("AI服务未初始化或配置错误");
+      }
+
+      const modelToUse =
+        options.model || (await request.wait(this.resolveModel()));
+      request.check();
+      const temperature = options.temperature ?? this.getCurrentTemperature();
+
       // 为utools线路提供特殊处理
       if (this.routeType === "utools") {
         if (!isUtoolsAvailable) {
           throw messageError("uTools API 不可用");
         }
 
-        return new Promise((resolve, reject) => {
-          const utoolsMessages = options.messages.map((msg) => ({
-            role: msg.role,
-            content: msg.content,
-          }));
+        const utoolsMessages = options.messages.map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        }));
 
-          const utoolsOptions = {
-            model: modelToUse,
-            messages: utoolsMessages,
-            temperature: temperature,
-            max_tokens: options.max_tokens || this.maxTokens,
-          };
+        const utoolsOptions = {
+          model: modelToUse,
+          messages: utoolsMessages,
+          temperature: temperature,
+          ...(options.max_tokens !== undefined
+            ? { max_tokens: options.max_tokens }
+            : {}),
+        };
 
-          try {
-            let responseContent = "";
-            const promise = (window as any).utools.ai(
-              utoolsOptions,
-              (chunk: { content?: string }) => {
-                if (chunk.content) {
-                  responseContent += chunk.content;
-                }
+        let responseContent = "";
+        const promise = (window as any).utools.ai(
+          utoolsOptions,
+          (chunk: { content?: string }) => {
+            if (request.active && chunk.content) {
+              responseContent += chunk.content;
+            }
+          },
+        ) as PromiseLike<unknown> & { abort?: () => void };
+
+        request.onAbort(() => promise.abort?.());
+        await request.wait(promise);
+        request.check();
+        completed = true;
+
+        return {
+          choices: [
+            {
+              message: {
+                role: "assistant",
+                content: responseContent,
               },
-            );
-
-            promise
-              .then(() => {
-                resolve({
-                  choices: [
-                    {
-                      message: {
-                        role: "assistant",
-                        content: responseContent,
-                      },
-                    },
-                  ],
-                });
-              })
-              .catch((err: Error) => {
-                reject(err);
-              });
-          } catch (error) {
-            reject(error);
-          }
-        });
+            },
+          ],
+        };
       }
 
       // 对于其他线路，使用普通的完成请求
@@ -511,17 +524,33 @@ export class OpenAIService {
         throw messageError("OpenAI客户端未初始化");
       }
 
-      const response = await this.openai.chat.completions.create({
-        model: modelToUse,
-        messages: options.messages,
-        temperature: temperature,
-        max_tokens: options.max_tokens || this.maxTokens,
-      });
+      const response = await request.wait(
+        this.openai.chat.completions.create(
+          {
+            model: modelToUse,
+            messages: options.messages,
+            temperature: temperature,
+            ...(options.max_tokens !== undefined
+              ? { max_tokens: options.max_tokens }
+              : {}),
+          },
+          { signal: request.signal, maxRetries: 0 },
+        ),
+      );
+      request.check();
+      completed = true;
 
       return response;
     } catch (error) {
-      console.error("AI请求失败:", error);
-      throw error;
+      const normalized = normalizeAIError(
+        request.signal.aborted ? request.signal.reason : error,
+      );
+      if (!options.silent && !request.cancelled) {
+        console.error("AI请求失败:", normalized);
+      }
+      throw normalized;
+    } finally {
+      request.dispose(!completed);
     }
   }
 }

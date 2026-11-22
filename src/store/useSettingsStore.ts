@@ -52,6 +52,8 @@ export interface SettingsState {
   closeTabShortcut: string;
   // 本地数据持久化开关
   persistentDataEnabled: boolean;
+  // AI 自动命名标签开关
+  aiAutoTabNamingEnabled: boolean;
 
   // Actions
   setExpandSidebar: (value: boolean) => void;
@@ -71,6 +73,7 @@ export interface SettingsState {
   setNewTabShortcut: (value: string) => void;
   setCloseTabShortcut: (value: string) => void;
   setPersistentDataEnabled: (value: boolean) => void;
+  setAiAutoTabNamingEnabled: (value: boolean) => void;
   setSettings: (settings: Partial<SettingsState>) => void;
   syncSettingsStore: () => Promise<void>;
 }
@@ -102,6 +105,7 @@ export const useSettingsStore = create<SettingsState>()(
         newTabShortcut: "Ctrl+Shift+T",
         closeTabShortcut: "Ctrl+Shift+W",
         persistentDataEnabled: true,
+        aiAutoTabNamingEnabled: false,
 
         // Actions 实现
         setExpandSidebar: (value: boolean) => set({ expandSidebar: value }),
@@ -134,6 +138,8 @@ export const useSettingsStore = create<SettingsState>()(
           set({ closeTabShortcut: value }),
         setPersistentDataEnabled: (value: boolean) =>
           set({ persistentDataEnabled: value }),
+        setAiAutoTabNamingEnabled: (value: boolean) =>
+          set({ aiAutoTabNamingEnabled: value }),
         setSettings: (settings: Partial<SettingsState>) => set(settings),
         // 从存储同步设置数据
         syncSettingsStore: () =>
@@ -146,6 +152,9 @@ export const useSettingsStore = create<SettingsState>()(
                 locale: normalizeLocale(settings.locale),
                 timestampTimeZone: normalizeTimeZone(
                   settings.timestampTimeZone,
+                ),
+                aiAutoTabNamingEnabled: Boolean(
+                  settings.aiAutoTabNamingEnabled,
                 ),
               });
             }
@@ -182,6 +191,7 @@ const getPersistedSettings = (settings: SettingsState) => ({
   newTabShortcut: settings.newTabShortcut,
   closeTabShortcut: settings.closeTabShortcut,
   persistentDataEnabled: settings.persistentDataEnabled,
+  aiAutoTabNamingEnabled: settings.aiAutoTabNamingEnabled,
 });
 
 let pendingWrite = Promise.resolve();

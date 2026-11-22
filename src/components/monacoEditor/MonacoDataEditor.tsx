@@ -23,7 +23,9 @@ import { useDataLanguage } from "@/hooks/useDataLanguage";
 import { useEditorIndentation } from "@/hooks/useEditorIndentation";
 import {
   documentDownloadName,
+  formatDefaultTabName,
   isDefaultDocumentName,
+  parseDefaultTabNumber,
   supportsJsonOperations,
   supportsFormatting,
   type LanguageMode,
@@ -699,7 +701,9 @@ export default function MonacoDataEditor({
         <AIAssistantHeader
           fileName={
             isDefaultDocumentName(tabTitle) && !filename
-              ? t("未命名")
+              ? parseDefaultTabNumber(tabTitle) !== null
+                ? tabTitle!.trim()
+                : formatDefaultTabName(1)
               : tabTitle || t("当前文档")
           }
           contextLabel={

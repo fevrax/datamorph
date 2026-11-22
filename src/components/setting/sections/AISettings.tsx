@@ -4,12 +4,15 @@ import { useLocale } from "@/i18n/useLocale";
 import type { TestResult } from "../ai/TestConnection";
 
 import { useEffect, useState } from "react";
+import { Switch } from "@/components/ui";
 
 import {
+  ControlSlot,
   GroupLabel,
   InfoNote,
   SectionCard,
   SectionHeader,
+  SettingRow,
 } from "../settingPrimitives";
 import { RouteCard } from "../ai/RouteCard";
 import { RouteConfigPanel } from "../ai/RouteConfigPanel";
@@ -20,6 +23,7 @@ import {
   useOpenAIConfigStore,
   type AIRouteType,
 } from "@/store/useOpenAIConfigStore";
+import { useSettingsStore } from "@/store/useSettingsStore";
 import { OpenAIService, openAIService } from "@/services/openAIService";
 import { isUtoolsAvailable } from "@/utils/env";
 
@@ -29,6 +33,12 @@ import { isUtoolsAvailable } from "@/utils/env";
  */
 export function AISettings() {
   useLocale();
+  const aiAutoTabNamingEnabled = useSettingsStore(
+    (s) => s.aiAutoTabNamingEnabled,
+  );
+  const setAiAutoTabNamingEnabled = useSettingsStore(
+    (s) => s.setAiAutoTabNamingEnabled,
+  );
   const {
     routeType,
     ssooaiRoute,
@@ -186,12 +196,41 @@ export function AISettings() {
     }
   };
 
+  const handleAutoTabNamingChange = (value: boolean) => {
+    setAiAutoTabNamingEnabled(value);
+    toast.success(
+      t("AI 自动命名标签已{0}", { 0: value ? t("启用") : t("禁用") }),
+    );
+  };
+
   return (
     <div className="h-full">
       <SectionHeader
         description={t("管理 AI 线路与模型配置")}
         title={t("AI 设置")}
       />
+
+      <GroupLabel>{t("AI 功能")}</GroupLabel>
+      <SectionCard>
+        <SettingRow
+          description={t(
+            "开启后，输入或粘贴内容时使用当前 AI 线路自动为默认标签页生成名称",
+          )}
+          icon="hugeicons:ai-chat-02"
+          title={t("AI 自动命名标签")}
+          tone="violet"
+        >
+          <ControlSlot>
+            <Switch
+              aria-label={t("AI 自动命名标签")}
+              color="success"
+              isSelected={aiAutoTabNamingEnabled}
+              size="lg"
+              onValueChange={handleAutoTabNamingChange}
+            />
+          </ControlSlot>
+        </SettingRow>
+      </SectionCard>
 
       <GroupLabel>{t("AI 线路")}</GroupLabel>
       <p className="mb-3 px-4 text-[13px] text-muted-foreground">

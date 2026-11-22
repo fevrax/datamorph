@@ -104,6 +104,7 @@ export function GeneralSettings() {
       defaultIndentSize: 4,
       newTabShortcut: "Ctrl+Shift+T",
       closeTabShortcut: "Ctrl+Shift+W",
+      aiAutoTabNamingEnabled: false,
     });
     useOpenAIConfigStore.getState().resetConfig();
     setTheme("system");
