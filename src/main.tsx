@@ -47,19 +47,17 @@ const initializeStorage = async () => {
 
 // 初始化 Utools 监听器
 const initializeUtoolsListener = () => {
-  setTimeout(() => {
-    UtoolsListener.getInstance().initialize();
-  }, 0);
+  UtoolsListener.getInstance().initialize();
 };
 
 // 监听应用加载完成事件
 async function startApp() {
+  initializeUtoolsListener();
   await initializeStorage();
   await useSettingsStore.getState().syncSettingsStore().catch(console.error);
   await useOpenAIConfigStore.getState().syncConfig().catch(console.error);
   updateDocumentLanguage();
   subscribeLocale(updateDocumentLanguage);
-  initializeUtoolsListener();
   ReactDOM.createRoot(document.getElementById("root")!).render(
     <React.StrictMode>
       <HashRouter

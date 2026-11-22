@@ -1,4 +1,11 @@
 import { useTabStore } from "@/store/useTabStore";
+import {
+  UtoolsEnterController,
+  extractUtoolsEditorPayload,
+  type UtoolsPluginEnterAction,
+} from "./utoolsEnterCore";
+
+export { extractUtoolsEditorPayload, type UtoolsPluginEnterAction };
 
 /**
  * Utools 事件监听器管理
@@ -9,6 +16,31 @@ import { useTabStore } from "@/store/useTabStore";
 class UtoolsListener {
   private static instance: UtoolsListener;
   private isInitialized: boolean = false;
+  private readonly controller = new UtoolsEnterController({
+    isHydrated: () => useTabStore.getState().hydrated,
+    subscribeHydrated: (listener) =>
+      useTabStore.subscribe((state) => {
+        if (state.hydrated) {
+          listener();
+        }
+      }),
+    getTabCount: () => useTabStore.getState().tabs.length,
+    getActiveTab: () => useTabStore.getState().activeTab(),
+    setView: (key, view) => useTabStore.getState().setView(key, view),
+    updateTabContent: (key, content) =>
+      useTabStore.getState().updateTabContent(key, content),
+    addTab: (title, content) => useTabStore.getState().addTab(title, content),
+    navigateToEditor: () => {
+      if (
+        typeof window !== "undefined" &&
+        window.location &&
+        window.location.hash &&
+        window.location.hash !== "#/"
+      ) {
+        window.location.hash = "#/";
+      }
+    },
+  });
 
   private constructor() {}
 
@@ -32,7 +64,7 @@ class UtoolsListener {
     }
 
     if (typeof window !== "undefined" && (window as any).utools) {
-      (window as any).utools.onPluginEnter((data: any) => {
+      (window as any).utools.onPluginEnter((data: UtoolsPluginEnterAction) => {
         this.handlePluginEnter(data);
       });
       this.isInitialized = true;
@@ -43,34 +75,9 @@ class UtoolsListener {
   /**
    * 处理插件进入事件
    */
-  private handlePluginEnter(data: any): void {
-    if (!useTabStore.getState().hydrated) {
-      const unsubscribe = useTabStore.subscribe((state) => {
-        if (state.hydrated) {
-          unsubscribe();
-          this.handlePluginEnter(data);
-        }
-      });
-      return;
-    }
+  public handlePluginEnter(data: UtoolsPluginEnterAction): void {
     try {
-      if (
-        (data.type === "regex" || data.type === "text") &&
-        typeof data.payload === "string" &&
-        data.payload !== ""
-      ) {
-        const store = useTabStore.getState();
-        const current = store.activeTab();
-        if (
-          current?.kind === "document" &&
-          store.tabs.length === 1 &&
-          current.content.trim() === ""
-        ) {
-          store.updateTabContent(current.key, data.payload);
-        } else {
-          store.addTab(undefined, data.payload);
-        }
-      }
+      this.controller.handlePluginEnter(data);
     } catch (error) {
       console.error("处理 Utools 插件进入事件时发生错误:", error);
     }
