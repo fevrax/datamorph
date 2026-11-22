@@ -14,6 +14,7 @@ import { generateUUID } from "@/utils/uuid";
 import {
   UNTITLED_DOCUMENT_NAME,
   isDefaultDocumentName,
+  supportsJsonOperations,
   type LanguageMode,
 } from "@/utils/dataFormats";
 export interface TextChange {
@@ -22,7 +23,9 @@ export interface TextChange {
   text: string;
 }
 export type TabHistoryItem = DocumentSnapshot;
-export type DocumentView = "code" | "tree" | "table" | "diff";
+export type DocumentView = "code" | "tree" | "table" | "columns" | "diff";
+const isJsonView = (view: DocumentView) =>
+  view === "tree" || view === "table" || view === "columns";
 export type ToolId =
   | "protoSort"
   | "jsonPath"
@@ -530,8 +533,7 @@ export const useTabStore = create<TabStore>((set, get) => ({
   setView: (key, view) =>
     patch(key, (t) =>
       t.view === view ||
-      (["tree", "table"].includes(view) &&
-        !["json", "json5"].includes(t.editorSettings.language))
+      (isJsonView(view) && !supportsJsonOperations(t.editorSettings.language))
         ? t
         : { ...t, view },
     ),
@@ -588,8 +590,8 @@ export const useTabStore = create<TabStore>((set, get) => ({
             editorSettings: { ...t.editorSettings, ...settings },
             view:
               settings.language &&
-              !["json", "json5"].includes(settings.language) &&
-              ["tree", "table"].includes(t.view)
+              !supportsJsonOperations(settings.language) &&
+              isJsonView(t.view)
                 ? "code"
                 : t.view,
           },
