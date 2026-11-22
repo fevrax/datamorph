@@ -11,9 +11,6 @@
       "cmds": [
         "json",
         "datamorph",
-        "yaml",
-        "toml",
-        "xml",
         "数据转换",
         "格式化",
         {
@@ -21,6 +18,17 @@
           "label": "Json 格式化",
           "match": "/^\\s*(\\{[\\s\\S]*\\}|\\[[\\s\\S]*\\])\\s*$/i",
           "minLength": 2
+        }
+      ]
+    },
+    {
+      "code": "datamorph-text",
+      "explain": "在 Datamorph 编辑器中打开任意文本",
+      "cmds": [
+        {
+          "type": "over",
+          "label": "Datamorph 编辑",
+          "minLength": 5
         }
       ]
     }
