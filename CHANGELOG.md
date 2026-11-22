@@ -1,3 +1,10 @@
+# [2.3.0](https://github.com/fevrax/datamorph/compare/v2.2.0...v2.3.0) (2026-11-22)
+
+
+### Features
+
+* **workspace:** add read-only JSON column view ([f56ca71](https://github.com/fevrax/datamorph/commit/f56ca71a7de6596efdd588e5b1dc2ba330d8cd23))
+
 # [2.2.0](https://github.com/fevrax/datamorph/compare/v2.1.0...v2.2.0) (2026-11-18)
 
 
