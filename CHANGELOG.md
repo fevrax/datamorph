@@ -1,3 +1,10 @@
+# [2.7.0](https://github.com/fevrax/datamorph/compare/v2.6.0...v2.7.0) (2026-11-22)
+
+
+### Features
+
+* **utools:** limit cmds per feature and support 5+ char arbitrary text entry ([1022b27](https://github.com/fevrax/datamorph/commit/1022b27f6cfd9d7b962404b442c2fcbc09a1afc3))
+
 # [2.6.0](https://github.com/fevrax/datamorph/compare/v2.5.0...v2.6.0) (2026-11-22)
 
 
