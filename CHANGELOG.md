@@ -1,3 +1,15 @@
+# [2.4.0](https://github.com/fevrax/datamorph/compare/v2.3.0...v2.4.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **i18n:** preserve JSON hover copy label ([1e6d4d0](https://github.com/fevrax/datamorph/commit/1e6d4d0a6a6c150c10f8cf03ec7d29a45db17d7b))
+
+
+### Features
+
+* **i18n:** add English and Simplified Chinese UI ([5f4c7c7](https://github.com/fevrax/datamorph/commit/5f4c7c770c3fb8f8c71fa0bc4bd2635b6d95a7c6))
+
 # [2.3.0](https://github.com/fevrax/datamorph/compare/v2.2.0...v2.3.0) (2026-11-22)
 
 
