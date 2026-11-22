@@ -1,3 +1,4 @@
+import { messageError } from "@/i18n/diagnostics";
 import type { Plugin } from "prettier";
 import { EXTRA_FORMAT_LANGUAGES } from "../utils/dataFormats";
 
@@ -28,7 +29,7 @@ export async function executeFormatTask(
   loadProto: () => Promise<ProtoFormatter> = loadProtoFormatter,
 ): Promise<{ content: string }> {
   if (!EXTRA_FORMAT_LANGUAGES.some((id) => id === language))
-    throw new Error(`${language.toUpperCase()} 暂不支持格式化`);
+    throw messageError("{0} 暂不支持格式化", { 0: language.toUpperCase() });
   if (!content.trim()) return { content };
   if (language === "proto") {
     const { format } = await loadProto();

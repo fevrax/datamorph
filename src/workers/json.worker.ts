@@ -1,4 +1,5 @@
 import { executeJsonTask, type JsonTaskInput } from "./jsonTasks";
+import { errorDetails } from "@/i18n/diagnostics";
 import { executeProtoTask, type ProtoTaskInput } from "./protoTasks";
 self.onmessage = (
   event: MessageEvent<{ id: number; input: JsonTaskInput | ProtoTaskInput }>,
@@ -14,7 +15,7 @@ self.onmessage = (
   } catch (error) {
     self.postMessage({
       id: event.data.id,
-      error: error instanceof Error ? error.message : String(error),
+      error: errorDetails(error),
     });
   }
 };

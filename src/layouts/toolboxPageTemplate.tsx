@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { ToolContext } from "@/components/workspace/ToolContext";
 import {
   subscribeTasks,
@@ -31,6 +33,7 @@ export default function ToolboxPageTemplate({
   statusIndicator,
   children,
 }: ToolboxPageTemplateProps) {
+  useLocale();
   const key = useContext(ToolContext);
   const running = useSyncExternalStore(
     subscribeTasks,
@@ -70,7 +73,7 @@ export default function ToolboxPageTemplate({
             {showBackButton && (
               <Button
                 isIconOnly
-                aria-label="返回工具箱"
+                aria-label={t("返回工具箱")}
                 size="sm"
                 variant="light"
                 onPress={handleBackToToolbox}
@@ -133,7 +136,7 @@ export default function ToolboxPageTemplate({
             role="status"
             className="mb-2 flex items-center justify-between rounded border bg-accent px-3 py-1 text-xs"
           >
-            正在后台处理…
+            {t("正在后台处理…")}
             <Button
               size="sm"
               variant="ghost"
@@ -143,7 +146,7 @@ export default function ToolboxPageTemplate({
                   .forEach(cancelJsonTask)
               }
             >
-              取消任务
+              {t("取消任务")}
             </Button>
           </div>
         )}

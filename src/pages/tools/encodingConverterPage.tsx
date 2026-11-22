@@ -1,3 +1,11 @@
+import { t } from "@/i18n";
+import {
+  errorDetails,
+  errorText,
+  messageError,
+  type ErrorDetails,
+} from "@/i18n/diagnostics";
+import { useLocale } from "@/i18n/useLocale";
 import { useBackgroundTask } from "@/components/workspace/useBackgroundTask";
 import { createToolStateHook } from "@/components/workspace/ToolContext";
 import type { editor } from "monaco-editor";
@@ -38,8 +46,12 @@ interface EncodingDefinition {
 
 const TEXT_ENCODING: EncodingDefinition = {
   type: "text",
-  label: "纯文本",
-  description: "UTF-8 普通文本",
+  get label() {
+    return t("纯文本");
+  },
+  get description() {
+    return t("UTF-8 普通文本");
+  },
   icon: "solar:text-square-outline",
 };
 
@@ -47,37 +59,53 @@ const ENCODINGS: EncodingDefinition[] = [
   {
     type: "base64",
     label: "Base64",
-    description: "标准 Base64 编码",
+    get description() {
+      return t("标准 Base64 编码");
+    },
     icon: "ph:binary",
   },
   {
     type: "base64url",
     label: "Base64URL",
-    description: "URL-safe Base64 编码",
+    get description() {
+      return t("URL-safe Base64 编码");
+    },
     icon: "solar:link-round-angle-outline",
   },
   {
     type: "url",
-    label: "URL 编码",
-    description: "百分号转义编码",
+    get label() {
+      return t("URL 编码");
+    },
+    get description() {
+      return t("百分号转义编码");
+    },
     icon: "solar:link-outline",
   },
   {
     type: "unicode",
-    label: "Unicode 转义",
-    description: "JavaScript / JSON 转义",
+    get label() {
+      return t("Unicode 转义");
+    },
+    get description() {
+      return t("JavaScript / JSON 转义");
+    },
     icon: "solar:global-outline",
   },
   {
     type: "hex",
     label: "Hex",
-    description: "十六进制字节",
+    get description() {
+      return t("十六进制字节");
+    },
     icon: "solar:hashtag-outline",
   },
   {
     type: "binary",
     label: "Binary",
-    description: "二进制字节",
+    get description() {
+      return t("二进制字节");
+    },
     icon: "solar:code-square-outline",
   },
 ];
@@ -100,6 +128,7 @@ interface FormatOptionsProps {
 }
 
 function FormatOptions({ type, options, onChange }: FormatOptionsProps) {
+  useLocale();
   const setOption = <Key extends keyof EncodingOptions>(
     key: Key,
     value: EncodingOptions[Key],
@@ -110,8 +139,8 @@ function FormatOptions({ type, options, onChange }: FormatOptionsProps) {
       <div className="w-full p-3">
         {type === "url" && (
           <Select
-            aria-label="URL 编码模式"
-            label="处理模式"
+            aria-label={t("URL 编码模式")}
+            label={t("处理模式")}
             selectedKeys={[options.urlMode]}
             size="sm"
             onChange={(event) =>
@@ -119,8 +148,8 @@ function FormatOptions({ type, options, onChange }: FormatOptionsProps) {
             }
           >
             <SelectItem key="component">URL Component</SelectItem>
-            <SelectItem key="full">完整 URL</SelectItem>
-            <SelectItem key="form">表单模式（空格转 +）</SelectItem>
+            <SelectItem key="full">{t("完整 URL")}</SelectItem>
+            <SelectItem key="form">{t("表单模式（空格转 +）")}</SelectItem>
           </Select>
         )}
 
@@ -131,7 +160,7 @@ function FormatOptions({ type, options, onChange }: FormatOptionsProps) {
             size="sm"
             onValueChange={(value) => setOption("base64Padding", value)}
           >
-            保留末尾填充
+            {t("保留末尾填充")}
           </Switch>
         )}
 
@@ -142,15 +171,15 @@ function FormatOptions({ type, options, onChange }: FormatOptionsProps) {
             size="sm"
             onValueChange={(value) => setOption("unicodeEscapeAll", value)}
           >
-            转义全部字符
+            {t("转义全部字符")}
           </Switch>
         )}
 
         {type === "hex" && (
           <div className="space-y-3">
             <Select
-              aria-label="Hex 分隔方式"
-              label="字节分隔"
+              aria-label={t("Hex 分隔方式")}
+              label={t("字节分隔")}
               selectedKeys={[options.hexSeparator]}
               size="sm"
               onChange={(event) =>
@@ -160,8 +189,8 @@ function FormatOptions({ type, options, onChange }: FormatOptionsProps) {
                 )
               }
             >
-              <SelectItem key="space">空格分隔</SelectItem>
-              <SelectItem key="none">紧凑格式</SelectItem>
+              <SelectItem key="space">{t("空格分隔")}</SelectItem>
+              <SelectItem key="none">{t("紧凑格式")}</SelectItem>
             </Select>
             <Switch
               className="w-full justify-between"
@@ -169,7 +198,7 @@ function FormatOptions({ type, options, onChange }: FormatOptionsProps) {
               size="sm"
               onValueChange={(value) => setOption("hexUppercase", value)}
             >
-              使用大写字母
+              {t("使用大写字母")}
             </Switch>
             <Switch
               className="w-full justify-between"
@@ -177,7 +206,7 @@ function FormatOptions({ type, options, onChange }: FormatOptionsProps) {
               size="sm"
               onValueChange={(value) => setOption("hexPrefix", value)}
             >
-              添加 0x 前缀
+              {t("添加 0x 前缀")}
             </Switch>
           </div>
         )}
@@ -185,8 +214,8 @@ function FormatOptions({ type, options, onChange }: FormatOptionsProps) {
         {type === "binary" && (
           <div className="space-y-3">
             <Select
-              aria-label="Binary 分隔方式"
-              label="字节分隔"
+              aria-label={t("Binary 分隔方式")}
+              label={t("字节分隔")}
               selectedKeys={[options.binarySeparator]}
               size="sm"
               onChange={(event) =>
@@ -196,8 +225,8 @@ function FormatOptions({ type, options, onChange }: FormatOptionsProps) {
                 )
               }
             >
-              <SelectItem key="space">空格分隔</SelectItem>
-              <SelectItem key="none">紧凑格式</SelectItem>
+              <SelectItem key="space">{t("空格分隔")}</SelectItem>
+              <SelectItem key="none">{t("紧凑格式")}</SelectItem>
             </Select>
             <Switch
               className="w-full justify-between"
@@ -205,7 +234,7 @@ function FormatOptions({ type, options, onChange }: FormatOptionsProps) {
               size="sm"
               onValueChange={(value) => setOption("binaryPrefix", value)}
             >
-              添加 0b 前缀
+              {t("添加 0b 前缀")}
             </Switch>
           </div>
         )}
@@ -239,6 +268,7 @@ function EditorPanel({
   onCopy,
   onMount,
 }: EditorPanelProps) {
+  useLocale();
   const { resolvedTheme } = useTheme();
   const definition = ENCODING_MAP.get(type)!;
   const characterCount = Array.from(value).length;
@@ -259,10 +289,10 @@ function EditorPanel({
             </h2>
           </div>
           <div className="flex items-center gap-1">
-            <Tooltip content={`粘贴到${title}`}>
+            <Tooltip content={t("粘贴到{0}", { 0: title })}>
               <Button
                 isIconOnly
-                aria-label={`粘贴到${title}`}
+                aria-label={t("粘贴到{0}", { 0: title })}
                 size="sm"
                 variant="light"
                 onPress={onPaste}
@@ -270,10 +300,10 @@ function EditorPanel({
                 <Icon icon="solar:clipboard-text-outline" width={18} />
               </Button>
             </Tooltip>
-            <Tooltip content={`复制${title}`}>
+            <Tooltip content={t("复制{0}", { 0: title })}>
               <Button
                 isIconOnly
-                aria-label={`复制${title}`}
+                aria-label={t("复制{0}", { 0: title })}
                 isDisabled={!value}
                 size="sm"
                 variant="light"
@@ -282,10 +312,10 @@ function EditorPanel({
                 <Icon icon="solar:copy-outline" width={18} />
               </Button>
             </Tooltip>
-            <Tooltip content={`清空${title}`}>
+            <Tooltip content={t("清空{0}", { 0: title })}>
               <Button
                 isIconOnly
-                aria-label={`清空${title}`}
+                aria-label={t("清空{0}", { 0: title })}
                 isDisabled={!value}
                 size="sm"
                 variant="light"
@@ -344,8 +374,8 @@ function EditorPanel({
         <div className="tool-panel-footer flex flex-wrap items-center justify-between gap-2">
           <span>{footerLabel}</span>
           <span>
-            {characterCount.toLocaleString()} 字符 ·{" "}
-            {byteCount.toLocaleString()} 字节
+            {characterCount.toLocaleString()} {t("字符 ·")}{" "}
+            {byteCount.toLocaleString()} {t("字节")}
           </span>
         </div>
       </CardBody>
@@ -364,6 +394,7 @@ interface ConversionRequest {
 const useToolState = createToolStateHook("encodingConverter");
 
 export default function EncodingConverterPage() {
+  useLocale();
   const [encodingType, setEncodingType] = useToolState(
     "encodingType",
     "base64",
@@ -374,7 +405,7 @@ export default function EncodingConverterPage() {
   );
   const [plainText, setPlainText] = useToolState("plainText", "");
   const [encodedText, setEncodedText] = useToolState("encodedText", "");
-  const [error, setError] = useState("");
+  const [error, setError] = useState<ErrorDetails>();
   const [errorSide, setErrorSide] = useState<EditSide | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [request, setRequest] = useState<ConversionRequest | null>(null);
@@ -408,7 +439,7 @@ export default function EncodingConverterPage() {
         setPlainText("");
       }
 
-      setError("");
+      setError(undefined);
       setErrorSide(null);
       setIsProcessing(false);
 
@@ -440,7 +471,7 @@ export default function EncodingConverterPage() {
             setPlainText(result);
           }
 
-          setError("");
+          setError(undefined);
           setErrorSide(null);
         } catch (conversionError) {
           if (
@@ -457,9 +488,11 @@ export default function EncodingConverterPage() {
           }
 
           setError(
-            conversionError instanceof Error
-              ? conversionError.message
-              : "转换失败，请检查输入内容",
+            errorDetails(
+              conversionError instanceof Error
+                ? conversionError
+                : messageError("转换失败，请检查输入内容"),
+            ),
           );
           setErrorSide(request.side);
         } finally {
@@ -522,7 +555,7 @@ export default function EncodingConverterPage() {
     setEncodingOptions(cloneDefaultOptions());
     setPlainText("");
     setEncodedText("");
-    setError("");
+    setError(undefined);
     setErrorSide(null);
     setIsProcessing(false);
     setRequest(null);
@@ -530,7 +563,7 @@ export default function EncodingConverterPage() {
   };
 
   const handlePaste = async (side: EditSide) => {
-    const value = await clipboard.read("无法读取剪贴板，请直接粘贴到编辑器");
+    const value = await clipboard.read(t("无法读取剪贴板，请直接粘贴到编辑器"));
 
     if (value === null) return;
 
@@ -585,21 +618,21 @@ export default function EncodingConverterPage() {
     >
       {error
         ? activeDirection === "plain"
-          ? "编码失败"
-          : "解码失败"
+          ? t("编码失败")
+          : t("解码失败")
         : isProcessing
           ? activeDirection === "plain"
-            ? "正在编码"
-            : "正在解码"
+            ? t("正在编码")
+            : t("正在解码")
           : activeDirection === "plain"
-            ? "编码"
-            : "解码"}
+            ? t("编码")
+            : t("解码")}
     </Chip>
   );
 
   return (
     <ToolboxPageTemplate
-      description="从左侧选择编码格式，编辑任一侧实时同步结果。"
+      description={t("从左侧选择编码格式，编辑任一侧实时同步结果。")}
       actions={
         <Button
           size="sm"
@@ -607,17 +640,17 @@ export default function EncodingConverterPage() {
           onPress={handleReset}
           isDisabled={!plainText && !encodedText && encodingType === "base64"}
         >
-          重置
+          {t("重置")}
         </Button>
       }
       statusIndicator={statusIndicator}
       toolIcon="solar:code-square-bold"
       toolIconColor="text-primary"
-      toolName="编码转换"
+      toolName={t("编码转换")}
     >
       <div className="tool-sidebar-layout">
-        <aside className="tool-sidebar" aria-label="编码格式">
-          <h2 className="tool-sidebar-title">编码格式</h2>
+        <aside className="tool-sidebar" aria-label={t("编码格式")}>
+          <h2 className="tool-sidebar-title">{t("编码格式")}</h2>
           <div className="tool-format-list">
             {ENCODINGS.map((encoding) => (
               <button
@@ -636,7 +669,7 @@ export default function EncodingConverterPage() {
           </div>
           <details className="tool-encoding-options" open>
             <summary className="tool-sidebar-title cursor-pointer">
-              格式选项
+              {t("格式选项")}
             </summary>
             <FormatOptions
               type={encodingType}
@@ -655,14 +688,14 @@ export default function EncodingConverterPage() {
             onResizeComplete={handleResizeComplete}
           >
             <EditorPanel
-              error={errorSide === "plain" ? error : undefined}
-              footerLabel="编辑原始文本，实时编码"
-              title="原始文本"
+              error={errorSide === "plain" ? errorText(error) : undefined}
+              footerLabel={t("编辑原始文本，实时编码")}
+              title={t("原始文本")}
               type="text"
               value={plainText}
               onChange={handlePlainTextChange}
               onClear={() => handleClear("plain")}
-              onCopy={() => clipboard.copy(plainText, "原始文本已复制")}
+              onCopy={() => clipboard.copy(plainText, t("原始文本已复制"))}
               onMount={(instance) => {
                 plainEditorRef.current = instance;
                 instance.focus();
@@ -670,14 +703,16 @@ export default function EncodingConverterPage() {
               onPaste={() => handlePaste("plain")}
             />
             <EditorPanel
-              error={errorSide === "encoded" ? error : undefined}
-              footerLabel="编辑编码内容，实时解码"
-              title={`${ENCODING_MAP.get(encodingType)?.label} 内容`}
+              error={errorSide === "encoded" ? errorText(error) : undefined}
+              footerLabel={t("编辑编码内容，实时解码")}
+              title={t("{0} 内容", {
+                0: ENCODING_MAP.get(encodingType)?.label,
+              })}
               type={encodingType}
               value={encodedText}
               onChange={handleEncodedTextChange}
               onClear={() => handleClear("encoded")}
-              onCopy={() => clipboard.copy(encodedText, "编码内容已复制")}
+              onCopy={() => clipboard.copy(encodedText, t("编码内容已复制"))}
               onMount={(instance) => {
                 encodedEditorRef.current = instance;
               }}

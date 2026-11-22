@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import React, {
   Children,
   createContext,
@@ -203,6 +205,7 @@ export function Input({
   onChange,
   ...props
 }: InputProps) {
+  useLocale();
   const generated = useId();
   const id = props.id || generated;
   return (
@@ -239,7 +242,7 @@ export function Input({
         {isClearable && props.value && (
           <button
             type="button"
-            aria-label="清空输入"
+            aria-label={t("清空输入")}
             onClick={() => {
               onClear?.();
               onValueChange?.("");
@@ -413,10 +416,11 @@ export function Spinner({
   size?: string;
   color?: string;
 }) {
+  useLocale();
   return (
     <span
       role="status"
-      aria-label={label || "加载中"}
+      aria-label={label || t("加载中")}
       className={cn(
         "inline-flex items-center gap-2 text-muted-foreground",
         className,
@@ -442,9 +446,10 @@ export function Avatar({
   className?: string;
   size?: string;
 }) {
+  useLocale();
   return src ? (
     <img
-      alt={name || "头像"}
+      alt={name || t("头像")}
       src={src}
       className={cn("size-7 rounded-full", className)}
     />
@@ -567,6 +572,7 @@ export function ModalContent({
 }: Omit<React.HTMLAttributes<HTMLDivElement>, "children"> & {
   children?: React.ReactNode | ((close: () => void) => React.ReactNode);
 }) {
+  useLocale();
   const modal = useContext(ModalContext);
   return (
     <DialogPrimitive.Portal>
@@ -591,7 +597,7 @@ export function ModalContent({
         {typeof children === "function" ? children(modal.close) : children}
         <DialogPrimitive.Close
           className="absolute right-3 top-3 rounded-md p-1 text-muted-foreground hover:bg-accent"
-          aria-label="关闭"
+          aria-label={t("关闭")}
         >
           <X className="size-4" />
         </DialogPrimitive.Close>

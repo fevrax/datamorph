@@ -1,3 +1,5 @@
+import { messageError } from "@/i18n/diagnostics";
+import type { TaskResult } from "./client";
 import { parseDataFormat } from "@/utils/dataFormatConverter";
 import { supportsJsonOperations } from "../utils/dataFormats";
 import { jsonrepair } from "jsonrepair";
@@ -31,18 +33,13 @@ export interface JsonTaskInput {
   direction?: "asc" | "desc";
   query?: string;
 }
-export function executeJsonTask(input: JsonTaskInput): {
-  data?: unknown;
-  matchCount?: number;
-  content?: string;
-  error?: { message: string; line: number; column: number; detail?: string };
-} {
+export function executeJsonTask(input: JsonTaskInput): TaskResult {
   const { content, action, indent = 2, language = "json" } = input;
   const space = input.insertSpaces === false ? "\t" : indent;
   if (action !== "validate" && !supportsJsonOperations(language))
-    throw new Error(
-      `${language.toUpperCase()} 暂不支持 JSON 专用操作，请使用数据格式转换工具`,
-    );
+    throw messageError("{0} 暂不支持 JSON 专用操作，请使用数据格式转换工具", {
+      0: language.toUpperCase(),
+    });
   if (action === "parse") return { data: parseJson(content) };
   if (action === "validate") {
     if (!content.trim() || !["json", "json5"].includes(language)) return {};
@@ -52,6 +49,7 @@ export function executeJsonTask(input: JsonTaskInput): {
       ? {
           error: {
             message: error.message,
+            diagnostic: error.diagnostic,
             detail: error.error?.message,
             line: error.line,
             column: error.column,
@@ -68,7 +66,7 @@ export function executeJsonTask(input: JsonTaskInput): {
       return { content: typeof decoded === "string" ? decoded : content };
     } catch {
       const decoded = JSON.parse(content);
-      if (typeof decoded !== "string") throw new Error("内容不是转义字符串");
+      if (typeof decoded !== "string") throw messageError("内容不是转义字符串");
       return { content: decoded };
     }
   }

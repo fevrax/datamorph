@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 // src/components/SearchBox.tsx
 import React from "react";
 import { Input } from "@/components/ui";
@@ -6,17 +8,18 @@ import { Icon } from "@/components/ui/icon";
 import { useToolboxStore } from "@/store/useToolboxStore";
 
 export const SearchBox: React.FC = () => {
+  useLocale();
   const { searchQuery, setSearchQuery } = useToolboxStore();
 
   return (
     <Input
       isClearable
-      aria-label="搜索工具"
+      aria-label={t("搜索工具")}
       classNames={{
         base: "w-full md:max-w-sm",
         inputWrapper: "shadow-sm",
       }}
-      placeholder="搜索工具名称、描述或分类..."
+      placeholder={t("搜索工具名称、描述或分类...")}
       size="md"
       startContent={
         <Icon

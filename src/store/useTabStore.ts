@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import type { EncodingType, EncodingOptions } from "@/utils/encodingConverter";
 import type { NamingFormat } from "@/utils/keyNamingConverter";
 import { create } from "zustand";
@@ -725,7 +726,7 @@ export const useTabStore = create<TabStore>((set, get) => ({
         set({
           hydrated: true,
           saveStatus: "error",
-          storageError: "无法恢复本地数据，旧数据已保留。" + String(error),
+          storageError: t("无法恢复本地数据，旧数据已保留。") + String(error),
         });
       }
     })();

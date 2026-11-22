@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import React, { useState, useRef } from "react";
 
 import {
@@ -41,6 +43,7 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
   formatSupported = jsonSupported,
   settingsTargetRef,
 }) => {
+  useLocale();
   const [isCopyDropdownOpen, setCopyDropdownOpen] = useState(false);
   const [isFormatDropdownOpen, setFormatDropdownOpen] = useState(false);
   const [isSortDropdownOpen, setSortDropdownOpen] = useState(false);
@@ -136,8 +139,8 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
         {
           key: "ai",
           icon: "hugeicons:ai-chat-02",
-          text: "AI助手",
-          tooltip: "打开AI助手",
+          text: t("AI助手"),
+          tooltip: t("打开AI助手"),
           onClick: onAiClick || (() => {}),
           iconColor: "text-indigo-500",
           className:
@@ -152,8 +155,8 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
         {
           key: "format",
           icon: "ph:magic-wand-light",
-          text: "格式化",
-          tooltip: "格式化内容",
+          text: t("格式化"),
+          tooltip: t("格式化内容"),
           priority: 20,
           hasDropdown: true,
           onClick: showFormatDropdown,
@@ -161,7 +164,7 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
             {
               key: "all",
               icon: "ph:magic-wand-light",
-              text: "格式化全部",
+              text: t("格式化全部"),
               onClick: () => {
                 onFormat(MonacoDiffEditorEditorType.all);
                 setFormatDropdownOpen(false);
@@ -170,7 +173,7 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
             {
               key: "left",
               icon: "mdi-light:arrow-left",
-              text: "格式化左边",
+              text: t("格式化左边"),
               onClick: () => {
                 onFormat(MonacoDiffEditorEditorType.left);
                 setFormatDropdownOpen(false);
@@ -179,7 +182,7 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
             {
               key: "right",
               icon: "mdi-light:arrow-right",
-              text: "格式化右边",
+              text: t("格式化右边"),
               onClick: () => {
                 onFormat(MonacoDiffEditorEditorType.right);
                 setFormatDropdownOpen(false);
@@ -190,8 +193,8 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
         {
           key: "copy",
           icon: "si:copy-line",
-          text: "复制",
-          tooltip: "复制内容到剪贴板",
+          text: t("复制"),
+          tooltip: t("复制内容到剪贴板"),
           priority: 30,
           hasDropdown: true,
           onClick: showCopyDropdown,
@@ -199,7 +202,7 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
             {
               key: "left",
               icon: "mdi-light:arrow-left",
-              text: "复制左边",
+              text: t("复制左边"),
               onClick: () => {
                 onCopy(MonacoDiffEditorEditorType.left);
                 setCopyDropdownOpen(false);
@@ -208,7 +211,7 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
             {
               key: "right",
               icon: "mdi-light:arrow-right",
-              text: "复制右边",
+              text: t("复制右边"),
               onClick: () => {
                 onCopy(MonacoDiffEditorEditorType.right);
                 setCopyDropdownOpen(false);
@@ -219,8 +222,8 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
         {
           key: "clear",
           icon: "mynaui:trash",
-          text: "清空",
-          tooltip: "清空编辑器内容",
+          text: t("清空"),
+          tooltip: t("清空编辑器内容"),
           priority: 40,
           hasDropdown: true,
           onClick: showClearDropdown,
@@ -228,7 +231,7 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
             {
               key: "all",
               icon: "mynaui:trash",
-              text: "清空全部",
+              text: t("清空全部"),
               onClick: () => {
                 onClear(MonacoDiffEditorEditorType.all);
                 setClearDropdownOpen(false);
@@ -237,7 +240,7 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
             {
               key: "left",
               icon: "mdi-light:arrow-left",
-              text: "清空左边",
+              text: t("清空左边"),
               onClick: () => {
                 onClear(MonacoDiffEditorEditorType.left);
                 setClearDropdownOpen(false);
@@ -246,7 +249,7 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
             {
               key: "right",
               icon: "mdi-light:arrow-right",
-              text: "清空右边",
+              text: t("清空右边"),
               onClick: () => {
                 onClear(MonacoDiffEditorEditorType.right);
                 setClearDropdownOpen(false);
@@ -257,8 +260,8 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
         {
           key: "sort",
           icon: "fluent:arrow-sort-24-regular",
-          text: "字段排序",
-          tooltip: "对JSON字段进行排序",
+          text: t("字段排序"),
+          tooltip: t("对JSON字段进行排序"),
           hasDropdown: true,
           priority: 50,
           onClick: showSortDropdown,
@@ -266,7 +269,7 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
             {
               key: "left-asc",
               icon: "mdi-light:arrow-left",
-              text: "左边字段升序",
+              text: t("左边字段升序"),
               onClick: () => {
                 onFieldSort(MonacoDiffEditorEditorType.left, "asc");
                 setSortDropdownOpen(false);
@@ -275,7 +278,7 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
             {
               key: "left-desc",
               icon: "mdi-light:arrow-left",
-              text: "左边字段降序",
+              text: t("左边字段降序"),
               onClick: () => {
                 onFieldSort(MonacoDiffEditorEditorType.left, "desc");
                 setSortDropdownOpen(false);
@@ -284,7 +287,7 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
             {
               key: "right-asc",
               icon: "mdi-light:arrow-right",
-              text: "右边字段升序",
+              text: t("右边字段升序"),
               onClick: () => {
                 onFieldSort(MonacoDiffEditorEditorType.right, "asc");
                 setSortDropdownOpen(false);
@@ -293,7 +296,7 @@ const MonacoDiffOperationBar: React.FC<MonacoDiffOperationBarProps> = ({
             {
               key: "right-desc",
               icon: "mdi-light:arrow-right",
-              text: "右边字段降序",
+              text: t("右边字段降序"),
               onClick: () => {
                 onFieldSort(MonacoDiffEditorEditorType.right, "desc");
                 setSortDropdownOpen(false);

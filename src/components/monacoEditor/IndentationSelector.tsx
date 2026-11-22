@@ -1,11 +1,20 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { DropdownMenu } from "radix-ui";
 import { Check, ChevronDown } from "lucide-react";
 
 const OPTIONS = [
-  { value: "auto", label: "自动" },
+  {
+    value: "auto",
+    get label() {
+      return t("自动");
+    },
+  },
   ...Array.from({ length: 10 }, (_, index) => ({
     value: String(index + 1),
-    label: `${index + 1} 空格`,
+    get label() {
+      return t("{0} 空格", { 0: index + 1 });
+    },
   })),
 ];
 
@@ -24,17 +33,19 @@ export default function IndentationSelector({
   onModeChange,
   onSizeChange,
 }: IndentationSelectorProps) {
-  const label = `${indentMode === "auto" ? "自动 · " : ""}${
-    insertSpaces ? `${indentSize} 空格` : `Tab · 宽度 ${indentSize}`
-  }`;
+  useLocale();
+  const size = insertSpaces
+    ? t("{0} 空格", { 0: indentSize })
+    : t("Tab · 宽度 {0}", { 0: indentSize });
+  const label = indentMode === "auto" ? t("自动 · {0}", { 0: size }) : size;
 
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
         <button
           type="button"
-          aria-label="选择缩进"
-          title={`选择缩进 · ${label}`}
+          aria-label={t("选择缩进")}
+          title={t("选择缩进 · {0}", { 0: label })}
           className="inline-flex h-6 shrink-0 items-center gap-1 rounded px-1.5 outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-accent data-[state=open]:text-foreground"
         >
           {label}
@@ -43,7 +54,7 @@ export default function IndentationSelector({
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
-          aria-label="缩进"
+          aria-label={t("缩进")}
           side="top"
           align="end"
           sideOffset={5}

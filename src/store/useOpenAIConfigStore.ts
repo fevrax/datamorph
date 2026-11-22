@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { messageError } from "@/i18n/diagnostics";
 import { create } from "zustand";
 import { devtools, subscribeWithSelector } from "zustand/middleware";
 import {
@@ -313,16 +315,16 @@ export const useOpenAIConfigStore = create<OpenAIConfigStore>()(
             try {
               let models: Array<{ value: string; label: string }>;
               if (route === "utools") {
-                if (!isUtoolsAvailable) throw new Error("uTools API 不可用");
+                if (!isUtoolsAvailable) throw messageError("uTools API 不可用");
                 const result = await (window as any).utools.allAiModels();
                 if (!Array.isArray(result))
-                  throw new Error("模型列表格式不正确");
+                  throw messageError("模型列表格式不正确");
                 models = result.flatMap((model) =>
                   typeof model?.id === "string" && model.id.trim()
                     ? [
                         {
                           value: model.id,
-                          label: `${model.label || model.id}${model.cost > 0 ? ` (${model.cost}积分)` : ""}`,
+                          label: `${model.label || model.id}${model.cost > 0 ? t(" ({0}积分)", { 0: model.cost }) : ""}`,
                         },
                       ]
                     : [],
@@ -332,7 +334,7 @@ export const useOpenAIConfigStore = create<OpenAIConfigStore>()(
                   credentials &&
                   (!credentials.apiKey || !credentials.proxyUrl)
                 )
-                  throw new Error("请先配置 API 地址和密钥");
+                  throw messageError("请先配置 API 地址和密钥");
                 const baseURL =
                   credentials?.proxyUrl.replace(/\/+$/, "") ||
                   DEFAULT_ROUTE_PROXY_URL;
@@ -343,14 +345,14 @@ export const useOpenAIConfigStore = create<OpenAIConfigStore>()(
                   signal: AbortSignal.timeout(10000),
                 });
                 if (!response.ok)
-                  throw new Error(
+                  throw messageError(
                     route === "default" && response.status === 503
                       ? "站点API尚未配置，请联系管理员或使用私有API"
                       : "获取模型失败，请检查 API 配置后重试",
                   );
                 const data = await response.json();
                 if (!Array.isArray(data?.data))
-                  throw new Error("模型列表格式不正确");
+                  throw messageError("模型列表格式不正确");
                 models = data.data.flatMap((item: { id?: unknown }) =>
                   typeof item?.id === "string" && item.id.trim()
                     ? [{ value: item.id, label: item.id }]

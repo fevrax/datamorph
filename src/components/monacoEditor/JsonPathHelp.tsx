@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { useState } from "react";
 import { Popover } from "radix-ui";
 import { ArrowUpRight, BookOpen, X } from "lucide-react";
@@ -9,6 +11,7 @@ export default function JsonPathHelp({
 }: {
   onSelect: (path: string) => void;
 }) {
+  useLocale();
   const [open, setOpen] = useState(false);
 
   return (
@@ -18,8 +21,8 @@ export default function JsonPathHelp({
           size="sm"
           isIconOnly
           variant="ghost"
-          aria-label="JSONPath 说明"
-          title="JSONPath 说明"
+          aria-label={t("JSONPath 说明")}
+          title={t("JSONPath 说明")}
         >
           <BookOpen />
         </Button>
@@ -30,17 +33,17 @@ export default function JsonPathHelp({
           align="end"
           sideOffset={12}
           collisionPadding={12}
-          aria-label="JSONPath 说明"
+          aria-label={t("JSONPath 说明")}
           className="z-[100] w-[540px] max-w-[calc(100vw-24px)] overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-xl"
         >
           <div className="flex items-start justify-between border-b bg-muted/40 p-4">
             <div>
               <div className="mb-1 flex items-center gap-2 text-sm font-semibold">
                 <BookOpen className="size-4 text-primary" />
-                JSONPath 使用指南
+                {t("JSONPath 使用指南")}
               </div>
               <p className="text-xs text-muted-foreground">
-                点击示例即可填入当前输入框。
+                {t("点击示例即可填入当前输入框。")}
               </p>
             </div>
             <Popover.Close asChild>
@@ -48,7 +51,7 @@ export default function JsonPathHelp({
                 isIconOnly
                 size="sm"
                 variant="ghost"
-                aria-label="关闭说明"
+                aria-label={t("关闭说明")}
               >
                 <X />
               </Button>
@@ -58,11 +61,11 @@ export default function JsonPathHelp({
           <div className="max-h-[min(60vh,460px)] overflow-y-auto p-4">
             <div className="mb-4 flex flex-wrap gap-2 text-xs text-muted-foreground">
               {[
-                ["$", "根节点"],
-                ["@", "当前项"],
-                ["*", "通配符"],
-                ["..", "递归"],
-                ["[?()]", "条件"],
+                ["$", t("根节点")],
+                ["@", t("当前项")],
+                ["*", t("通配符")],
+                ["..", t("递归")],
+                ["[?()]", t("条件")],
               ].map(([symbol, label]) => (
                 <span key={symbol} className="rounded-md border px-2 py-1">
                   <code className="mr-1.5 font-mono text-primary">
@@ -107,7 +110,7 @@ export default function JsonPathHelp({
               target="_blank"
               rel="noopener noreferrer"
             >
-              标准文档
+              {t("标准文档")}
               <ArrowUpRight className="size-3.5" />
             </a>
           </div>

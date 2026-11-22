@@ -1,3 +1,4 @@
+import { messageError } from "@/i18n/diagnostics";
 import YAML from "js-yaml";
 import JSON5 from "json5";
 import TOML from "@iarna/toml";
@@ -56,7 +57,7 @@ const yamlFloat = new YAML.Type("tag:yaml.org,2002:float", {
       /^[+-]?\.(?:inf|nan)$/i.test(value)),
   construct: (value) => {
     if (!decimalPattern.test(yamlNumericToken(value) ?? ""))
-      throw new Error("无法无损转换非有限数值（NaN/Infinity）");
+      throw messageError("无法无损转换非有限数值（NaN/Infinity）");
 
     return new LosslessNumber(decimalToken(value));
   },
@@ -120,7 +121,7 @@ function tokens(text: string, toml = false): string[] {
       )
         i++;
     }
-    if (i === start) throw new Error("无法识别的格式标记");
+    if (i === start) throw messageError("无法识别的格式标记");
     result.push(text.slice(start, i));
   }
 
@@ -138,7 +139,7 @@ function parseJson5(text: string): unknown {
       }
       if (/^["']/.test(part)) return JSON.stringify(JSON5.parse(part));
       if (/^[+-]?(?:Infinity|NaN)$/.test(part)) {
-        throw new Error("无法无损转换非有限数值（NaN/Infinity）");
+        throw messageError("无法无损转换非有限数值（NaN/Infinity）");
       }
       if (decimalPattern.test(part) || integerPattern.test(part))
         return decimalToken(part);
@@ -157,7 +158,9 @@ function tomlInteger(raw: string): bigint {
   const value = BigInt(raw);
 
   if (value < minInteger || value > maxInteger) {
-    throw new Error(`TOML 无法无损表示超出 64 位整数范围的数值: ${raw}`);
+    throw messageError("TOML 无法无损表示超出 64 位整数范围的数值: {0}", {
+      0: raw,
+    });
   }
 
   return value;
@@ -165,7 +168,7 @@ function tomlInteger(raw: string): bigint {
 
 function safeNumber(raw: string): number {
   if (!isSafeNumber(raw))
-    throw new Error(`无法无损转换数值（精度损失或溢出）: ${raw}`);
+    throw messageError("无法无损转换数值（精度损失或溢出）: {0}", { 0: raw });
 
   return Number(raw);
 }
@@ -194,7 +197,7 @@ function parseToml(text: string): unknown {
 
       tomlInteger(decimal); // The dependency wraps overflowing BigInts to 64 bits.
       if (Object.is(Number(decimal), -0))
-        throw new Error("TOML 整数 -0 无法保留负零；请使用 -0.0");
+        throw messageError("TOML 整数 -0 无法保留负零；请使用 -0.0");
     } else if (decimalPattern.test(raw)) {
       safeNumber(decimalToken(raw));
     }
@@ -219,9 +222,10 @@ function mapTree(
       Object.getPrototypeOf(value) !== Object.prototype &&
       Object.getPrototypeOf(value) !== null)
   ) {
-    throw new Error(`无法无损转换特殊类型: ${path}`);
+    throw messageError("无法无损转换特殊类型: {0}", { 0: path });
   }
-  if (ancestors.has(value)) throw new Error(`无法转换循环引用: ${path}`);
+  if (ancestors.has(value))
+    throw messageError("无法转换循环引用: {0}", { 0: path });
   ancestors.add(value);
   const result = Array.isArray(value)
     ? value.map((item, i) => mapTree(item, scalar, `${path}[${i}]`, ancestors))
@@ -242,7 +246,7 @@ function validateScalar(value: unknown, path: string): unknown {
     value === undefined ||
     (typeof value === "number" && !Number.isFinite(value))
   ) {
-    throw new Error(`无法无损转换非有限数值或空文档: ${path}`);
+    throw messageError("无法无损转换非有限数值或空文档: {0}", { 0: path });
   }
   if (typeof value === "number")
     return new LosslessNumber(Object.is(value, -0) ? "-0" : String(value));
@@ -272,7 +276,7 @@ export function parseDataFormat(text: string, format: string): unknown {
       value = xml2js(text, { compact: true });
       break;
     default:
-      throw new Error(`不支持的输入格式: ${format}`);
+      throw messageError("不支持的输入格式: {0}", { 0: format });
   }
 
   return mapTree(value, validateScalar);
@@ -303,14 +307,14 @@ function assertEquivalent(expected: unknown, actual: unknown): void {
     ) {
       for (const [key, item] of left) {
         if (!Object.prototype.hasOwnProperty.call(actual, key))
-          throw new Error("TOML 无法无损保留对象结构");
+          throw messageError("TOML 无法无损保留对象结构");
         assertEquivalent(item, (actual as Record<string, unknown>)[key]);
       }
 
       return;
     }
   } else if (expected === actual) return;
-  throw new Error("TOML 无法无损保留数值或类型");
+  throw messageError("TOML 无法无损保留数值或类型");
 }
 
 // Inspect compact XML keys directly: dots in element/attribute/PI names are
@@ -338,15 +342,16 @@ function xmlCompactValue(value: unknown, keys: string[] = []): unknown {
 
   if (isLosslessNumber(value)) {
     if (!numeric)
-      throw new Error(
-        `XML 数值请放入 _text 或 _attributes: ${JSON.stringify(keys)}`,
-      );
+      throw messageError("XML 数值请放入 _text 或 _attributes: {0}", {
+        0: JSON.stringify(keys),
+      });
 
     return value.value;
   }
   if (!scalar)
-    throw new Error(
-      `XML 不支持普通对象标量，请使用 _text 或 _attributes: ${JSON.stringify(keys)}`,
+    throw messageError(
+      "XML 不支持普通对象标量，请使用 _text 或 _attributes: {0}",
+      { 0: JSON.stringify(keys) },
     );
 
   return value;
@@ -364,7 +369,9 @@ export function serializeDataFormat(value: unknown, format: string): string {
     case "toml": {
       const native = mapTree(data, (item, path) => {
         if (item === null)
-          throw new Error(`TOML 不支持 null，无法无损转换: ${path}`);
+          throw messageError("TOML 不支持 null，无法无损转换: {0}", {
+            0: path,
+          });
         if (!isLosslessNumber(item)) return item;
         if (/^-?\d+$/.test(item.value) && !Object.is(Number(item.value), -0))
           return tomlInteger(item.value);
@@ -393,7 +400,7 @@ export function serializeDataFormat(value: unknown, format: string): string {
       });
     }
     default:
-      throw new Error(`不支持的输出格式: ${format}`);
+      throw messageError("不支持的输出格式: {0}", { 0: format });
   }
 }
 

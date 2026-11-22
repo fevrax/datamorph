@@ -1,3 +1,6 @@
+import { t } from "@/i18n";
+import { errorDetails, errorText, messageError } from "@/i18n/diagnostics";
+import { useLocale } from "@/i18n/useLocale";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Copy } from "lucide-react";
 import { Button, Spinner } from "@/components/ui";
@@ -22,6 +25,7 @@ export default function JsonColumnView({
   language: string;
   onEdit: () => void;
 }) {
+  useLocale();
   const worker = useRef<Worker | null>(null);
   const requestId = useRef(0);
   const pages = useRef<ColumnRequest["pages"]>({});
@@ -41,7 +45,10 @@ export default function JsonColumnView({
       if (data.id === requestId.current) setResult(data);
     };
     parser.onerror = () => {
-      setResult({ id: requestId.current, error: "后台解析失败" });
+      setResult({
+        id: requestId.current,
+        error: errorDetails(messageError("后台解析失败")),
+      });
     };
     parser.postMessage({
       id: ++requestId.current,
@@ -87,14 +94,16 @@ export default function JsonColumnView({
         {empty || error !== undefined ? (
           <>
             <p role={empty ? "status" : "alert"}>
-              {empty ? "暂无内容可浏览" : `无法浏览文档：${error}`}
+              {empty
+                ? t("暂无内容可浏览")
+                : t("无法浏览文档：{0}", { 0: errorText(error) })}
             </p>
             <Button size="sm" variant="outline" onPress={onEdit}>
-              返回编辑
+              {t("返回编辑")}
             </Button>
           </>
         ) : (
-          <Spinner label="正在解析文档…" />
+          <Spinner label={t("正在解析文档…")} />
         )}
       </div>
     );
@@ -106,13 +115,13 @@ export default function JsonColumnView({
 
   return (
     <section
-      aria-label="JSON 栏列浏览"
+      aria-label={t("JSON 栏列浏览")}
       className="@container flex h-full min-w-0 flex-col"
     >
       <div className="flex min-w-0 shrink-0 items-center gap-2 border-b px-3 py-1.5">
         <nav
           ref={breadcrumbs}
-          aria-label="节点路径"
+          aria-label={t("节点路径")}
           className="flex min-w-0 flex-1 items-center overflow-x-auto"
         >
           {crumbs.map((crumb, index) => {
@@ -143,10 +152,10 @@ export default function JsonColumnView({
           size="sm"
           variant="outline"
           className="shrink-0"
-          onPress={() => void clipboard.copy(selectedPath, "已复制路径")}
+          onPress={() => void clipboard.copy(selectedPath, t("已复制路径"))}
         >
           <Copy />
-          复制路径
+          {t("复制路径")}
         </Button>
       </div>
       <div className="min-h-0 flex-1 overflow-auto @lg:overflow-hidden">
@@ -155,20 +164,22 @@ export default function JsonColumnView({
             const parent = path.slice(0, column.depth);
             const parentLabel = parent.length
               ? nodeLabel(parent[parent.length - 1])
-              : "根节点";
+              : t("根节点");
             const changePage = (page: number) =>
               navigate(path, { ...pages.current, [column.depth]: page });
             return (
               <section
                 key={formatNodePath(parent)}
-                aria-label={`${parentLabel} 子节点`}
+                aria-label={t("{0} 子节点", { 0: parentLabel })}
                 className="flex min-h-0 min-w-0 flex-col border-b @lg:border-r @lg:border-b-0"
               >
                 <div className="flex shrink-0 items-center justify-between gap-2 border-b bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
                   <h3 className="truncate font-mono" title={parentLabel}>
                     {parentLabel}
                   </h3>
-                  <span className="shrink-0">{column.count} 项</span>
+                  <span className="shrink-0">
+                    {column.count} {t("项")}
+                  </span>
                 </div>
                 <ul
                   key={column.page}
@@ -199,7 +210,7 @@ export default function JsonColumnView({
                   })}
                   {!column.count && (
                     <li className="px-2 py-1 text-sm text-muted-foreground">
-                      没有子节点
+                      {t("没有子节点")}
                     </li>
                   )}
                 </ul>
@@ -209,7 +220,7 @@ export default function JsonColumnView({
                       size="sm"
                       variant="ghost"
                       isIconOnly
-                      aria-label="上一页"
+                      aria-label={t("上一页")}
                       isDisabled={column.page === 0}
                       onPress={() => changePage(column.page - 1)}
                     >
@@ -222,7 +233,7 @@ export default function JsonColumnView({
                       size="sm"
                       variant="ghost"
                       isIconOnly
-                      aria-label="下一页"
+                      aria-label={t("下一页")}
                       isDisabled={column.page + 1 === column.pageCount}
                       onPress={() => changePage(column.page + 1)}
                     >
@@ -235,14 +246,14 @@ export default function JsonColumnView({
           })}
           {columns.length === 1 && (
             <div className="hidden border-r p-3 text-xs text-muted-foreground @lg:block">
-              选择对象或数组以浏览下一层
+              {t("选择对象或数组以浏览下一层")}
             </div>
           )}
           <div
             className={`min-h-0 min-w-0 overflow-auto bg-muted/30 p-3 ${columns.length ? "" : "@lg:col-span-3"}`}
           >
             <div className="mb-2 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-              <h3>节点预览</h3>
+              <h3>{t("节点预览")}</h3>
               <span className="font-mono">{type}</span>
             </div>
             <code role="status" className="block text-xs wrap-anywhere">

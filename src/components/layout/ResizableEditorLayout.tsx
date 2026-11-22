@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { Children, useEffect, useState, type ReactNode } from "react";
 import { PanelGroup, Panel, PanelResizeHandle } from "react-resizable-panels";
 import { cn } from "@/components/ui";
@@ -26,6 +28,7 @@ export default function ResizableEditorLayout({
   onResizeComplete,
   isStacked = false,
 }: Props) {
+  useLocale();
   const [narrow, setNarrow] = useState(() => window.innerWidth < 768);
   useEffect(() => {
     const resize = () => setNarrow(window.innerWidth < 768);
@@ -55,7 +58,7 @@ export default function ResizableEditorLayout({
       {panels.length > 1 && (
         <>
           <PanelResizeHandle
-            aria-label="调整输入输出区域"
+            aria-label={t("调整输入输出区域")}
             className={cn(
               "bg-border transition-colors hover:bg-primary focus-visible:bg-primary",
               vertical ? "h-1" : "w-1",

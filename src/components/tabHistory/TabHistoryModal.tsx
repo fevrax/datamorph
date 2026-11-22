@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { useMemo, useState } from "react";
 import { useTheme } from "next-themes";
 import {
@@ -47,27 +49,27 @@ interface TabHistoryModalProps {
 type Confirmation =
   | { type: "delete"; item: TabHistoryItem }
   | { type: "clear" };
-const timeFormat = new Intl.DateTimeFormat("zh-CN", {
+const timeOptions: Intl.DateTimeFormatOptions = {
   hour: "2-digit",
   minute: "2-digit",
   second: "2-digit",
   hour12: false,
-});
-const dateFormat = new Intl.DateTimeFormat("zh-CN", {
+};
+const dateOptions: Intl.DateTimeFormatOptions = {
   year: "numeric",
   month: "long",
   day: "numeric",
-});
+};
 function dayKey(timestamp: number) {
   const date = new Date(timestamp);
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
-function dayLabel(timestamp: number) {
+function dayLabel(timestamp: number, dateFormat: Intl.DateTimeFormat) {
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
-  if (dayKey(timestamp) === dayKey(today.getTime())) return "今天";
-  if (dayKey(timestamp) === dayKey(yesterday.getTime())) return "昨天";
+  if (dayKey(timestamp) === dayKey(today.getTime())) return t("今天");
+  if (dayKey(timestamp) === dayKey(yesterday.getTime())) return t("昨天");
   return dateFormat.format(timestamp);
 }
 function sizeLabel(bytes: number) {
@@ -89,6 +91,15 @@ export default function TabHistoryModal({
   onDelete,
   onClear,
 }: TabHistoryModalProps) {
+  const locale = useLocale();
+  const timeFormat = useMemo(
+    () => new Intl.DateTimeFormat(locale, timeOptions),
+    [locale],
+  );
+  const dateFormat = useMemo(
+    () => new Intl.DateTimeFormat(locale, dateOptions),
+    [locale],
+  );
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [mode, setMode] = useState<"content" | "diff">("content");
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
@@ -104,13 +115,13 @@ export default function TabHistoryModal({
       const key = dayKey(item.timestamp);
       let group = days.get(key);
       if (!group) {
-        group = { label: dayLabel(item.timestamp), items: [] };
+        group = { label: dayLabel(item.timestamp, dateFormat), items: [] };
         days.set(key, group);
       }
       group.items.push(item);
     }
     return [...days.entries()];
-  }, [records]);
+  }, [records, dateFormat]);
   const selected =
     records.find((item) => item.key === selectedKey) ?? records[0];
   const isCurrent = selected?.content === currentContent;
@@ -143,19 +154,22 @@ export default function TabHistoryModal({
           <ModalHeader className="history-header">
             <div className="history-heading">
               <History className="size-5 text-primary" aria-hidden="true" />
-              <span>历史记录</span>
-              <span className="history-count">{records.length} 个版本</span>
+              <span>{t("历史记录")}</span>
+              <span className="history-count">
+                {records.length} {t("个版本")}
+              </span>
             </div>
             <div className="history-document" title={documentTitle}>
               {documentTitle}
-              <span>浏览已保存的内容，随时找回之前的版本</span>
+              <span>{t("浏览已保存的内容，随时找回之前的版本")}</span>
             </div>
           </ModalHeader>
           {selected ? (
             <div className="history-layout">
-              <aside className="history-sidebar" aria-label="历史版本列表">
+              <aside className="history-sidebar" aria-label={t("历史版本列表")}>
                 <div className="history-list-heading">
-                  保存时间<span>从新到旧</span>
+                  {t("保存时间")}
+                  <span>{t("从新到旧")}</span>
                 </div>
                 <div className="history-records">
                   {groups.map(([key, group]) => (
@@ -168,7 +182,11 @@ export default function TabHistoryModal({
                             key={item.key}
                             className="history-record"
                             aria-pressed={selected.key === item.key}
-                            aria-label={`${dateFormat.format(item.timestamp)} ${timeFormat.format(item.timestamp)}，版本 ${item.revision}`}
+                            aria-label={t("{0} {1}，版本 {2}", {
+                              0: dateFormat.format(item.timestamp),
+                              1: timeFormat.format(item.timestamp),
+                              2: item.revision,
+                            })}
                             onClick={() => setSelectedKey(item.key)}
                           >
                             <span className="history-record-marker">
@@ -178,12 +196,17 @@ export default function TabHistoryModal({
                               <span className="history-record-time">
                                 {timeFormat.format(item.timestamp)}
                                 {item.key === records[0].key && (
-                                  <span className="history-latest">最近</span>
+                                  <span className="history-latest">
+                                    {t("最近")}
+                                  </span>
                                 )}
                               </span>
                               <span className="history-record-meta">
-                                {item.content.length.toLocaleString()} 字符
-                                <span>版本 {item.revision}</span>
+                                {item.content.length.toLocaleString()}{" "}
+                                {t("字符")}
+                                <span>
+                                  {t("版本")} {item.revision}
+                                </span>
                               </span>
                             </span>
                           </button>
@@ -193,12 +216,15 @@ export default function TabHistoryModal({
                   ))}
                 </div>
               </aside>
-              <section className="history-preview" aria-label="历史内容预览">
+              <section
+                className="history-preview"
+                aria-label={t("历史内容预览")}
+              >
                 <div className="history-preview-toolbar">
                   <div
                     className="history-mode"
                     role="group"
-                    aria-label="预览方式"
+                    aria-label={t("预览方式")}
                   >
                     <Button
                       size="sm"
@@ -207,7 +233,7 @@ export default function TabHistoryModal({
                       onPress={() => setMode("content")}
                     >
                       <FileCode2 />
-                      内容预览
+                      {t("内容预览")}
                     </Button>
                     <Button
                       size="sm"
@@ -216,7 +242,7 @@ export default function TabHistoryModal({
                       onPress={() => setMode("diff")}
                     >
                       <Columns2 />
-                      与当前比较
+                      {t("与当前比较")}
                     </Button>
                   </div>
                   <span className="history-language">
@@ -230,18 +256,18 @@ export default function TabHistoryModal({
                       <span>{timeFormat.format(selected.timestamp)}</span>
                     </span>
                     <span className="history-preview-meta">
-                      {selected.content.length.toLocaleString()} 字符 ·{" "}
+                      {selected.content.length.toLocaleString()} {t("字符 ·")}{" "}
                       {sizeLabel(snapshotBytes(selected))}
                     </span>
                   </div>
                   {isCurrent && (
-                    <span className="history-same">与当前内容一致</span>
+                    <span className="history-same">{t("与当前内容一致")}</span>
                   )}
                 </div>
                 {mode === "diff" && (
                   <div className="history-diff-labels">
-                    <span>历史内容</span>
-                    <span>当前内容</span>
+                    <span>{t("历史内容")}</span>
+                    <span>{t("当前内容")}</span>
                   </div>
                 )}
                 <div className="history-editor">
@@ -252,7 +278,7 @@ export default function TabHistoryModal({
                       language={language}
                       languageMode={languageMode}
                       filename={filename}
-                      ariaLabel="历史版本内容，只读"
+                      ariaLabel={t("历史版本内容，只读")}
                     />
                   ) : (
                     <HistoryDiffPreview
@@ -272,10 +298,10 @@ export default function TabHistoryModal({
               <span className="history-empty-icon">
                 <History aria-hidden="true" />
               </span>
-              <h3>还没有历史记录</h3>
-              <p>编辑内容后会自动保存历史版本，可在这里预览和恢复。</p>
+              <h3>{t("还没有历史记录")}</h3>
+              <p>{t("编辑内容后会自动保存历史版本，可在这里预览和恢复。")}</p>
               <Button variant="flat" onPress={close}>
-                继续编辑
+                {t("继续编辑")}
               </Button>
             </div>
           )}
@@ -284,32 +310,36 @@ export default function TabHistoryModal({
               <div className="history-footer-start">
                 <Dropdown>
                   <DropdownTrigger>
-                    <Button size="sm" variant="ghost" aria-label="管理历史">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={t("管理历史")}
+                    >
                       <MoreHorizontal />
-                      管理历史
+                      {t("管理历史")}
                     </Button>
                   </DropdownTrigger>
-                  <DropdownMenu aria-label="历史管理操作">
+                  <DropdownMenu aria-label={t("历史管理操作")}>
                     <DropdownItem
                       startContent={<Trash2 className="size-4" />}
                       onPress={() =>
                         setConfirmation({ type: "delete", item: selected })
                       }
                     >
-                      删除此版本
+                      {t("删除此版本")}
                     </DropdownItem>
                     <DropdownItem
                       startContent={<Trash2 className="size-4" />}
                       className="text-destructive"
                       onPress={() => setConfirmation({ type: "clear" })}
                     >
-                      清空所有历史
+                      {t("清空所有历史")}
                     </DropdownItem>
                   </DropdownMenu>
                 </Dropdown>
                 <span className="history-restore-note">
                   <ShieldCheck aria-hidden="true" />
-                  恢复前保留当前版本
+                  {t("恢复前保留当前版本")}
                 </span>
               </div>
               <div className="history-footer-actions">
@@ -320,7 +350,7 @@ export default function TabHistoryModal({
                   }}
                 >
                   <SquareArrowOutUpRight />
-                  新标签打开
+                  {t("新标签打开")}
                 </Button>
                 <Button
                   color="primary"
@@ -331,7 +361,7 @@ export default function TabHistoryModal({
                   }}
                 >
                   <RotateCcw />
-                  恢复此版本
+                  {t("恢复此版本")}
                 </Button>
               </div>
             </ModalFooter>
@@ -345,21 +375,30 @@ export default function TabHistoryModal({
         <ModalContent>
           <ModalHeader>
             {confirmation?.type === "clear"
-              ? "清空所有历史记录？"
-              : "删除此历史版本？"}
+              ? t("清空所有历史记录？")
+              : t("删除此历史版本？")}
           </ModalHeader>
           <ModalBody>
             <p className="text-sm text-muted-foreground">
               {confirmation?.type === "clear"
-                ? `将删除 ${records.length} 个历史版本，当前文档内容会保留。此操作无法撤销。`
+                ? t(
+                    "将删除 {0} 个历史版本，当前文档内容会保留。此操作无法撤销。",
+                    { 0: records.length },
+                  )
                 : confirmation &&
-                  `将删除 ${dateFormat.format(confirmation.item.timestamp)} ${timeFormat.format(confirmation.item.timestamp)} 保存的版本，当前文档内容会保留。此操作无法撤销。`}
+                  t(
+                    "将删除 {0} {1} 保存的版本，当前文档内容会保留。此操作无法撤销。",
+                    {
+                      0: dateFormat.format(confirmation.item.timestamp),
+                      1: timeFormat.format(confirmation.item.timestamp),
+                    },
+                  )}
             </p>
           </ModalBody>
           <ModalFooter>
-            <Button onPress={() => setConfirmation(null)}>取消</Button>
+            <Button onPress={() => setConfirmation(null)}>{t("取消")}</Button>
             <Button color="danger" onPress={confirm}>
-              {confirmation?.type === "clear" ? "确认清空" : "确认删除"}
+              {confirmation?.type === "clear" ? t("确认清空") : t("确认删除")}
             </Button>
           </ModalFooter>
         </ModalContent>

@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import * as monaco from "monaco-editor";
 import { attachSmartDisplay, detachSmartDisplay } from "./smartDisplayEngine";
 import {
@@ -193,11 +194,21 @@ function escapeMarkdown(text: string) {
   return text.replace(/[\\`*_{}\[\]()<>#+.!|]/g, "\\$&");
 }
 const titles = {
-  timestamp: "时间戳",
-  base64: "Base64 解码",
-  unicode: "Unicode 解码",
-  url: "URL 解码",
-  image: "图片预览",
+  get timestamp() {
+    return t("时间戳");
+  },
+  get base64() {
+    return t("Base64 解码");
+  },
+  get unicode() {
+    return t("Unicode 解码");
+  },
+  get url() {
+    return t("URL 解码");
+  },
+  get image() {
+    return t("图片预览");
+  },
 };
 
 function dismissDecoderHovers() {
@@ -222,7 +233,7 @@ export function registerDecoderProviders() {
   monaco.editor.registerCommand(
     "datamorph.copyDecoded",
     (_accessor, value: string) => {
-      if (typeof value === "string") void clipboard.copy(value, "已复制");
+      if (typeof value === "string") void clipboard.copy(value, t("已复制"));
     },
   );
   monaco.editor.registerCommand(
@@ -273,30 +284,44 @@ export function registerDecoderProviders() {
           position.lineNumber,
           matches[0].end + 1,
         ),
-        contents: matches.flatMap((t) => {
-          const args = encodeURIComponent(JSON.stringify([t.decoded]));
+        contents: matches.flatMap((token) => {
+          const args = encodeURIComponent(JSON.stringify([token.decoded]));
           return [
             {
               value:
                 "**" +
-                titles[t.kind] +
+                titles[token.kind] +
                 "**" +
-                (t.kind === "timestamp"
-                  ? ` · ${escapeMarkdown(resolveTimeZone(useSettingsStore.getState().timestampTimeZone))} · [切换时区](command:datamorph.selectTimeZone)`
+                (token.kind === "timestamp"
+                  ? t(" · {0} · [切换时区](command:datamorph.selectTimeZone)", {
+                      0: escapeMarkdown(
+                        resolveTimeZone(
+                          useSettingsStore.getState().timestampTimeZone,
+                        ),
+                      ),
+                    })
                   : ""),
               isTrusted: { enabledCommands: ["datamorph.selectTimeZone"] },
             },
-            t.kind === "image"
+            token.kind === "image"
               ? {
-                  value: `[打开图片预览](command:datamorph.previewImage?${args})`,
+                  value: t(
+                    "[打开图片预览](command:datamorph.previewImage?{0})",
+                    { 0: args },
+                  ),
                   isTrusted: { enabledCommands: ["datamorph.previewImage"] },
                 }
-              : { value: escapeMarkdown(t.decoded.slice(0, 12000)) },
+              : { value: escapeMarkdown(token.decoded.slice(0, 12000)) },
             {
               value:
-                `[复制](command:datamorph.copyDecoded?${args}) · [新标签打开](command:datamorph.openDecoded?${args})` +
-                (/^https?:\/\//i.test(t.decoded)
-                  ? ` · [打开链接](command:datamorph.openLink?${args})`
+                t(
+                  "[复制](command:datamorph.copyDecoded?{0}) · [新标签打开](command:datamorph.openDecoded?{1})",
+                  { 0: args, 1: args },
+                ) +
+                (/^https?:\/\//i.test(token.decoded)
+                  ? t(" · [打开链接](command:datamorph.openLink?{0})", {
+                      0: args,
+                    })
                   : ""),
               isTrusted: {
                 enabledCommands: [
@@ -312,7 +337,10 @@ export function registerDecoderProviders() {
     },
   });
   useSettingsStore.subscribe((state, previous) => {
-    if (state.timestampTimeZone !== previous.timestampTimeZone)
+    if (
+      state.timestampTimeZone !== previous.timestampTimeZone ||
+      state.locale !== previous.locale
+    )
       dismissDecoderHovers();
     refreshGlobalDecoders();
   });

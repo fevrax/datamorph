@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import type React from "react";
 import { createPortal } from "react-dom";
 import {
@@ -80,6 +82,7 @@ function ToggleRow({
 }
 
 export default function DraggableMenu(props: DraggableMenuProps) {
+  useLocale();
   const settings = useSettingsStore();
   const menu = (
     <div
@@ -90,7 +93,7 @@ export default function DraggableMenu(props: DraggableMenuProps) {
       <Popover>
         <PopoverTrigger>
           <Button
-            aria-label="编辑器设置"
+            aria-label={t("编辑器设置")}
             variant="ghost"
             size="sm"
             isIconOnly
@@ -104,37 +107,39 @@ export default function DraggableMenu(props: DraggableMenuProps) {
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          aria-label="编辑器设置"
+          aria-label={t("编辑器设置")}
           collisionPadding={12}
           className="w-[460px] max-w-[calc(100vw-1.5rem)] overflow-y-auto rounded-2xl p-0 shadow-xl"
           style={{ maxHeight: "var(--radix-popover-content-available-height)" }}
         >
           <div className="flex items-center justify-between gap-4 px-5 pb-1 pt-5">
             <h3 className="text-base font-semibold tracking-tight">
-              编辑器设置
+              {t("编辑器设置")}
             </h3>
-            <span className="text-[11px] text-muted-foreground">即时生效</span>
+            <span className="text-[11px] text-muted-foreground">
+              {t("即时生效")}
+            </span>
           </div>
 
-          <section className="px-5 pb-5 pt-4" aria-label="排版设置">
+          <section className="px-5 pb-5 pt-4" aria-label={t("排版设置")}>
             <div className="mb-3 flex items-center justify-between">
               <h4 className="text-xs font-medium text-muted-foreground">
-                排版
+                {t("排版")}
               </h4>
               <span className="text-[11px] text-muted-foreground">
-                当前编辑器
+                {t("当前编辑器")}
               </span>
             </div>
             <div className="grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 min-[480px]:gap-5">
               <div>
                 <div className="flex h-7 items-center justify-between text-[13px]">
-                  <span>字体大小</span>
+                  <span>{t("字体大小")}</span>
                   <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs tabular-nums">
                     {props.currentFontSize} px
                   </span>
                 </div>
                 <Slider
-                  aria-label="字体大小"
+                  aria-label={t("字体大小")}
                   className="mt-2"
                   minValue={12}
                   maxValue={24}
@@ -144,19 +149,19 @@ export default function DraggableMenu(props: DraggableMenuProps) {
               </div>
               <div className="min-[480px]:border-l min-[480px]:border-border/70 min-[480px]:pl-5">
                 <div className="flex h-7 items-center justify-between gap-2 text-[13px]">
-                  <span>缩进</span>
+                  <span>{t("缩进")}</span>
                   <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs tabular-nums">
                     {props.insertSpaces
-                      ? `${props.currentIndentSize} 空格`
+                      ? t("{0} 空格", { 0: props.currentIndentSize })
                       : `Tab · ${props.currentIndentSize}`}
                   </span>
                 </div>
                 <div className="mt-2 flex h-8 items-center justify-between gap-3">
                   <span className="text-xs text-muted-foreground">
-                    自动识别缩进
+                    {t("自动识别缩进")}
                   </span>
                   <Switch
-                    aria-label="自动识别缩进"
+                    aria-label={t("自动识别缩进")}
                     isSelected={props.currentIndentMode === "auto"}
                     onValueChange={(enabled) =>
                       props.onIndentModeChange(enabled ? "auto" : "manual")
@@ -165,7 +170,7 @@ export default function DraggableMenu(props: DraggableMenuProps) {
                 </div>
                 {props.currentIndentMode === "manual" && (
                   <Slider
-                    aria-label="缩进"
+                    aria-label={t("缩进")}
                     minValue={1}
                     maxValue={10}
                     value={props.currentIndentSize}
@@ -178,15 +183,15 @@ export default function DraggableMenu(props: DraggableMenuProps) {
 
           <section
             className="border-t border-border/70 px-5 py-4"
-            aria-label="智能提示设置"
+            aria-label={t("智能提示设置")}
           >
             <h4 className="mb-3 text-xs font-medium text-muted-foreground">
-              智能提示
+              {t("智能提示")}
             </h4>
             <div className="rounded-xl bg-muted/45 px-3.5 pb-3 pt-1">
               <ToggleRow
                 icon={Clock3}
-                label="时间戳提示"
+                label={t("时间戳提示")}
                 enabled={
                   settings.timestampDecoderEnabled &&
                   (props.timestampDecoratorsEnabled ?? true)
@@ -196,61 +201,62 @@ export default function DraggableMenu(props: DraggableMenuProps) {
               />
               <div className="mt-1 flex items-start gap-3">
                 <span className="flex h-9 shrink-0 items-center text-xs text-muted-foreground">
-                  显示时区
+                  {t("显示时区")}
                 </span>
                 <div className="min-w-0 flex-1">
                   <TimeZoneSelector />
                   <p className="mt-1.5 break-words text-[11px] leading-relaxed text-muted-foreground">
-                    {resolveTimeZone(settings.timestampTimeZone)} · 全局同步
+                    {resolveTimeZone(settings.timestampTimeZone)}{" "}
+                    {t("· 全局同步")}
                   </p>
                 </div>
               </div>
               {!settings.timestampDecoderEnabled && (
                 <p className="mt-1 text-[10px] text-muted-foreground">
-                  在系统设置的「自动解码」中启用时间戳提示
+                  {t("在系统设置的「自动解码」中启用时间戳提示")}
                 </p>
               )}
             </div>
             <div className="mt-3 grid grid-cols-1 gap-x-6 gap-y-1 min-[480px]:grid-cols-2">
               <ToggleRow
                 icon={Braces}
-                label="字符串内 JSON 展开"
+                label={t("字符串内 JSON 展开")}
                 enabled={settings.embeddedJsonDecoderEnabled}
                 onChange={settings.setEmbeddedJsonDecoderEnabled}
               />
               <ToggleRow
                 icon={Palette}
-                label="颜色预览"
+                label={t("颜色预览")}
                 enabled={settings.colorDecoderEnabled}
                 onChange={settings.setColorDecoderEnabled}
               />
               <ToggleRow
                 icon={ListTree}
-                label="折叠摘要"
+                label={t("折叠摘要")}
                 enabled={settings.summaryDecoderEnabled}
                 onChange={settings.setSummaryDecoderEnabled}
               />
               <ToggleRow
                 icon={Binary}
-                label="Base64 解码"
+                label={t("Base64 解码")}
                 enabled={settings.base64DecoderEnabled}
                 onChange={settings.setBase64DecoderEnabled}
               />
               <ToggleRow
                 icon={CaseSensitive}
-                label="Unicode 解码"
+                label={t("Unicode 解码")}
                 enabled={settings.unicodeDecoderEnabled}
                 onChange={settings.setUnicodeDecoderEnabled}
               />
               <ToggleRow
                 icon={Link2}
-                label="URL 解码"
+                label={t("URL 解码")}
                 enabled={settings.urlDecoderEnabled}
                 onChange={settings.setUrlDecoderEnabled}
               />
               <ToggleRow
                 icon={Image}
-                label="图片预览"
+                label={t("图片预览")}
                 enabled={
                   settings.imageDecoderEnabled &&
                   (props.imageDecoratorsEnabled ?? true)
@@ -270,7 +276,7 @@ export default function DraggableMenu(props: DraggableMenuProps) {
               onPress={props.onReset}
             >
               <RotateCcw className="size-3.5" aria-hidden="true" />
-              恢复默认排版
+              {t("恢复默认排版")}
             </Button>
           </div>
         </PopoverContent>

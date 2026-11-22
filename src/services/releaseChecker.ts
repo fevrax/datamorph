@@ -1,3 +1,4 @@
+import { DiagnosticError, message, type Diagnostic } from "@/i18n/diagnostics";
 import {
   LATEST_RELEASE_API_URL,
   parseStableVersion,
@@ -17,12 +18,12 @@ type ReleaseCheckErrorKind =
   | "network"
   | "http";
 
-export class ReleaseCheckError extends Error {
+export class ReleaseCheckError extends DiagnosticError {
   constructor(
     public readonly kind: ReleaseCheckErrorKind,
-    message: string,
+    diagnostic: Diagnostic,
   ) {
-    super(message);
+    super(diagnostic);
     this.name = "ReleaseCheckError";
   }
 }
@@ -85,19 +86,19 @@ export function createReleaseChecker(
         ) {
           throw new ReleaseCheckError(
             "rate-limit",
-            "GitHub 请求过于频繁，请稍后重试",
+            message("GitHub 请求过于频繁，请稍后重试"),
           );
         }
         if (response.status === 404) {
           throw new ReleaseCheckError(
             "not-found",
-            "未找到可用的 GitHub 正式发布",
+            message("未找到可用的 GitHub 正式发布"),
           );
         }
         if (!response.ok) {
           throw new ReleaseCheckError(
             "http",
-            "GitHub 暂时无法提供发布信息，请稍后重试",
+            message("GitHub 暂时无法提供发布信息，请稍后重试"),
           );
         }
         let data: unknown;
@@ -107,7 +108,7 @@ export function createReleaseChecker(
         } catch {
           throw new ReleaseCheckError(
             "invalid-response",
-            "GitHub 返回的发布信息无效",
+            message("GitHub 返回的发布信息无效"),
           );
         }
         const release = data as Record<string, unknown> | null;
@@ -126,7 +127,7 @@ export function createReleaseChecker(
         ) {
           throw new ReleaseCheckError(
             "invalid-response",
-            "GitHub 返回的正式版本信息无效",
+            message("GitHub 返回的正式版本信息无效"),
           );
         }
         signal.throwIfAborted();
@@ -141,14 +142,17 @@ export function createReleaseChecker(
       return result;
     } catch (error) {
       if (timedOut) {
-        throw new ReleaseCheckError("timeout", "检查更新超时，请稍后重试");
+        throw new ReleaseCheckError(
+          "timeout",
+          message("检查更新超时，请稍后重试"),
+        );
       }
       if (signal.aborted)
         throw new DOMException("Request cancelled", "AbortError");
       if (error instanceof ReleaseCheckError) throw error;
       throw new ReleaseCheckError(
         "network",
-        "无法连接 GitHub，请检查网络后重试",
+        message("无法连接 GitHub，请检查网络后重试"),
       );
     } finally {
       clearTimeout(timeout);
@@ -205,7 +209,10 @@ export function createReleaseChecker(
       }
       if (!isOnline()) {
         return Promise.reject(
-          new ReleaseCheckError("offline", "当前处于离线状态，请联网后重试"),
+          new ReleaseCheckError(
+            "offline",
+            message("当前处于离线状态，请联网后重试"),
+          ),
         );
       }
       if (!pending) {

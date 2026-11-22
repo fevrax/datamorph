@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import type { ReactNode } from "react";
 import type { AIRouteType } from "@/store/useOpenAIConfigStore";
 
@@ -31,6 +33,7 @@ export function RouteCard({
   onToggle,
   onConfigure,
 }: RouteCardProps) {
+  useLocale();
   const brand = ROUTE_BRAND[routeType];
   const enabled = isSelected && available;
 
@@ -59,19 +62,19 @@ export function RouteCard({
       <div className="flex flex-wrap items-center justify-between gap-2">
         {!available ? (
           <span className="rounded-full bg-border/60 px-2 py-0.5 text-[10.5px] font-semibold text-muted-foreground">
-            ● 不可用
+            {t("● 不可用")}
           </span>
         ) : routeType === "default" ? (
           <span className="rounded-full bg-success/15 px-2 py-0.5 text-[10.5px] font-semibold text-success">
-            ● 始终启用
+            {t("● 始终启用")}
           </span>
         ) : enabled ? (
           <span className="rounded-full bg-success/15 px-2 py-0.5 text-[10.5px] font-semibold text-success">
-            ● 已启用
+            {t("● 已启用")}
           </span>
         ) : (
           <span className="rounded-full bg-border/60 px-2 py-0.5 text-[10.5px] font-semibold text-muted-foreground">
-            ● 已关闭
+            {t("● 已关闭")}
           </span>
         )}
 
@@ -83,7 +86,7 @@ export function RouteCard({
               variant="flat"
               onPress={onConfigure}
             >
-              配置
+              {t("配置")}
             </Button>
           ) : null}
           <Switch

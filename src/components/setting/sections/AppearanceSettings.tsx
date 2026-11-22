@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import {
   ChoiceCard,
   GroupLabel,
@@ -18,15 +20,43 @@ const FONT_OPTIONS: Array<{
   desc: string;
   previewSize: string;
 }> = [
-  { value: "small", label: "小号", desc: "紧凑省空间", previewSize: "13px" },
-  { value: "medium", label: "标准", desc: "平衡阅读", previewSize: "16px" },
-  { value: "large", label: "大号", desc: "清晰易见", previewSize: "19px" },
+  {
+    value: "small",
+    get label() {
+      return t("小号");
+    },
+    get desc() {
+      return t("紧凑省空间");
+    },
+    previewSize: "13px",
+  },
+  {
+    value: "medium",
+    get label() {
+      return t("标准");
+    },
+    get desc() {
+      return t("平衡阅读");
+    },
+    previewSize: "16px",
+  },
+  {
+    value: "large",
+    get label() {
+      return t("大号");
+    },
+    get desc() {
+      return t("清晰易见");
+    },
+    previewSize: "19px",
+  },
 ];
 
 /**
  * 外观设置（Apple 系统风）：聊天样式 + 字体大小，均用可视化选择卡片。
  */
 export function AppearanceSettings() {
+  useLocale();
   const chatStyle = useSettingsStore((s) => s.chatStyle);
   const setChatStyle = useSettingsStore((s) => s.setChatStyle);
   const fontSize = useSettingsStore((s) => s.fontSize);
@@ -34,22 +64,22 @@ export function AppearanceSettings() {
 
   const handleStyleChange = (style: ChatStyle) => {
     setChatStyle(style);
-    toast.success("聊天窗口样式已更改");
+    toast.success(t("聊天窗口样式已更改"));
   };
 
   const handleFontSizeChange = (size: FontSize) => {
     setFontSize(size);
-    toast.success("字体大小已更改");
+    toast.success(t("字体大小已更改"));
   };
 
   return (
     <div className="h-full">
       <SectionHeader
-        description="自定义应用的外观和显示方式"
-        title="外观设置"
+        description={t("自定义应用的外观和显示方式")}
+        title={t("外观设置")}
       />
 
-      <GroupLabel>聊天窗口样式</GroupLabel>
+      <GroupLabel>{t("聊天窗口样式")}</GroupLabel>
       <SectionCard>
         <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:p-4">
           <ChoiceCard
@@ -64,10 +94,10 @@ export function AppearanceSettings() {
               </div>
             </div>
             <p className="text-[12.5px] font-semibold text-foreground">
-              气泡模式
+              {t("气泡模式")}
             </p>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              左右分列的对话气泡
+              {t("左右分列的对话气泡")}
             </p>
           </ChoiceCard>
 
@@ -84,16 +114,16 @@ export function AppearanceSettings() {
               </div>
             </div>
             <p className="text-[12.5px] font-semibold text-foreground">
-              文档模式
+              {t("文档模式")}
             </p>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              上下排列的文档流
+              {t("上下排列的文档流")}
             </p>
           </ChoiceCard>
         </div>
       </SectionCard>
 
-      <GroupLabel>字体大小</GroupLabel>
+      <GroupLabel>{t("字体大小")}</GroupLabel>
       <SectionCard>
         <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-3 sm:p-4">
           {FONT_OPTIONS.map((opt) => (
@@ -106,7 +136,7 @@ export function AppearanceSettings() {
                 className="mb-2 font-semibold text-foreground"
                 style={{ fontSize: opt.previewSize }}
               >
-                Aa 示例
+                {t("Aa 示例")}
               </div>
               <p className="text-[12px] font-semibold text-foreground">
                 {opt.label}

@@ -1,9 +1,11 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { DropdownMenu } from "radix-ui";
 import { Check, ChevronDown } from "lucide-react";
 import { DATA_FORMATS, type LanguageMode } from "@/utils/dataFormats";
 
 const SUPPORTED_LANGUAGES = [
-  ...DATA_FORMATS.map(({ id, name }) => ({ id, name })),
+  ...DATA_FORMATS,
   { id: "go", name: "Go" },
   { id: "python", name: "Python" },
   { id: "java", name: "Java" },
@@ -23,19 +25,20 @@ export default function LanguageSelector({
   languageMode,
   onLanguageChange,
 }: LanguageSelectorProps) {
+  useLocale();
   const name =
     SUPPORTED_LANGUAGES.find((item) => item.id === language)?.name ||
     language.toUpperCase();
-  const label = languageMode === "auto" ? `自动 · ${name}` : name;
-  const options = [{ id: "auto", name: "自动识别" }, ...SUPPORTED_LANGUAGES];
+  const label = languageMode === "auto" ? t("自动 · {0}", { 0: name }) : name;
+  const options = [{ id: "auto", name: t("自动识别") }, ...SUPPORTED_LANGUAGES];
 
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
         <button
           type="button"
-          aria-label="选择语言"
-          title={`选择语言 · ${label}`}
+          aria-label={t("选择语言")}
+          title={t("选择语言 · {0}", { 0: label })}
           className="inline-flex h-6 shrink-0 items-center gap-1 rounded px-1.5 outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-accent data-[state=open]:text-foreground"
         >
           {label}
@@ -44,7 +47,7 @@ export default function LanguageSelector({
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
-          aria-label="语言"
+          aria-label={t("语言")}
           side="top"
           align="end"
           sideOffset={5}

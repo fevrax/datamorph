@@ -1,3 +1,6 @@
+import { errorText } from "@/i18n/diagnostics";
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { runJsonTask, cancelJsonTask } from "@/workers/client";
 import { readClipboardText } from "@/utils/clipboard";
 import { parseDocument, cancelParse } from "@/workers/parseCache";
@@ -52,6 +55,7 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
   onMount,
   ref,
 }) => {
+  useLocale();
   const documentKey = useTabStore((s) => s.activeTabKey);
   const operationBarRef = useRef<JsonTableOperationBarRef>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -131,7 +135,7 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
           text = await readClipboardText();
         } else {
           text = await clipboard.read(
-            "无法读取剪贴板内容, 请从文本编辑器中粘贴。",
+            t("无法读取剪贴板内容, 请从文本编辑器中粘贴。"),
           );
         }
 
@@ -152,14 +156,14 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
           if (onDataUpdate) {
             onDataUpdate(text);
             setError(null);
-            toast.success("JSON数据已成功粘贴！");
+            toast.success(t("JSON数据已成功粘贴！"));
           }
         } catch (parseErr) {
           // 解析失败，设置错误状态
-          setError((parseErr as Error).message || "JSON解析错误");
+          setError(errorText(parseErr) || t("JSON解析错误"));
           setJsonData(null);
           setShouldShowEmpty(false);
-          toast.error(`无效的JSON数据：${(parseErr as Error).message}`);
+          toast.error(t("无效的JSON数据：{0}", { 0: errorText(parseErr) }));
 
           // 如果有onDataUpdate回调，也可以选择更新数据（取决于应用需求）
           if (onDataUpdate) {
@@ -167,7 +171,7 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
           }
         }
       } catch (err) {
-        toast.error(`粘贴操作失败：${(err as Error).message}`);
+        toast.error(t("粘贴操作失败：{0}", { 0: errorText(err) }));
       } finally {
         setIsPasting(false);
       }
@@ -233,7 +237,7 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
       .catch((err) => {
         if (disposed || err.name === "AbortError") return;
         setJsonData(null);
-        setError(err.message || "JSON 解析错误");
+        setError(errorText(err) || t("JSON 解析错误"));
         setShouldShowEmpty(false);
       });
     return () => {
@@ -363,10 +367,10 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
 
           <div className="text-center space-y-1.5 sm:space-y-2">
             <h3 className="text-lg sm:text-xl font-bold text-foreground">
-              JSON 表格视图
+              {t("JSON 表格视图")}
             </h3>
             <p className="text-sm text-muted-foreground max-w-xs mx-auto leading-relaxed">
-              粘贴您的 JSON 数据以表格形式浏览
+              {t("粘贴您的 JSON 数据以表格形式浏览")}
             </p>
           </div>
 
@@ -378,7 +382,9 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
             <kbd className="px-1.5 py-0.5 bg-muted dark:bg-border/50 rounded border border-border font-mono text-xs text-muted-foreground">
               V
             </kbd>
-            <span className="text-muted-foreground text-xs ml-1">快速粘贴</span>
+            <span className="text-muted-foreground text-xs ml-1">
+              {t("快速粘贴")}
+            </span>
           </div>
 
           <Button
@@ -400,11 +406,11 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
             variant="solid"
             onPress={handlePaste}
           >
-            {isPasting ? "处理中..." : "从剪贴板粘贴"}
+            {isPasting ? t("处理中...") : t("从剪贴板粘贴")}
           </Button>
 
           <p className="text-xs text-muted-foreground text-center">
-            支持标准 JSON 格式 · 自动解析并显示为表格
+            {t("支持标准 JSON 格式 · 自动解析并显示为表格")}
           </p>
         </div>
       </div>
@@ -424,10 +430,10 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
 
           <div className="text-center space-y-1.5">
             <h3 className="text-lg sm:text-xl font-bold text-danger">
-              JSON 解析失败
+              {t("JSON 解析失败")}
             </h3>
             <p className="text-sm text-muted-foreground">
-              请检查数据格式后重试
+              {t("请检查数据格式后重试")}
             </p>
           </div>
 
@@ -446,14 +452,15 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
               />
               <ul className="text-xs text-muted-foreground space-y-1">
                 <li>
-                  确保所有括号 <code className="text-danger">{"{ } [ ]"}</code>{" "}
-                  正确配对
+                  {t("确保所有括号")}{" "}
+                  <code className="text-danger">{"{ } [ ]"}</code>{" "}
+                  {t("正确配对")}
                 </li>
                 <li>
-                  键名使用双引号{" "}
+                  {t("键名使用双引号")}{" "}
                   <code className="text-danger">{'"key": value'}</code>
                 </li>
-                <li>键值对之间使用逗号分隔</li>
+                <li>{t("键值对之间使用逗号分隔")}</li>
               </ul>
             </div>
           </div>
@@ -479,7 +486,7 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
               variant="solid"
               onPress={handlePaste}
             >
-              {isPasting ? "处理中..." : "重新粘贴"}
+              {isPasting ? t("处理中...") : t("重新粘贴")}
             </Button>
 
             <Button
@@ -491,7 +498,7 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
               variant="bordered"
               onPress={handleSwitchToTextEditor}
             >
-              JSON 解析器
+              {t("JSON 解析器")}
             </Button>
           </div>
         </div>
@@ -684,11 +691,11 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
   // cause the previous document to be downloaded. JSON null is valid data.
   const exportCSV = useCallback((): string | null => {
     try {
-      if (!data.trim()) throw new Error("没有可导出的 JSON 数据");
+      if (!data.trim()) throw new Error(t("没有可导出的 JSON 数据"));
 
       return convertToCSV(parseJson(data), selectedPath);
     } catch (error) {
-      toast.error("导出 CSV 失败：" + (error as Error).message);
+      toast.error(t("导出 CSV 失败：") + errorText(error));
 
       return null;
     }
@@ -696,11 +703,11 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
 
   const exportExcel = useCallback((): ArrayBuffer | null => {
     try {
-      if (!data.trim()) throw new Error("没有可导出的 JSON 数据");
+      if (!data.trim()) throw new Error(t("没有可导出的 JSON 数据"));
 
       return convertToExcel(parseJson(data), selectedPath);
     } catch (error) {
-      toast.error("导出 Excel 失败：" + (error as Error).message);
+      toast.error(t("导出 Excel 失败：") + errorText(error));
 
       return null;
     }
@@ -728,7 +735,7 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
         );
       } catch (error) {
         if ((error as Error).name !== "AbortError")
-          toast.error("导出失败：" + (error as Error).message);
+          toast.error(t("导出失败：") + errorText(error));
       } finally {
         setExporting(false);
       }
@@ -772,7 +779,7 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
       if (onDataUpdate) {
         onDataUpdate("");
       }
-      toast.success("JSON数据已清空");
+      toast.success(t("JSON数据已清空"));
       setShouldShowEmpty(true);
 
       return true;
@@ -791,13 +798,13 @@ const JsonTableView: React.FC<JsonTableViewProps> = ({
           role="status"
           className="flex items-center justify-between border-b bg-accent px-3 py-1"
         >
-          正在后台导出…
+          {t("正在后台导出…")}
           <Button
             size="sm"
             variant="ghost"
             onPress={() => cancelJsonTask(exportScope)}
           >
-            取消导出
+            {t("取消导出")}
           </Button>
         </div>
       )}

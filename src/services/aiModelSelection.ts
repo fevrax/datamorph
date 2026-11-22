@@ -1,8 +1,13 @@
+import { t } from "@/i18n";
 import type { AIRouteType, OpenAIConfig } from "../store/useOpenAIConfigStore";
 
 export const AI_ROUTE_LABELS: Record<AIRouteType, string> = {
-  default: "站点API",
-  custom: "私有API",
+  get default() {
+    return t("站点API");
+  },
+  get custom() {
+    return t("私有API");
+  },
   utools: "uTools AI",
   ssooai: "SSOOAI",
 };

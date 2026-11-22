@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { Input } from "@/components/ui";
 import { Icon } from "@/components/ui/icon";
 import { useState, useRef, useCallback, useEffect } from "react";
@@ -15,11 +17,12 @@ export interface SearchableSelectProps {
 const SearchableSelect: React.FC<SearchableSelectProps> = ({
   items,
   selectedValue,
-  placeholder = "请选择",
+  placeholder = t("请选择"),
   onChange,
   className = "",
   id,
 }) => {
+  useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -127,7 +130,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
             <div className="p-2">
               <Input
                 className="w-full"
-                placeholder="搜索..."
+                placeholder={t("搜索...")}
                 size="sm"
                 startContent={
                   <Icon icon="heroicons:magnifying-glass" width={16} />
@@ -166,7 +169,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                 ))
               ) : (
                 <li className="px-3 py-2 text-muted-foreground text-center">
-                  无匹配结果
+                  {t("无匹配结果")}
                 </li>
               )}
             </ul>

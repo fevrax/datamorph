@@ -1,3 +1,6 @@
+import { errorText } from "@/i18n/diagnostics";
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { useEffect, useState } from "react";
 import {
   Check,
@@ -30,6 +33,7 @@ export default function AIModelPicker({
 }: {
   disabled?: boolean;
 }) {
+  useLocale();
   const config = useOpenAIConfigStore();
   const [open, setOpen] = useState(false);
   const [browseRoute, setBrowseRoute] = useState<AIRouteType>(config.routeType);
@@ -50,7 +54,7 @@ export default function AIModelPicker({
   const selectedLabel =
     getAIModels(config, config.routeType).find(
       (model) => model.value === selectedModel,
-    )?.label || "选择模型";
+    )?.label || t("选择模型");
   const models = getAIModels(config, browseRoute);
   const credentialsMissing =
     (browseRoute === "custom" || browseRoute === "ssooai") &&
@@ -104,8 +108,8 @@ export default function AIModelPicker({
         if (!cancelled)
           setError(
             error instanceof Error
-              ? error.message
-              : "模型列表暂不可用，请重试。",
+              ? errorText(error)
+              : t("模型列表暂不可用，请重试。"),
           );
       })
       .finally(() => {
@@ -142,7 +146,10 @@ export default function AIModelPicker({
           className="ai-model-trigger"
           variant="ghost"
           isDisabled={disabled}
-          aria-label={`选择线路与模型，当前 ${AI_ROUTE_LABELS[config.routeType]} · ${selectedLabel}`}
+          aria-label={t("选择线路与模型，当前 {0} · {1}", {
+            0: AI_ROUTE_LABELS[config.routeType],
+            1: selectedLabel,
+          })}
           title={`${AI_ROUTE_LABELS[config.routeType]} · ${selectedLabel}`}
         >
           <Network className="size-3.5 shrink-0" aria-hidden="true" />
@@ -156,18 +163,18 @@ export default function AIModelPicker({
       </PopoverTrigger>
       <PopoverContent
         className="ai-surface ai-model-picker-popover"
-        aria-label="线路与模型选择器"
+        aria-label={t("线路与模型选择器")}
         align="end"
         collisionPadding={12}
       >
         <div className="ai-picker-heading">
-          <span>线路与模型</span>
+          <span>{t("线路与模型")}</span>
           <Button
             size="sm"
             isIconOnly
             variant="ghost"
-            aria-label="刷新模型列表"
-            title="刷新模型列表"
+            aria-label={t("刷新模型列表")}
+            title={t("刷新模型列表")}
             isDisabled={loading || credentialsMissing}
             onPress={() => setRefresh((value) => value + 1)}
           >
@@ -175,7 +182,11 @@ export default function AIModelPicker({
           </Button>
         </div>
         <div className="ai-picker-columns">
-          <div className="ai-picker-routes" role="group" aria-label="选择线路">
+          <div
+            className="ai-picker-routes"
+            role="group"
+            aria-label={t("选择线路")}
+          >
             {routes.map((route) => (
               <button
                 key={route}
@@ -193,7 +204,7 @@ export default function AIModelPicker({
               >
                 <span>
                   {AI_ROUTE_LABELS[route]}
-                  {!available(route) && <small>未启用</small>}
+                  {!available(route) && <small>{t("未启用")}</small>}
                 </span>
                 <ChevronRight
                   className="size-3.5 shrink-0"
@@ -205,7 +216,7 @@ export default function AIModelPicker({
           <div
             className="ai-picker-models"
             role="group"
-            aria-label={`${AI_ROUTE_LABELS[browseRoute]}模型`}
+            aria-label={t("{0}模型", { 0: AI_ROUTE_LABELS[browseRoute] })}
           >
             <p className="mb-2 px-2 text-[11px] text-muted-foreground">
               {AI_ROUTE_LABELS[browseRoute]}
@@ -213,12 +224,12 @@ export default function AIModelPicker({
             {loading && (
               <p className="ai-picker-notice" role="status">
                 <LoaderCircle className="size-3.5 animate-spin" />
-                正在获取模型…
+                {t("正在获取模型…")}
               </p>
             )}
             {credentialsMissing ? (
               <p className="ai-picker-notice">
-                请先在 AI 设置中配置接口地址和密钥。
+                {t("请先在 AI 设置中配置接口地址和密钥。")}
               </p>
             ) : (
               models.map((model, index) => (
@@ -245,7 +256,7 @@ export default function AIModelPicker({
                 >
                   <span className="min-w-0 break-words">
                     {model.label}
-                    {index === 0 && <small>默认模型</small>}
+                    {index === 0 && <small>{t("默认模型")}</small>}
                   </span>
                   {config.routeType === browseRoute &&
                     selectedModel === model.value && (
@@ -256,7 +267,7 @@ export default function AIModelPicker({
             )}
             {!models.length && !loading && !credentialsMissing && !error && (
               <p className="ai-picker-notice">
-                API 暂未返回模型，请刷新或检查 API 配置。
+                {t("API 暂未返回模型，请刷新或检查 API 配置。")}
               </p>
             )}
             {error && (

@@ -1,3 +1,6 @@
+import { t } from "@/i18n";
+import { errorText } from "@/i18n/diagnostics";
+import { useLocale } from "@/i18n/useLocale";
 import React from "react";
 import {
   AlertCircle,
@@ -66,6 +69,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
   onGotoErrorLine,
   onAutoFix,
 }) => {
+  useLocale();
   const lines = parseJsonError?.context
     ? parseJsonError.context.split("\n")
     : [];
@@ -74,11 +78,11 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
   const hasLocation = line > 0 && column > 0;
   const startLine = parseJsonError?.contextStartLine ?? Math.max(1, line - 2);
   const detail = parseJsonError?.detail || parseJsonError?.error?.message;
-  const message = parseJsonError?.message;
+  const message = errorText(parseJsonError);
   const description =
-    message && !/^JSON\s*解析错误$/.test(message)
+    message && parseJsonError?.diagnostic?.key !== "JSON解析错误"
       ? message
-      : "在标记位置附近发现语法问题，请检查符号或尝试自动修复。";
+      : t("在标记位置附近发现语法问题，请检查符号或尝试自动修复。");
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} onOpenChange={onOpenChange}>
@@ -91,23 +95,26 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
               </div>
               <div className="min-w-0">
                 <ModalHeader className="p-0 text-[17px] font-semibold tracking-tight">
-                  JSON 解析失败
+                  {t("JSON 解析失败")}
                 </ModalHeader>
                 <p className="json-error-description">{description}</p>
               </div>
             </div>
             <ModalBody className="json-error-body">
               {lines.length > 0 ? (
-                <section className="json-error-preview" aria-label="错误上下文">
+                <section
+                  className="json-error-preview"
+                  aria-label={t("错误上下文")}
+                >
                   <div className="json-error-toolbar">
                     <span className="flex items-center gap-2">
                       <Braces size={14} aria-hidden="true" />
-                      代码上下文
+                      {t("代码上下文")}
                     </span>
                     <span className="json-error-location">
                       {hasLocation
-                        ? `第 ${line} 行 · 第 ${column} 列`
-                        : "位置未知"}
+                        ? t("第 {0} 行 · 第 {1} 列", { 0: line, 1: column })
+                        : t("位置未知")}
                     </span>
                   </div>
                   {/* A scrollable region needs a tab stop for keyboard scrolling. */}
@@ -116,7 +123,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
                     // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
                     tabIndex={0}
                     role="region"
-                    aria-label="JSON 代码预览，可横向滚动"
+                    aria-label={t("JSON 代码预览，可横向滚动")}
                   >
                     <div className="json-error-code">
                       {lines.map((text, index) => {
@@ -134,7 +141,10 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
                             )}
                             aria-label={
                               isError
-                                ? `错误位置：第 ${line} 行，第 ${column} 列`
+                                ? t("错误位置：第 {0} 行，第 {1} 列", {
+                                    0: line,
+                                    1: column,
+                                  })
                                 : undefined
                             }
                           >
@@ -156,7 +166,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
                                   </span>
                                   <span className="json-error-caret">^</span>
                                   <span className="json-error-pointer-label">
-                                    检查此处
+                                    {t("检查此处")}
                                   </span>
                                 </div>
                               )}
@@ -169,14 +179,16 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
                 </section>
               ) : (
                 <div className="json-error-empty">
-                  暂时无法显示代码上下文，可返回编辑器检查内容或尝试自动修复。
+                  {t(
+                    "暂时无法显示代码上下文，可返回编辑器检查内容或尝试自动修复。",
+                  )}
                 </div>
               )}
               {detail && (
                 <details className="json-error-details">
                   <summary>
                     <ChevronRight size={14} aria-hidden="true" />
-                    解析器详情
+                    {t("解析器详情")}
                   </summary>
                   <p>{detail}</p>
                 </details>
@@ -188,7 +200,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
                 variant="ghost"
                 onPress={close}
               >
-                返回编辑
+                {t("返回编辑")}
               </Button>
               <div className="json-error-actions">
                 <Button
@@ -199,7 +211,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
                   }}
                 >
                   <Crosshair size={15} aria-hidden="true" />
-                  定位错误
+                  {t("定位错误")}
                 </Button>
                 <Button
                   color="primary"
@@ -210,7 +222,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
                   }}
                 >
                   <WandSparkles size={15} aria-hidden="true" />
-                  自动修复
+                  {t("自动修复")}
                 </Button>
               </div>
             </ModalFooter>

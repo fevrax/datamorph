@@ -1,3 +1,6 @@
+import { errorText } from "@/i18n/diagnostics";
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { useTabMetadata } from "@/store/useTabMetadata";
 import { memo, useEffect, useRef, useState, useImperativeHandle } from "react";
 import { ContextMenu } from "radix-ui";
@@ -52,7 +55,7 @@ export async function importFiles(files: File[]) {
     try {
       useTabStore.getState().addTab(file.name, await file.text());
     } catch (error) {
-      toast.error("无法读取文件", String(error));
+      toast.error(t("无法读取文件"), errorText(error));
     }
   }
 }
@@ -62,6 +65,7 @@ function DynamicTabs({
   onClose,
   onUrlRefresh,
 }: DynamicTabsProps) {
+  useLocale();
   const tabs = useTabMetadata();
   const active = useTabStore((s) => s.activeTabKey);
   const { newTabShortcut, closeTabShortcut } = useSettingsStore();
@@ -140,7 +144,7 @@ function DynamicTabs({
       }
       if (dialog === "base64") {
         const result = validateAndDecodeBase64(input);
-        if (!result.success) throw new Error(result.error || "Base64 无效");
+        if (!result.success) throw new Error(result.error || t("Base64 无效"));
         store.addTab("decoded.json", result.decoded);
         setDialog(null);
         return;
@@ -148,7 +152,7 @@ function DynamicTabs({
       setBusy(true);
       const url = new URL(input);
       if (!["http:", "https:"].includes(url.protocol))
-        throw new Error("请输入 HTTP 或 HTTPS 地址");
+        throw new Error(t("请输入 HTTP 或 HTTPS 地址"));
       request.current?.abort();
       const controller = new AbortController();
       request.current = controller;
@@ -162,8 +166,8 @@ function DynamicTabs({
           store.updateTabContent(target, text);
           onUrlRefresh?.(target);
         } else {
-          store.addTab(before.title + " · 最新数据", text, { url: input });
-          toast.warning("原文件已变化，已在新标签打开最新数据");
+          store.addTab(`${before.title} · 最新数据`, text, { url: input });
+          toast.warning(t("原文件已变化，已在新标签打开最新数据"));
         }
       } else
         store.addTab(url.pathname.split("/").pop() || "remote.json", text, {
@@ -172,7 +176,7 @@ function DynamicTabs({
       setDialog(null);
     } catch (error) {
       if ((error as Error).name !== "AbortError")
-        toast.error("操作失败", (error as Error).message);
+        toast.error(t("操作失败"), errorText(error));
     } finally {
       setBusy(false);
     }
@@ -186,7 +190,7 @@ function DynamicTabs({
       <Button
         isIconOnly
         variant="ghost"
-        aria-label="新建文档"
+        aria-label={t("新建文档")}
         className="mx-1"
         onPress={() => store.addTab()}
       >
@@ -205,7 +209,7 @@ function DynamicTabs({
       />
       <div
         role="tablist"
-        aria-label="工作区标签"
+        aria-label={t("工作区标签")}
         className="flex min-w-0 flex-1 self-stretch overflow-x-auto"
       >
         {tabs.map((tab) => (
@@ -230,7 +234,7 @@ function DynamicTabs({
                 </button>
                 {Boolean(tab.extraData?.url) && (
                   <button
-                    aria-label={`刷新 ${tab.title}`}
+                    aria-label={t("刷新 {0}", { 0: tab.title })}
                     onClick={() => open("refresh", tab.key)}
                     className="rounded p-0.5 hover:bg-accent"
                   >
@@ -238,7 +242,7 @@ function DynamicTabs({
                   </button>
                 )}
                 <button
-                  aria-label={`关闭 ${tab.title}`}
+                  aria-label={t("关闭 {0}", { 0: tab.title })}
                   className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                   onClick={() => {
                     store.closeTab(tab.key);
@@ -252,37 +256,37 @@ function DynamicTabs({
             <ContextMenu.Portal>
               <ContextMenu.Content className="z-50 min-w-40 rounded-lg border bg-popover p-1 text-[13px] shadow-lg">
                 {[
-                  ["重命名", () => open("rename", tab.key)],
+                  [t("重命名"), () => open("rename", tab.key)],
                   [
-                    "关闭",
+                    t("关闭"),
                     () => {
                       store.closeTab(tab.key);
                       onClose?.([tab.key]);
                     },
                   ],
                   [
-                    "关闭其他标签",
+                    t("关闭其他标签"),
                     () => {
                       const closed = store.closeOtherTabs(tab.key);
                       onClose?.(closed);
                     },
                   ],
                   [
-                    "关闭左侧标签",
+                    t("关闭左侧标签"),
                     () => {
                       const closed = store.closeLeftTabs(tab.key);
                       onClose?.(closed);
                     },
                   ],
                   [
-                    "关闭右侧标签",
+                    t("关闭右侧标签"),
                     () => {
                       const closed = store.closeRightTabs(tab.key);
                       onClose?.(closed);
                     },
                   ],
                   [
-                    "关闭全部标签",
+                    t("关闭全部标签"),
                     () => {
                       const closed = store.closeAllTabs();
                       onClose?.(closed);
@@ -306,7 +310,7 @@ function DynamicTabs({
         <WorkspaceSearchTrigger />
         <Dropdown>
           <DropdownTrigger>
-            <Button isIconOnly variant="ghost" aria-label="导入与新建">
+            <Button isIconOnly variant="ghost" aria-label={t("导入与新建")}>
               <ChevronDown />
             </Button>
           </DropdownTrigger>
@@ -315,25 +319,25 @@ function DynamicTabs({
               startContent={<FilePlus className="size-4" />}
               onPress={() => store.addTab()}
             >
-              空白文档
+              {t("空白文档")}
             </DropdownItem>
             <DropdownItem
               startContent={<Upload className="size-4" />}
               onPress={() => file.current?.click()}
             >
-              导入文件
+              {t("导入文件")}
             </DropdownItem>
             <DropdownItem
               startContent={<Link className="size-4" />}
               onPress={() => open("url")}
             >
-              从 URL 导入
+              {t("从 URL 导入")}
             </DropdownItem>
             <DropdownItem
               startContent={<Binary className="size-4" />}
               onPress={() => open("base64")}
             >
-              从 Base64 导入
+              {t("从 Base64 导入")}
             </DropdownItem>
             <DropdownItem
               onPress={() =>
@@ -345,7 +349,7 @@ function DynamicTabs({
                 )
               }
             >
-              打开示例数据
+              {t("打开示例数据")}
             </DropdownItem>
           </DropdownMenu>
         </Dropdown>
@@ -360,32 +364,32 @@ function DynamicTabs({
         <ModalContent>
           <ModalHeader>
             {dialog === "rename"
-              ? "重命名文件"
+              ? t("重命名文件")
               : dialog === "base64"
-                ? "从 Base64 导入"
+                ? t("从 Base64 导入")
                 : dialog === "refresh"
-                  ? "刷新远程文件"
-                  : "从 URL 导入"}
+                  ? t("刷新远程文件")
+                  : t("从 URL 导入")}
           </ModalHeader>
           <ModalBody>
             {dialog === "refresh" && (
               <p className="mb-3 text-sm text-muted-foreground">
-                最新内容将替换当前文档，替换前的内容会保留在历史记录中。
+                {t("最新内容将替换当前文档，替换前的内容会保留在历史记录中。")}
               </p>
             )}
             {dialog === "base64" ? (
               <Textarea
-                aria-label="Base64 内容"
+                aria-label={t("Base64 内容")}
                 value={input}
                 onValueChange={setInput}
                 minRows={6}
               />
             ) : (
               <Input
-                aria-label={dialog === "rename" ? "文件名称" : "URL 地址"}
+                aria-label={dialog === "rename" ? t("文件名称") : t("URL 地址")}
                 placeholder={
                   dialog === "rename"
-                    ? "文件名称"
+                    ? t("文件名称")
                     : "https://example.com/data.json"
                 }
                 value={input}
@@ -404,7 +408,7 @@ function DynamicTabs({
                 setDialog(null);
               }}
             >
-              取消
+              {t("取消")}
             </Button>
             <Button
               color="primary"
@@ -413,10 +417,10 @@ function DynamicTabs({
               onPress={() => void submit()}
             >
               {dialog === "rename"
-                ? "保存"
+                ? t("保存")
                 : dialog === "refresh"
-                  ? "刷新"
-                  : "导入"}
+                  ? t("刷新")
+                  : t("导入")}
             </Button>
           </ModalFooter>
         </ModalContent>

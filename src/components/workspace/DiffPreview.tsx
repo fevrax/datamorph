@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { useEffect, useRef } from "react";
 import * as monaco from "monaco-editor";
 import { useDataLanguage } from "@/hooks/useDataLanguage";
@@ -8,6 +10,7 @@ export function DiffPreview({
   original: string;
   modified: string;
 }) {
+  useLocale();
   const originalLanguage = useDataLanguage(original);
   const modifiedLanguage = useDataLanguage(modified);
   const host = useRef<HTMLDivElement>(null);
@@ -51,7 +54,7 @@ export function DiffPreview({
     <div
       className="h-72 overflow-hidden rounded-md border"
       ref={host}
-      aria-label="替换前后差异"
+      aria-label={t("替换前后差异")}
     />
   );
 }

@@ -1,3 +1,4 @@
+import { DiagnosticError, message } from "@/i18n/diagnostics";
 import { isLosslessNumber } from "lossless-json";
 
 import { parseJson, stringifyJson } from "@/utils/json";
@@ -10,11 +11,11 @@ export interface KeyNamingCollision {
   sourceKeys: string[];
 }
 
-export class KeyNamingCollisionError extends Error {
+export class KeyNamingCollisionError extends DiagnosticError {
   readonly collisions: KeyNamingCollision[];
 
   constructor(collisions: KeyNamingCollision[]) {
-    super(`检测到 ${collisions.length} 处字段命名冲突`);
+    super(message("检测到 {0} 处字段命名冲突", { 0: collisions.length }));
     this.name = "KeyNamingCollisionError";
     this.collisions = collisions;
   }

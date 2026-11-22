@@ -9,7 +9,7 @@
     "lint": "eslint src --ext .ts,.tsx",
     "test:key-naming": "tsx src/utils/keyNamingConverter.test.ts",
     "test:encoding-converter": "tsx src/utils/encodingConverter.test.ts",
-    "test:regressions": "node --import tsx --test src/utils/*.test.ts src/workers/*.test.ts src/services/*.test.ts src/components/monacoEditor/editorPerformance.test.ts .github/tests/*.test.mjs docker/*.test.mjs config/*.test.ts",
+    "test:regressions": "node --import tsx --test src/i18n/*.test.ts src/utils/*.test.ts src/workers/*.test.ts src/services/*.test.ts src/components/monacoEditor/editorPerformance.test.ts .github/tests/*.test.mjs docker/*.test.mjs config/*.test.ts",
     "preview": "vite preview",
     "semantic-release": "semantic-release",
     "test:e2e": "playwright test",

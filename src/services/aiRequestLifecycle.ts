@@ -1,3 +1,5 @@
+import type { StaticMessage } from "@/i18n";
+import { messageError } from "@/i18n/diagnostics";
 import { APIConnectionTimeoutError } from "openai/error";
 
 export interface AIRequestOptions {
@@ -8,7 +10,7 @@ export interface AIRequestOptions {
 
 export interface AICompletionCallbacks {
   onStart?: () => void;
-  onProcessing?: (step: string) => void;
+  onProcessing?: (step: StaticMessage) => void;
   onChunk?: (chunk: string, accumulated: string) => void;
   onComplete?: (final: string) => void;
   onError?: (error: Error) => void;
@@ -22,7 +24,7 @@ export function normalizeAIError(error: unknown): Error {
     result.name === "APIConnectionTimeoutError" ||
     result.name === "TimeoutError"
   ) {
-    return Object.assign(new Error("AI 请求超时，请稍后重试。"), {
+    return Object.assign(messageError("AI 请求超时，请稍后重试。"), {
       name: "TimeoutError",
     });
   }
@@ -84,7 +86,7 @@ export class AIRequestLifecycle {
   private external?: AbortSignal;
   private cancel = () =>
     this.controller.abort(
-      Object.assign(new Error("已取消生成"), { name: "AbortError" }),
+      Object.assign(messageError("已取消生成"), { name: "AbortError" }),
     );
 
   constructor(options: AIRequestOptions) {
@@ -96,7 +98,7 @@ export class AIRequestLifecycle {
       this.timeout = setTimeout(
         () =>
           this.controller.abort(
-            Object.assign(new Error("AI 请求超时，请稍后重试。"), {
+            Object.assign(messageError("AI 请求超时，请稍后重试。"), {
               name: "TimeoutError",
             }),
           ),

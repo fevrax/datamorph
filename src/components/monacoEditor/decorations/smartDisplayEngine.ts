@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import * as monaco from "monaco-editor";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { useTabStore } from "@/store/useTabStore";
@@ -316,7 +317,13 @@ export function attachSmartDisplay(
       entry.actionId = id;
       const contents: monaco.IMarkdownString[] = [];
       hints.forEach((hint, index) => {
-        contents.push({ value: `**${plain(hint.label)}**` });
+        const label =
+          hint.kind === "color"
+            ? t("颜色预览")
+            : hint.kind === "embeddedJson"
+              ? t("JSON 字符串")
+              : hint.label;
+        contents.push({ value: `**${plain(label)}**` });
         if (hint.preview)
           contents.push({
             value: code(
@@ -326,14 +333,23 @@ export function attachSmartDisplay(
           });
         if (hint.truncated)
           contents.push({
-            value: "预览已截断，复制或新标签打开可查看完整内容。",
+            value: t("预览已截断，复制或新标签打开可查看完整内容。"),
           });
         if (hint.content !== undefined) {
           const args = encodeURIComponent(
             JSON.stringify([editor.getId(), id, index]),
           );
           contents.push({
-            value: `[复制${hint.kind === "embeddedJson" ? " JSON" : "内容"}](command:datamorph.smartCopy?${args})${hint.kind === "color" ? "" : ` · [新标签打开](command:datamorph.smartOpen?${args})`}`,
+            value: t("[复制{0}](command:datamorph.smartCopy?{1}){2}", {
+              0: hint.kind === "embeddedJson" ? "JSON" : t("内容"),
+              1: args,
+              2:
+                hint.kind === "color"
+                  ? ""
+                  : t(" · [新标签打开](command:datamorph.smartOpen?{0})", {
+                      0: args,
+                    }),
+            }),
             isTrusted: {
               enabledCommands: ["datamorph.smartCopy", "datamorph.smartOpen"],
             },
@@ -379,7 +395,7 @@ function registerSmartDisplay() {
           return;
         const hint = entry.actions[index];
         if (hint?.content === undefined) return;
-        if (action === "Copy") void clipboard.copy(hint.content, "已复制");
+        if (action === "Copy") void clipboard.copy(hint.content, t("已复制"));
         else
           useTabStore
             .getState()

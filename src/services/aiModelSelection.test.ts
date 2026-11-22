@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { setLocalePreference } from "@/i18n/locale";
 import { useOpenAIConfigStore } from "../store/useOpenAIConfigStore";
 import { storage } from "../lib/indexedDBStore";
 import {
@@ -11,8 +12,12 @@ import {
 test("picker only offers discovered models and changes route/model atomically", () => {
   const state = useOpenAIConfigStore.getState();
   assert.equal(state.routeType, "default");
+  setLocalePreference("zh-CN");
   assert.equal(AI_ROUTE_LABELS.default, "站点API");
   assert.equal(AI_ROUTE_LABELS.custom, "私有API");
+  setLocalePreference("en");
+  assert.equal(AI_ROUTE_LABELS.default, "Site API");
+  assert.equal(AI_ROUTE_LABELS.custom, "Private API");
   for (const route of ["default", "custom", "ssooai", "utools"] as const) {
     assert.deepEqual(getAIModels(state, route), []);
     assert.equal(getAISelection(state, route), null);

@@ -1,4 +1,6 @@
-import type { Tool } from "@/store/useToolboxStore.ts";
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
+import type { ToolDefinition } from "@/store/useToolboxStore.ts";
 
 import React from "react";
 import { Card, CardBody, CardFooter } from "@/components/ui";
@@ -8,10 +10,11 @@ import { Icon } from "@/components/ui/icon";
 import { useTabStore } from "@/store/useTabStore";
 
 interface ToolCardProps {
-  tool: Tool;
+  tool: ToolDefinition;
 }
 
 export const ToolCard: React.FC<ToolCardProps> = ({ tool }) => {
+  useLocale();
   const addToolTab = useTabStore((state) => state.addToolTab);
 
   const handleCardClick = () => {
@@ -35,10 +38,10 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool }) => {
             />
           </div>
           <div className="overflow-hidden min-w-0">
-            <h3 className="text-sm font-semibold truncate">{tool.name}</h3>
+            <h3 className="text-sm font-semibold truncate">{t(tool.name)}</h3>
             <div className="flex flex-wrap gap-1 mt-1 max-h-6 overflow-hidden">
               {tool.category.length > 0 &&
-                tool.category.map((category: string) => (
+                tool.category.map((category) => (
                   <Chip
                     key={category}
                     className="max-w-[96px] h-5"
@@ -46,19 +49,19 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool }) => {
                     size="sm"
                     variant="flat"
                   >
-                    <span className="truncate">{category}</span>
+                    <span className="truncate">{t(category)}</span>
                   </Chip>
                 ))}
             </div>
           </div>
         </div>
         <p className="text-muted-foreground text-xs leading-5 line-clamp-2">
-          {tool.description}
+          {t(tool.description)}
         </p>
       </CardBody>
       <CardFooter className="bg-secondary/30 border-t-1 border-secondary justify-end gap-2 flex-none px-3 py-2">
         <div className="flex items-center text-primary text-xs">
-          <span>新建工具 Tab</span>
+          <span>{t("新建工具 Tab")}</span>
           <Icon className="ml-1" icon="solar:arrow-right-linear" width={16} />
         </div>
       </CardFooter>

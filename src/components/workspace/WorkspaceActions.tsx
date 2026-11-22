@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { createContext, useContext, type RefObject } from "react";
 import { Menu, Search } from "lucide-react";
 
@@ -17,25 +19,27 @@ export function WorkspaceSearchTrigger({
 }: {
   compact?: boolean;
 }) {
+  useLocale();
   const actions = useContext(WorkspaceActionsContext);
   if (!actions) return null;
   return (
     <button
       type="button"
       className={`command-trigger${compact ? " command-trigger-compact" : ""}`}
-      aria-label="搜索标签与操作"
+      aria-label={t("搜索标签与操作")}
       aria-haspopup="dialog"
-      title="搜索标签与操作（⌘ / Ctrl K）"
+      title={t("搜索标签与操作（⌘ / Ctrl K）")}
       onClick={actions.openSearch}
     >
       <Search className="size-3.5 shrink-0" />
-      <span>搜索标签与操作</span>
+      <span>{t("搜索标签与操作")}</span>
       <kbd>⌘ K</kbd>
     </button>
   );
 }
 
 export function WorkspaceNavigationTrigger() {
+  useLocale();
   const actions = useContext(WorkspaceActionsContext);
   if (!actions) return null;
   return (
@@ -43,7 +47,7 @@ export function WorkspaceNavigationTrigger() {
       type="button"
       ref={actions.navigationTrigger}
       className="mobile-nav-toggle nav-icon-button"
-      aria-label="打开导航"
+      aria-label={t("打开导航")}
       aria-expanded={actions.navigationOpen}
       aria-controls="workspace-navigation"
       onClick={actions.openNavigation}

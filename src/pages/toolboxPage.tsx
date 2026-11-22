@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 // src/pages/ToolboxPage.tsx
 import React from "react";
 import { Icon } from "@/components/ui/icon";
@@ -9,6 +11,7 @@ import { ToolCard } from "@/components/toolbox/ToolCard.tsx";
 import { useToolboxStore } from "@/store/useToolboxStore";
 
 const ToolboxPage: React.FC = () => {
+  useLocale();
   const { filteredTools } = useToolboxStore();
   const tools = filteredTools();
 
@@ -27,9 +30,9 @@ const ToolboxPage: React.FC = () => {
         icon="solar:empty-file-outline"
         width={64}
       />
-      <h3 className="text-xl font-semibold">没有找到匹配的工具</h3>
+      <h3 className="text-xl font-semibold">{t("没有找到匹配的工具")}</h3>
       <p className="text-muted-foreground mt-2 max-w-md">
-        尝试使用不同的关键词或浏览下方的所有工具分类
+        {t("尝试使用不同的关键词或浏览下方的所有工具分类")}
       </p>
     </div>
   );
@@ -45,7 +48,7 @@ const ToolboxPage: React.FC = () => {
                 icon="solar:toolbox-bold"
                 width={22}
               />
-              工具箱
+              {t("工具箱")}
             </h1>
           </div>
           <SearchBox />
@@ -56,7 +59,7 @@ const ToolboxPage: React.FC = () => {
           <div className="mb-4 flex flex-wrap gap-2">
             <span className="text-muted-foreground flex items-center mr-1 text-sm">
               <Icon className="mr-1" icon="solar:tag-outline" width={16} />
-              分类:
+              {t("分类:")}
             </span>
             {categories.map((category) => (
               <Chip
@@ -64,9 +67,9 @@ const ToolboxPage: React.FC = () => {
                 className="cursor-pointer"
                 color="primary"
                 variant="flat"
-                onClick={() => toolboxStore.setSearchQuery(category as string)}
+                onClick={() => toolboxStore.setSearchQuery(category)}
               >
-                {category}
+                {t(category)}
               </Chip>
             ))}
             {toolboxStore.searchQuery && (
@@ -75,7 +78,7 @@ const ToolboxPage: React.FC = () => {
                 variant="light"
                 onPress={() => toolboxStore.setSearchQuery("")}
               >
-                清除筛选
+                {t("清除筛选")}
               </Button>
             )}
           </div>

@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { cn, Tooltip } from "@/components/ui";
 import { Icon } from "@/components/ui/icon";
 import {
@@ -28,13 +30,14 @@ export function SettingsSidebar({
   activeTab,
   onSelect,
 }: SettingsSidebarProps) {
+  useLocale();
   return (
     <div className="flex h-full w-[60px] flex-shrink-0 flex-col border-r border-border/70 bg-background/80 backdrop-blur-md dark:bg-muted/20 md:w-[188px]">
       {/* 标题区 */}
       <div className="flex flex-wrap items-center justify-center gap-1 px-2 pb-2 pt-3 md:justify-between md:px-3">
         <WorkspaceNavigationTrigger />
         <p className="hidden text-[10.5px] font-medium text-muted-foreground md:block">
-          设置
+          {t("设置")}
         </p>
         <WorkspaceSearchTrigger compact />
       </div>

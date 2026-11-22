@@ -1,3 +1,4 @@
+import { messageError } from "@/i18n/diagnostics";
 import { isLosslessNumber } from "lossless-json";
 
 import { stringifyJson } from "./json";
@@ -46,7 +47,7 @@ export function getTableExportData(
 
   visit(data, "root");
   if (matches.length !== 1)
-    throw new Error("选中路径不存在或存在歧义，请重新选择节点");
+    throw messageError("选中路径不存在或存在歧义，请重新选择节点");
 
   return matches[0];
 }
@@ -168,7 +169,7 @@ function zip(files: Record<string, string>): ArrayBuffer {
     22,
   );
 
-  if (size >= 0xffffffff) throw new Error("导出文件过大");
+  if (size >= 0xffffffff) throw messageError("导出文件过大");
   const buffer = new ArrayBuffer(size);
   const bytes = new Uint8Array(buffer);
   const view = new DataView(buffer);
@@ -249,7 +250,7 @@ export function convertToExcel(
   const rows = tableRows(getTableExportData(data, selectedPath));
 
   if (rows.length > 1048576 || rows.some((row) => row.length > 16384)) {
-    throw new Error("数据超出 Excel 行数或列数限制");
+    throw messageError("数据超出 Excel 行数或列数限制");
   }
   const sheet = rows
     .map(
@@ -267,7 +268,7 @@ export function convertToExcel(
             const text = cellText(value);
 
             if (text.length > 32767)
-              throw new Error("单元格内容超出 Excel 的 32767 字符限制");
+              throw messageError("单元格内容超出 Excel 的 32767 字符限制");
 
             return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xmlText(text)}</t></is></c>`;
           })

@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import { useState } from "react";
 
 import {
@@ -19,12 +20,48 @@ import { AboutContent } from "@/components/setting/sections/AboutContent";
  * 根容器挂在全站 FontSizeLayout 之下，字号随全局 small/medium/large 缩放。
  */
 const MENU_ITEMS: SettingsMenuItem[] = [
-  { key: "general", label: "通用设置", icon: "solar:settings-bold" },
-  { key: "shortcuts", label: "快捷键", icon: "solar:keyboard-bold" },
-  { key: "appearance", label: "外观设置", icon: "catppuccin:folder-themes" },
-  { key: "decoders", label: "自动解码", icon: "solar:code-bold" },
-  { key: "ai", label: "AI 助手", icon: "hugeicons:ai-chat-02" },
-  { key: "about", label: "关于", icon: "solar:info-circle-bold" },
+  {
+    key: "general",
+    get label() {
+      return t("通用设置");
+    },
+    icon: "solar:settings-bold",
+  },
+  {
+    key: "shortcuts",
+    get label() {
+      return t("快捷键");
+    },
+    icon: "solar:keyboard-bold",
+  },
+  {
+    key: "appearance",
+    get label() {
+      return t("外观设置");
+    },
+    icon: "catppuccin:folder-themes",
+  },
+  {
+    key: "decoders",
+    get label() {
+      return t("自动解码");
+    },
+    icon: "solar:code-bold",
+  },
+  {
+    key: "ai",
+    get label() {
+      return t("AI 助手");
+    },
+    icon: "hugeicons:ai-chat-02",
+  },
+  {
+    key: "about",
+    get label() {
+      return t("关于");
+    },
+    icon: "solar:info-circle-bold",
+  },
 ];
 
 export default function SettingsPage() {

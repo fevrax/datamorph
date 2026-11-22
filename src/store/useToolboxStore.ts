@@ -1,5 +1,6 @@
 // src/stores/toolboxStore.ts
 import { create } from "zustand";
+import { t, type StaticMessage } from "@/i18n";
 
 export interface Tool {
   id: string;
@@ -10,14 +11,20 @@ export interface Tool {
   category: string[];
 }
 
+export type ToolDefinition = Omit<Tool, "name" | "description" | "category"> & {
+  name: StaticMessage;
+  description: StaticMessage;
+  category: StaticMessage[];
+};
+
 interface ToolboxState {
-  tools: Tool[];
+  tools: ToolDefinition[];
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  filteredTools: () => Tool[];
+  filteredTools: () => ToolDefinition[];
 }
 
-const demoTools: Tool[] = [
+const demoTools: ToolDefinition[] = [
   {
     id: "protoSort",
     name: "Protobuf 排序工具",
@@ -97,12 +104,12 @@ export const useToolboxStore = create<ToolboxState>((set, get) => ({
 
     const query = searchQuery.toLowerCase();
 
-    return tools.filter(
-      (tool) =>
-        tool.name.toLowerCase().includes(query) ||
-        tool.description.toLowerCase().includes(query) ||
-        (tool.category &&
-          tool.category.some((cat) => cat.toLowerCase().includes(query))),
+    return tools.filter((tool) =>
+      [tool.name, tool.description, ...tool.category].some(
+        (label) =>
+          t(label).toLowerCase().includes(query) ||
+          label.toLowerCase().includes(query),
+      ),
     );
   },
 }));

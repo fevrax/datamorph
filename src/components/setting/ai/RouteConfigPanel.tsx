@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import type { ReactNode } from "react";
 
 import { Button, Input } from "@/components/ui";
@@ -42,6 +44,7 @@ interface RouteConfigPanelProps {
  * 数据从 useOpenAIConfigStore 读取；写操作与测试由 AISettings 下传回调。
  */
 export function RouteConfigPanel(props: RouteConfigPanelProps) {
+  useLocale();
   const { routeType, onClose, testing, testResult, onTest } = props;
 
   return (
@@ -51,7 +54,7 @@ export function RouteConfigPanel(props: RouteConfigPanelProps) {
           <div className="rounded-lg bg-primary/15 p-1.5">
             <Icon icon="solar:settings-bold" width={18} />
           </div>
-          {ROUTE_LABEL[routeType]} 配置
+          {ROUTE_LABEL[routeType]} {t("配置")}
         </h3>
         <Button
           isIconOnly
@@ -88,23 +91,24 @@ function ConfigSection({ children }: { children: ReactNode }) {
 }
 
 function PromoBanner() {
+  useLocale();
   return (
     <div className="rounded-lg border border-primary/20 bg-primary/10 p-3">
       <div className="flex items-center gap-2.5">
         <Icon className="text-primary" icon="solar:star-bold" width={20} />
         <span className="text-[13px] font-medium text-primary">
-          SSOOAI API 服务
+          {t("SSOOAI API 服务")}
         </span>
       </div>
       <p className="mt-2 text-xs text-foreground">
-        SSOOAI 提供更稳定的 API 服务和多种先进模型。 访问{" "}
+        {t("SSOOAI 提供更稳定的 API 服务和多种先进模型。 访问")}{" "}
         <ExternalLink
           className="font-medium text-primary hover:underline"
           href="https://api.ssooai.com"
         >
           https://api.ssooai.com
         </ExternalLink>{" "}
-        注册并获取 API 密钥。
+        {t("注册并获取 API 密钥。")}
       </p>
     </div>
   );
@@ -121,6 +125,7 @@ function DefaultRouteConfig({
   testing: boolean;
   testResult: TestResult | null;
 }) {
+  useLocale();
   const { defaultRoute, defaultModels, updateDefaultRouteConfig } =
     useOpenAIConfigStore();
 
@@ -128,13 +133,13 @@ function DefaultRouteConfig({
     <ConfigSection>
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
         <Icon className="text-primary" icon="solar:star-bold" width={18} />
-        此线路由站点管理员提供。如连接失败，请联系管理员或配置私有API。
+        {t("此线路由站点管理员提供。如连接失败，请联系管理员或配置私有API。")}
       </div>
-      <FormField icon="solar:layers-bold" id="site-model" label="模型名称">
+      <FormField icon="solar:layers-bold" id="site-model" label={t("模型名称")}>
         <SearchableSelect
           id="site-model"
           items={defaultModels}
-          placeholder="选择 API 返回的模型"
+          placeholder={t("选择 API 返回的模型")}
           selectedValue={defaultRoute.model}
           onChange={(model) => updateDefaultRouteConfig({ model })}
         />
@@ -151,6 +156,7 @@ function DefaultRouteConfig({
 }
 
 function SsooaiRouteConfig(props: RouteConfigPanelProps) {
+  useLocale();
   const { ssooaiRoute, ssooaiModels } = useOpenAIConfigStore();
   const {
     testing,
@@ -166,11 +172,15 @@ function SsooaiRouteConfig(props: RouteConfigPanelProps) {
     <ConfigSection>
       <PromoBanner />
 
-      <FormField id="ssooai-api-key" icon="solar:key-bold" label="API 密钥">
+      <FormField
+        id="ssooai-api-key"
+        icon="solar:key-bold"
+        label={t("API 密钥")}
+      >
         <Input
           className="w-full"
           id="ssooai-api-key"
-          placeholder="输入您的 SSOOAI API 密钥"
+          placeholder={t("输入您的 SSOOAI API 密钥")}
           size="sm"
           type="password"
           value={ssooaiRoute.apiKey}
@@ -188,7 +198,7 @@ function SsooaiRouteConfig(props: RouteConfigPanelProps) {
         <SearchableSelect
           className="w-full sm:w-60"
           items={ssooaiModels}
-          placeholder="选择模型"
+          placeholder={t("选择模型")}
           selectedValue={testModelSsooai}
           onChange={(value) => onSetTestModel("ssooai", value)}
         />
@@ -200,6 +210,7 @@ function SsooaiRouteConfig(props: RouteConfigPanelProps) {
 }
 
 function UtoolsRouteConfig(props: RouteConfigPanelProps) {
+  useLocale();
   const { utoolsRoute, utoolsModels } = useOpenAIConfigStore();
   const {
     testing,
@@ -213,12 +224,16 @@ function UtoolsRouteConfig(props: RouteConfigPanelProps) {
 
   return (
     <ConfigSection>
-      <FormField id="utools-model" icon="solar:layers-bold" label="选择模型">
+      <FormField
+        id="utools-model"
+        icon="solar:layers-bold"
+        label={t("选择模型")}
+      >
         <SearchableSelect
           className="w-full"
           id="utools-model"
           items={utoolsModels}
-          placeholder="选择 uTools 模型"
+          placeholder={t("选择 uTools 模型")}
           selectedValue={utoolsRoute.model}
           onChange={(value) => onConfigureUtoolsModel(value)}
         />
@@ -233,7 +248,7 @@ function UtoolsRouteConfig(props: RouteConfigPanelProps) {
         <SearchableSelect
           className="w-full sm:w-64"
           items={utoolsModels}
-          placeholder="选择模型"
+          placeholder={t("选择模型")}
           selectedValue={testModelUtools}
           onChange={(value) => onSetTestModel("utools", value)}
         />
@@ -246,11 +261,12 @@ function UtoolsRouteConfig(props: RouteConfigPanelProps) {
             icon="solar:info-circle-bold"
             width={16}
           />
-          <span className="font-medium">提示</span>
+          <span className="font-medium">{t("提示")}</span>
         </div>
         <p className="ml-6 mt-1">
-          Utools 官方线路由 Utools
-          团队维护，提供更稳定的服务和更多模型选择，但需要付费使用。
+          {t(
+            "Utools 官方线路由 Utools\n          团队维护，提供更稳定的服务和更多模型选择，但需要付费使用。",
+          )}
         </p>
       </div>
     </ConfigSection>
@@ -258,6 +274,7 @@ function UtoolsRouteConfig(props: RouteConfigPanelProps) {
 }
 
 function CustomRouteConfig(props: RouteConfigPanelProps) {
+  useLocale();
   const { customRoute, customModels } = useOpenAIConfigStore();
   const {
     testing,
@@ -282,17 +299,17 @@ function CustomRouteConfig(props: RouteConfigPanelProps) {
           <span className="font-medium">SSOOAI API</span>
         </div>
         <p className="mt-2 text-xs text-foreground">
-          推荐使用 SSOOAI API 作为私有API，填入 API 地址：
+          {t("推荐使用 SSOOAI API 作为私有API，填入 API 地址：")}
           <InlineCode>https://api.ssooai.com/v1</InlineCode>
-          ，注册即可获得免费额度。高稳定性、低延迟、更实惠的价格。
+          {t("，注册即可获得免费额度。高稳定性、低延迟、更实惠的价格。")}
         </p>
       </div>
 
-      <FormField id="api-url" icon="solar:link-bold" label="API 地址">
+      <FormField id="api-url" icon="solar:link-bold" label={t("API 地址")}>
         <Input
           className="w-full"
           id="api-url"
-          placeholder="输入 API 地址，例如: https://api.ssooai.com/v1"
+          placeholder={t("输入 API 地址，例如: https://api.ssooai.com/v1")}
           size="sm"
           value={customRoute.proxyUrl}
           variant="bordered"
@@ -300,11 +317,11 @@ function CustomRouteConfig(props: RouteConfigPanelProps) {
         />
       </FormField>
 
-      <FormField id="api-key" icon="solar:key-bold" label="API 密钥">
+      <FormField id="api-key" icon="solar:key-bold" label={t("API 密钥")}>
         <Input
           className="w-full"
           id="api-key"
-          placeholder="输入您的 API 密钥"
+          placeholder={t("输入您的 API 密钥")}
           size="sm"
           type="password"
           value={customRoute.apiKey}
@@ -327,7 +344,7 @@ function CustomRouteConfig(props: RouteConfigPanelProps) {
         <SearchableSelect
           className="w-full sm:w-60"
           items={customModels}
-          placeholder="选择模型"
+          placeholder={t("选择模型")}
           selectedValue={testModelCustom}
           onChange={(value) => onSetTestModel("custom", value)}
         />

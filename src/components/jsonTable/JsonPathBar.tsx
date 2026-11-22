@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import React from "react";
 import { Button, ButtonGroup } from "@/components/ui";
 import { Icon } from "@/components/ui/icon";
@@ -13,6 +15,7 @@ const JsonPathBar: React.FC<JsonPathBarProps> = ({
   onExpand,
   onCollapse,
 }) => {
+  useLocale();
   return (
     <div className="h-8 flex items-center justify-between px-2 bg-muted border-b border-border">
       {/* 当前JSON路径 */}
@@ -28,14 +31,14 @@ const JsonPathBar: React.FC<JsonPathBarProps> = ({
           startContent={<Icon icon="tabler:fold-down" width={16} />}
           onPress={onExpand}
         >
-          展开所有
+          {t("展开所有")}
         </Button>
         <Button
           className="text-sm text-muted-foreground"
           startContent={<Icon icon="tabler:fold-up" width={16} />}
           onPress={onCollapse}
         >
-          折叠所有
+          {t("折叠所有")}
         </Button>
       </ButtonGroup>
     </div>

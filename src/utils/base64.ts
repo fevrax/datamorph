@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import { Base64 } from "js-base64";
 
 // 支持 URL-safe Base64 (-, _) 和数组上下文 ([, ,:)
@@ -25,7 +26,11 @@ export function validateAndDecodeBase64(input: string): {
   error?: string;
 } {
   if (!input.trim()) {
-    return { success: false, decoded: "", error: "请输入 Base64 编码字符串" };
+    return {
+      success: false,
+      decoded: "",
+      error: t("请输入 Base64 编码字符串"),
+    };
   }
 
   const normalized = normalizeBase64(input);
@@ -43,7 +48,7 @@ export function validateAndDecodeBase64(input: string): {
     return {
       success: false,
       decoded: "",
-      error: "无效的 Base64 编码格式，请检查输入内容",
+      error: t("无效的 Base64 编码格式，请检查输入内容"),
     };
   }
 }

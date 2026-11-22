@@ -1,3 +1,6 @@
+import { errorText } from "@/i18n/diagnostics";
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useBackgroundTask } from "@/components/workspace/useBackgroundTask";
 import { createToolStateHook } from "@/components/workspace/ToolContext";
@@ -34,8 +37,12 @@ const FORMAT_OPTIONS: {
 }[] = [
   {
     format: "camel",
-    label: "小驼峰",
-    displayText: "转小驼峰",
+    get label() {
+      return t("小驼峰");
+    },
+    get displayText() {
+      return t("转小驼峰");
+    },
     example: "firstName",
     icon: "solar:arrow-right-linear",
     inactiveBg: "bg-accent dark:bg-accent/30",
@@ -49,8 +56,12 @@ const FORMAT_OPTIONS: {
   },
   {
     format: "pascal",
-    label: "大驼峰",
-    displayText: "转大驼峰",
+    get label() {
+      return t("大驼峰");
+    },
+    get displayText() {
+      return t("转大驼峰");
+    },
     example: "FirstName",
     icon: "solar:arrow-right-linear",
     inactiveBg: "bg-secondary dark:bg-secondary/30",
@@ -65,8 +76,12 @@ const FORMAT_OPTIONS: {
   },
   {
     format: "snake",
-    label: "小写+下划线",
-    displayText: "转下划线",
+    get label() {
+      return t("小写+下划线");
+    },
+    get displayText() {
+      return t("转下划线");
+    },
     example: "first_name",
     icon: "solar:arrow-right-linear",
     inactiveBg: "bg-success dark:bg-success/30",
@@ -80,8 +95,12 @@ const FORMAT_OPTIONS: {
   },
   {
     format: "kebab",
-    label: "短横线",
-    displayText: "转短横线",
+    get label() {
+      return t("短横线");
+    },
+    get displayText() {
+      return t("转短横线");
+    },
     example: "first-name",
     icon: "solar:arrow-right-linear",
     inactiveBg: "bg-warning dark:bg-warning/30",
@@ -95,8 +114,12 @@ const FORMAT_OPTIONS: {
   },
   {
     format: "constant",
-    label: "大写+下划线",
-    displayText: "转常量",
+    get label() {
+      return t("大写+下划线");
+    },
+    get displayText() {
+      return t("转常量");
+    },
     example: "FIRST_NAME",
     icon: "solar:arrow-right-linear",
     inactiveBg: "bg-destructive dark:bg-destructive/30",
@@ -114,6 +137,7 @@ const FORMAT_OPTIONS: {
 const useToolState = createToolStateHook("jsonKeyNaming");
 
 export default function JsonKeyNamingPage() {
+  useLocale();
   const { resolvedTheme: theme } = useTheme();
   const inputEditorRef = useRef<MonacoDataEditorRef>(null);
   const outputEditorRef = useRef<MonacoDataEditorRef>(null);
@@ -132,7 +156,7 @@ export default function JsonKeyNamingPage() {
 
   const handleConvert = async (format: NamingFormat) => {
     if (!inputValue.trim()) {
-      toast.warning("请先输入 JSON 内容");
+      toast.warning(t("请先输入 JSON 内容"));
 
       return;
     }
@@ -147,7 +171,9 @@ export default function JsonKeyNamingPage() {
       setActiveFormat(format);
       setCollisions([]);
       toast.success(
-        `已转换为${FORMAT_OPTIONS.find((f) => f.format === format)?.label}`,
+        t("已转换为{0}", {
+          0: FORMAT_OPTIONS.find((f) => f.format === format)?.label,
+        }),
       );
     } catch (error) {
       const e = error as KeyNamingCollisionError;
@@ -159,7 +185,7 @@ export default function JsonKeyNamingPage() {
         const first = e.collisions[0];
 
         toast.error(
-          "字段命名冲突，已中止转换",
+          t("字段命名冲突，已中止转换"),
           `${first.path}: ${first.sourceKeys.join("、")} → ${first.targetKey}`,
         );
 
@@ -167,7 +193,7 @@ export default function JsonKeyNamingPage() {
       }
 
       setCollisions([]);
-      toast.error(`JSON 解析失败: ${(e as Error).message}`);
+      toast.error(t("JSON 解析失败: {0}", { 0: errorText(e) }));
     }
   };
 
@@ -178,26 +204,26 @@ export default function JsonKeyNamingPage() {
     setCollisions([]);
     inputEditorRef.current?.updateValue("");
     outputEditorRef.current?.updateValue("");
-    toast.success("内容已清空");
+    toast.success(t("内容已清空"));
   };
 
   const copyToClipboard = (text: string) => {
     if (!text) {
-      toast.warning("暂无内容可复制");
+      toast.warning(t("暂无内容可复制"));
 
       return;
     }
 
     writeClipboardText(text)
-      .then(() => toast.success("已复制到剪贴板"))
-      .catch(() => toast.error("复制失败"));
+      .then(() => toast.success(t("已复制到剪贴板")))
+      .catch(() => toast.error(t("复制失败")));
   };
 
   return (
     <ToolboxPageTemplate
       toolIcon="solar:text-selection-bold"
       toolIconColor="text-primary"
-      toolName="JSON 字段命名转换"
+      toolName={t("JSON 字段命名转换")}
     >
       <div className="key-naming-layout flex flex-1 min-h-0 overflow-hidden gap-2">
         {/* 左侧输入编辑器 */}
@@ -210,13 +236,13 @@ export default function JsonKeyNamingPage() {
                   icon="solar:document-text-outline"
                   width={16}
                 />
-                输入 JSON
+                {t("输入 JSON")}
               </span>
               <div className="flex items-center gap-1">
-                <Tooltip content="格式化" placement="top">
+                <Tooltip content={t("格式化")} placement="top">
                   <Button
                     isIconOnly
-                    aria-label="格式化"
+                    aria-label={t("格式化")}
                     className="bg-secondary/50 hover:bg-border/60"
                     size="sm"
                     variant="light"
@@ -229,10 +255,10 @@ export default function JsonKeyNamingPage() {
                     />
                   </Button>
                 </Tooltip>
-                <Tooltip content="复制" placement="top">
+                <Tooltip content={t("复制")} placement="top">
                   <Button
                     isIconOnly
-                    aria-label="复制输入"
+                    aria-label={t("复制输入")}
                     className="bg-secondary/50 hover:bg-border/60"
                     size="sm"
                     variant="light"
@@ -331,7 +357,7 @@ export default function JsonKeyNamingPage() {
                 icon="solar:restart-linear"
                 width={14}
               />
-              重置
+              {t("重置")}
             </span>
           </button>
         </div>
@@ -346,13 +372,13 @@ export default function JsonKeyNamingPage() {
                   icon="solar:code-square-linear"
                   width={16}
                 />
-                输出 JSON
+                {t("输出 JSON")}
               </span>
               <div className="flex items-center gap-1">
-                <Tooltip content="格式化" placement="top">
+                <Tooltip content={t("格式化")} placement="top">
                   <Button
                     isIconOnly
-                    aria-label="格式化输出"
+                    aria-label={t("格式化输出")}
                     className="bg-secondary/50 hover:bg-border/60"
                     size="sm"
                     variant="light"
@@ -365,10 +391,10 @@ export default function JsonKeyNamingPage() {
                     />
                   </Button>
                 </Tooltip>
-                <Tooltip content="复制" placement="top">
+                <Tooltip content={t("复制")} placement="top">
                   <Button
                     isIconOnly
-                    aria-label="复制输出"
+                    aria-label={t("复制输出")}
                     className="bg-secondary/50 hover:bg-border/60"
                     size="sm"
                     variant="light"
@@ -386,7 +412,9 @@ export default function JsonKeyNamingPage() {
             {collisions.length > 0 && (
               <div className="max-h-36 overflow-y-auto border-b border-destructive bg-destructive px-3 py-2 text-xs text-destructive dark:border-destructive/60 dark:bg-destructive/30 dark:text-destructive">
                 <div className="mb-1 font-medium">
-                  检测到 {collisions.length} 处字段命名冲突，未生成转换结果：
+                  {t("检测到 {0} 处字段命名冲突，未生成转换结果：", {
+                    0: collisions.length,
+                  })}
                 </div>
                 <ul className="space-y-1 font-mono">
                   {collisions.map(({ path, sourceKeys, targetKey }) => (

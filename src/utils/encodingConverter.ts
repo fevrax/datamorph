@@ -1,3 +1,4 @@
+import { DiagnosticError, message, type Diagnostic } from "@/i18n/diagnostics";
 import { Base64 } from "js-base64";
 
 export type EncodingType =
@@ -28,11 +29,11 @@ export interface EncodingDetection {
   confidence: "high";
 }
 
-export class EncodingConversionError extends Error {
+export class EncodingConversionError extends DiagnosticError {
   readonly encoding: EncodingType;
 
-  constructor(encoding: EncodingType, message: string) {
-    super(message);
+  constructor(encoding: EncodingType, diagnostic: Diagnostic) {
+    super(diagnostic);
     this.name = "EncodingConversionError";
     this.encoding = encoding;
   }
@@ -57,7 +58,7 @@ function decodeUtf8(bytes: Uint8Array, encoding: EncodingType): string {
   } catch {
     throw new EncodingConversionError(
       encoding,
-      "解码后的字节不是有效的 UTF-8 文本",
+      message("解码后的字节不是有效的 UTF-8 文本"),
     );
   }
 }
@@ -69,7 +70,10 @@ function normalizeBase64(input: string, type: "base64" | "base64url"): string {
     type === "base64" ? /^[A-Za-z0-9+/]*={0,2}$/u : /^[A-Za-z0-9_-]*={0,2}$/u;
 
   if (!compact || !pattern.test(compact)) {
-    throw new EncodingConversionError(type, `请输入有效的 ${label} 内容`);
+    throw new EncodingConversionError(
+      type,
+      message("请输入有效的 {0} 内容", { 0: label }),
+    );
   }
 
   const firstPadding = compact.indexOf("=");
@@ -77,14 +81,20 @@ function normalizeBase64(input: string, type: "base64" | "base64url"): string {
   const existingPadding = firstPadding >= 0 ? compact.length - firstPadding : 0;
 
   if (content.length % 4 === 1 || existingPadding > 2) {
-    throw new EncodingConversionError(type, `${label} 长度或填充不正确`);
+    throw new EncodingConversionError(
+      type,
+      message("{0} 长度或填充不正确", { 0: label }),
+    );
   }
 
   const standard = content.replace(/-/g, "+").replace(/_/g, "/");
   const requiredPadding = (4 - (standard.length % 4)) % 4;
 
   if (existingPadding > 0 && existingPadding !== requiredPadding) {
-    throw new EncodingConversionError(type, `${label} 填充不正确`);
+    throw new EncodingConversionError(
+      type,
+      message("{0} 填充不正确", { 0: label }),
+    );
   }
 
   return standard + "=".repeat(requiredPadding);
@@ -99,7 +109,9 @@ function decodeBase64(input: string, type: "base64" | "base64url"): string {
     if (error instanceof EncodingConversionError) throw error;
     throw new EncodingConversionError(
       type,
-      `请输入有效的 ${type === "base64" ? "Base64" : "Base64URL"} 内容`,
+      message("请输入有效的 {0} 内容", {
+        0: type === "base64" ? "Base64" : "Base64URL",
+      }),
     );
   }
 }
@@ -125,7 +137,10 @@ function decodeUrl(input: string, mode: UrlEncodingMode): string {
 
     return decodeURIComponent(input);
   } catch {
-    throw new EncodingConversionError("url", "URL 百分号转义不完整或格式无效");
+    throw new EncodingConversionError(
+      "url",
+      message("URL 百分号转义不完整或格式无效"),
+    );
   }
 }
 
@@ -164,7 +179,10 @@ function decodeUnicode(input: string): string {
     const marker = input[index + 1];
 
     if (!marker) {
-      throw new EncodingConversionError("unicode", "末尾存在不完整的转义符");
+      throw new EncodingConversionError(
+        "unicode",
+        message("末尾存在不完整的转义符"),
+      );
     }
 
     const commonEscapes: Record<string, string> = {
@@ -190,7 +208,10 @@ function decodeUnicode(input: string): string {
       const hex = readHex(input, index + 2, 2);
 
       if (!hex) {
-        throw new EncodingConversionError("unicode", "存在无效的 \\x 转义");
+        throw new EncodingConversionError(
+          "unicode",
+          message("存在无效的 \\x 转义"),
+        );
       }
 
       output += String.fromCodePoint(Number.parseInt(hex, 16));
@@ -201,7 +222,7 @@ function decodeUnicode(input: string): string {
     if (marker !== "u") {
       throw new EncodingConversionError(
         "unicode",
-        `不支持的转义序列：\\${marker}`,
+        message("不支持的转义序列：\\{0}", { 0: marker }),
       );
     }
 
@@ -211,7 +232,7 @@ function decodeUnicode(input: string): string {
       if (closingIndex < 0) {
         throw new EncodingConversionError(
           "unicode",
-          "存在未闭合的 \\u{...} 转义",
+          message("存在未闭合的 \\u{...} 转义"),
         );
       }
 
@@ -223,7 +244,10 @@ function decodeUnicode(input: string): string {
         codePoint > 0x10ffff ||
         (codePoint >= 0xd800 && codePoint <= 0xdfff)
       ) {
-        throw new EncodingConversionError("unicode", "存在无效的 Unicode 码点");
+        throw new EncodingConversionError(
+          "unicode",
+          message("存在无效的 Unicode 码点"),
+        );
       }
 
       output += String.fromCodePoint(codePoint);
@@ -234,7 +258,10 @@ function decodeUnicode(input: string): string {
     const firstHex = readHex(input, index + 2, 4);
 
     if (!firstHex) {
-      throw new EncodingConversionError("unicode", "存在无效的 \\u 转义");
+      throw new EncodingConversionError(
+        "unicode",
+        message("存在无效的 \\u 转义"),
+      );
     }
 
     const firstCodeUnit = Number.parseInt(firstHex, 16);
@@ -243,7 +270,7 @@ function decodeUnicode(input: string): string {
       if (input.slice(index + 6, index + 8) !== "\\u") {
         throw new EncodingConversionError(
           "unicode",
-          "高位代理项缺少低位代理项",
+          message("高位代理项缺少低位代理项"),
         );
       }
 
@@ -251,7 +278,7 @@ function decodeUnicode(input: string): string {
       const secondCodeUnit = secondHex ? Number.parseInt(secondHex, 16) : -1;
 
       if (secondCodeUnit < 0xdc00 || secondCodeUnit > 0xdfff) {
-        throw new EncodingConversionError("unicode", "代理项组合无效");
+        throw new EncodingConversionError("unicode", message("代理项组合无效"));
       }
 
       output += String.fromCodePoint(
@@ -262,7 +289,10 @@ function decodeUnicode(input: string): string {
     }
 
     if (firstCodeUnit >= 0xdc00 && firstCodeUnit <= 0xdfff) {
-      throw new EncodingConversionError("unicode", "存在孤立的低位代理项");
+      throw new EncodingConversionError(
+        "unicode",
+        message("存在孤立的低位代理项"),
+      );
     }
 
     output += String.fromCodePoint(firstCodeUnit);
@@ -318,14 +348,18 @@ function decodeByteString(input: string, encoding: "hex" | "binary"): string {
   if (!compact || !pattern.test(compact)) {
     throw new EncodingConversionError(
       encoding,
-      `请输入有效的${encoding === "hex" ? "十六进制" : "二进制"}内容`,
+      message("请输入有效的{0}内容", {
+        0: encoding === "hex" ? message("十六进制") : message("二进制"),
+      }),
     );
   }
 
   if (compact.length % byteLength !== 0) {
     throw new EncodingConversionError(
       encoding,
-      `${encoding === "hex" ? "Hex" : "Binary"} 必须由完整字节组成`,
+      message("{0} 必须由完整字节组成", {
+        0: encoding === "hex" ? "Hex" : "Binary",
+      }),
     );
   }
 

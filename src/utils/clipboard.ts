@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 /**
  * 剪贴板工具函数
  * 优先使用现代的Navigator Clipboard API，在不支持或非HTTPS环境下回退到传统方式
@@ -38,7 +39,7 @@ export async function readClipboardText(): Promise<string> {
 async function copyWithExecCommand(
   text: string,
   successMessage?: string,
-  errorMessage = "复制失败，请手动复制",
+  errorMessage = t("复制失败，请手动复制"),
 ): Promise<boolean> {
   try {
     // 创建临时文本区域
@@ -89,7 +90,7 @@ async function copyWithExecCommand(
  * @returns Promise<string | null> 读取的文本或null(如果失败)
  */
 async function readWithPasteEvent(
-  errorMessage = "无法读取剪贴板内容",
+  errorMessage = t("无法读取剪贴板内容"),
 ): Promise<string | null> {
   return new Promise((resolve) => {
     // 创建一个临时的不可见输入框
@@ -102,7 +103,7 @@ async function readWithPasteEvent(
     document.body.appendChild(tempInput);
 
     // 提示用户进行粘贴操作
-    toast.warning("请按 Ctrl+V 粘贴内容");
+    toast.warning(t("请按 Ctrl+V 粘贴内容"));
 
     // 监听粘贴事件
     const handlePaste = (e: ClipboardEvent) => {
@@ -144,11 +145,11 @@ async function readWithPasteEvent(
  */
 export async function copyToClipboard(
   text: string,
-  successMessage = "复制成功！",
-  errorMessage = "复制失败，请手动复制",
+  successMessage = t("复制成功！"),
+  errorMessage = t("复制失败，请手动复制"),
 ): Promise<boolean> {
   if (!text) {
-    toast.error("没有内容可复制");
+    toast.error(t("没有内容可复制"));
 
     return false;
   }
@@ -180,7 +181,7 @@ export async function copyToClipboard(
  * @returns Promise<string | null> 读取的文本或null(如果失败)
  */
 export async function readFromClipboard(
-  errorMessage = "无法读取剪贴板内容",
+  errorMessage = t("无法读取剪贴板内容"),
 ): Promise<string | null> {
   // 方案1: 使用现代的Navigator Clipboard API
   try {

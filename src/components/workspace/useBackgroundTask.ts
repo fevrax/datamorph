@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import { useContext, useEffect, useRef, useCallback } from "react";
 import { ToolContext } from "./ToolContext";
 import { runJsonTask, cancelJsonTask } from "@/workers/client";
@@ -15,7 +16,7 @@ export function useBackgroundTask(source: string, channel = "conversion") {
       const snapshot = current.current;
       const result = await runJsonTask(scope, input);
       if (current.current !== snapshot)
-        throw new DOMException("输入已变化", "AbortError");
+        throw new DOMException(t("输入已变化"), "AbortError");
       return result;
     },
     [scope],

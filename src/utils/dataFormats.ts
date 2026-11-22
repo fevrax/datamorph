@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 export type LanguageMode = "auto" | "manual";
 export const UNTITLED_DOCUMENT_NAME = "未命名";
 export function isDefaultDocumentName(title?: string): boolean {
@@ -141,7 +142,9 @@ export const DATA_FORMATS = [
   {
     id: "plaintext",
     highlighter: "builtin",
-    name: "普通文本",
+    get name() {
+      return t("普通文本");
+    },
     extensions: ["txt"],
     jsonOperations: false,
   },
