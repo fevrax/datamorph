@@ -1,3 +1,10 @@
+# [2.9.0](https://github.com/fevrax/datamorph/compare/v2.8.0...v2.9.0) (2026-11-22)
+
+
+### Features
+
+* **editor:** style inline decoder hints as translucent line-end pills ([f90d03c](https://github.com/fevrax/datamorph/commit/f90d03cb917511a41e7361ef1b0b1d6efada7d49)), closes [#31](https://github.com/fevrax/datamorph/issues/31)
+
 # [2.8.0](https://github.com/fevrax/datamorph/compare/v2.7.0...v2.8.0) (2026-11-22)
 
 
