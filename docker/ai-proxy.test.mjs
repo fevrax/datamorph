@@ -27,10 +27,10 @@ test("unconfigured site fails closed and replaces an old key on restart", () => 
     execFileSync("sh", [script], {
       env: { ...env, OPENAI_API_KEY: "test-only-key" },
     });
-    execFileSync("sh", [script], { env });
+    execFileSync("sh", [script], { env: { ...env, OPENAI_MODELS: "gpt-4o" } });
     const config = readFileSync(path, "utf8");
     assert.match(config, /return 503/);
-    assert.doesNotMatch(config, /test-only-key|proxy_pass/);
+    assert.doesNotMatch(config, /test-only-key|proxy_pass|gpt-4o/);
   });
 });
 
@@ -41,6 +41,7 @@ test("only chat and models are proxied with server credentials and limits", () =
         ...env,
         OPENAI_API_KEY: "test-only-key",
         OPENAI_BASE_URL: "https://example.com/v2/",
+        OPENAI_MODELS: " , \t, ",
       },
     });
     const config = readFileSync(path, "utf8");
@@ -63,7 +64,44 @@ test("only chat and models are proxied with server credentials and limits", () =
   });
 });
 
-test("invalid credentials and upstream configuration cannot inject nginx directives", () => {
+test("configured models replace only the model-list proxy", () => {
+  withConfig((path, env) => {
+    execFileSync("sh", [script], {
+      env: {
+        ...env,
+        OPENAI_API_KEY: "test-only-key",
+        OPENAI_MODELS: " gpt-4o-mini, org/model:v2@fp+4 ,gpt-4o-mini, ",
+      },
+    });
+    const config = readFileSync(path, "utf8");
+    const modelsLocation = config.slice(
+      config.indexOf("location = /api/ai/v1/models"),
+    );
+    assert.match(
+      config,
+      /proxy_pass https:\/\/example\.com\/v1\/chat\/completions;/,
+    );
+    assert.doesNotMatch(modelsLocation, /proxy_pass|test-only-key/);
+    assert.match(modelsLocation, /\$request_method != GET/);
+    assert.match(modelsLocation, /\$http_sec_fetch_site = cross-site/);
+    assert.match(modelsLocation, /default_type application\/json;/);
+    assert.match(modelsLocation, /Cache-Control "no-store"/);
+    assert.deepEqual(
+      JSON.parse(modelsLocation.match(/return 200 '([^']+)';/)[1]),
+      {
+        object: "list",
+        data: ["gpt-4o-mini", "org/model:v2@fp+4"].map((id) => ({
+          id,
+          object: "model",
+          created: 0,
+          owned_by: "site",
+        })),
+      },
+    );
+  });
+});
+
+test("invalid site AI configuration cannot inject nginx directives", () => {
   for (const invalid of [
     { OPENAI_API_KEY: 'key"; return 200; #' },
     { OPENAI_API_KEY: "key\nheader" },
@@ -71,6 +109,8 @@ test("invalid credentials and upstream configuration cannot inject nginx directi
     { OPENAI_BASE_URL: "https://$http_host/v1" },
     { OPENAI_BASE_URL: "https://example.com/v1;" },
     { OPENAI_BASE_URL: "http://example.com/v1" },
+    { OPENAI_MODELS: "valid,model'; return 200; #" },
+    { OPENAI_MODELS: "valid,$http_host" },
   ]) {
     withConfig((path, env) => {
       const result = spawnSync("sh", [script], {

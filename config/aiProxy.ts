@@ -14,6 +14,28 @@ export function siteAIProxy(env: Record<string, string>): Plugin {
   ) {
     throw new Error("OPENAI_BASE_URL must be an HTTPS API base URL");
   }
+  const modelIds = [
+    ...new Set(
+      (env.OPENAI_MODELS || "")
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean),
+    ),
+  ];
+  if (configured && modelIds.some((id) => /[^a-zA-Z0-9._:/@+-]/.test(id))) {
+    throw new Error("Invalid OPENAI_MODELS model ID");
+  }
+  const modelsResponse = modelIds.length
+    ? JSON.stringify({
+        object: "list",
+        data: modelIds.map((id) => ({
+          id,
+          object: "model",
+          created: 0,
+          owned_by: "site",
+        })),
+      })
+    : null;
   return {
     name: "site-ai-proxy",
     apply: "serve",
@@ -21,7 +43,9 @@ export function siteAIProxy(env: Record<string, string>): Plugin {
       server: {
         proxy: configured
           ? {
-              "^/api/ai/v1/(models|chat/completions)$": {
+              [modelsResponse
+                ? "^/api/ai/v1/chat/completions$"
+                : "^/api/ai/v1/(models|chat/completions)$"]: {
                 target: baseURL,
                 changeOrigin: true,
                 secure: true,
@@ -66,6 +90,9 @@ export function siteAIProxy(env: Record<string, string>): Plugin {
         if (request.method !== method) return fail(405, "请求方法不支持");
         if (!configured)
           return fail(503, "站点API尚未配置，请在 .env 中设置 API 地址和密钥");
+        if (modelsResponse && request.url === "/api/ai/v1/models") {
+          return response.end(modelsResponse);
+        }
         next();
       });
     },

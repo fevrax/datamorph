@@ -53,6 +53,22 @@ case "$upstream_path" in
 esac
 upstream_path=${upstream_path%/}
 
+if ! models_response=$(LC_ALL=C awk 'BEGIN {
+    count = split(ENVIRON["OPENAI_MODELS"], models, ",")
+    for (index_ = 1; index_ <= count; index_++) {
+        id = models[index_]
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", id)
+        if (id == "" || seen[id]++) continue
+        if (id ~ /[^a-zA-Z0-9._:\/@+-]/) exit 1
+        if (data != "") data = data ","
+        data = data "{\"id\":\"" id "\",\"object\":\"model\",\"created\":0,\"owned_by\":\"site\"}"
+    }
+    if (data != "") printf "{\"object\":\"list\",\"data\":[%s]}", data
+}' </dev/null); then
+  echo "Invalid OPENAI_MODELS model ID" >&2
+  exit 1
+fi
+
 # Only expose the two API operations used by the UI, not a general proxy.
 for endpoint in chat/completions models; do
   if [ "$endpoint" = models ]; then
@@ -65,6 +81,17 @@ for endpoint in chat/completions models; do
 location = /api/ai/v1/$endpoint {
     if (\$request_method != $allowed_method) { return 405; }
     if (\$http_sec_fetch_site = cross-site) { return 403; }
+    add_header Cache-Control "no-store" always;
+NGINX
+  if [ "$endpoint" = models ] && [ -n "$models_response" ]; then
+    cat >> "$config_path" <<NGINX
+    default_type application/json;
+    return 200 '$models_response';
+}
+NGINX
+    continue
+  fi
+  cat >> "$config_path" <<NGINX
     limit_req zone=ai_requests burst=3 nodelay;
     limit_req_status 429;
     limit_conn ai_connections 2;
@@ -85,7 +112,6 @@ location = /api/ai/v1/$endpoint {
     proxy_buffering off;
     proxy_cache off;
     proxy_ignore_client_abort off;
-    add_header Cache-Control "no-store" always;
 }
 NGINX
 done
