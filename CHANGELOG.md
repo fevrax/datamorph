@@ -1,3 +1,10 @@
+# [2.5.0](https://github.com/fevrax/datamorph/compare/v2.4.0...v2.5.0) (2026-11-22)
+
+
+### Features
+
+* **workspace:** default New Tab numbering and optional AI tab naming ([203bf80](https://github.com/fevrax/datamorph/commit/203bf800957784a3d56b003d02eb0add411fb32d))
+
 # [2.4.0](https://github.com/fevrax/datamorph/compare/v2.3.0...v2.4.0) (2026-11-22)
 
 
