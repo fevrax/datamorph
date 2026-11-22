@@ -1216,4 +1216,22 @@ export const messages = {
   "开启后，输入或粘贴内容时使用当前 AI 线路自动为默认标签页生成名称":
     "Automatically name default tabs from their content using the active AI route",
   "AI 自动命名标签已{0}": "AI auto-name tabs {0}",
+  "自动识别 19+ 数据格式，支持行内智能解码与多视图切换。":
+    "Auto-detects 19+ formats with inline decoding and multi-view switching.",
+  预览数据形态: "Preview data shapes",
+  表格视图: "Table view",
+  "Monaco 智能编辑": "Monaco smart editing",
+  树形结构浏览: "Tree structure view",
+  表格与筛选导出: "Table filtering & export",
+  支持一键重排编号: "One-click field renumbering",
+  字段: "Field",
+  类型: "Type",
+  原始值: "Raw value",
+  智能解析: "Decoded",
+  靛蓝: "Indigo",
+  "URL 导入": "Import URL",
+  "AI 生成": "AI generate",
+  直接粘贴: "Paste directly",
+  命令面板: "Command palette",
+  拖放文件至此: "Drop files here",
 } as const satisfies Record<string, string>;

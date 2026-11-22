@@ -7,6 +7,8 @@ import {
   formatFromFilename,
 } from "./dataFormats";
 import { executeJsonTask } from "../workers/jsonTasks";
+import { JsonSample } from "./jsonSample";
+import { ProtoSample, YamlSample } from "./welcomeSamples";
 
 const samples = {
   proto: 'syntax="proto3";message User{string name=1;}',
@@ -189,4 +191,9 @@ test("JSON operations cannot process another data format, including keyboard-tri
       {},
     );
   }
+});
+test("welcome morph samples auto-detect to their target formats", () => {
+  assert.equal(detectDataFormat(JsonSample), "json");
+  assert.equal(detectDataFormat(YamlSample), "yaml");
+  assert.equal(detectDataFormat(ProtoSample), "proto");
 });

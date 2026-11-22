@@ -54,7 +54,10 @@ import {
   SelectItem,
   Spinner,
 } from "@/components/ui";
-import DynamicTabs, { importFiles } from "@/components/dynamicTabs/DynamicTabs";
+import DynamicTabs, {
+  importFiles,
+  type DynamicTabsRef,
+} from "@/components/dynamicTabs/DynamicTabs";
 import MonacoDataEditor, {
   type MonacoDataEditorRef,
 } from "@/components/monacoEditor/MonacoDataEditor";
@@ -76,7 +79,6 @@ import { runJsonTask, cancelJsonTask, type TaskResult } from "@/workers/client";
 import type { JsonTask } from "@/workers/jsonTasks";
 import type { JsonTableViewRef } from "@/components/jsonTable/JsonTableView";
 import { stringifyJson } from "@/utils/json";
-import { JsonSample } from "@/utils/jsonSample";
 import clipboard from "@/utils/clipboard";
 import toast from "@/utils/toast";
 import { useDelayedVisibility } from "@/hooks/useDelayedVisibility";
@@ -219,7 +221,15 @@ function ToolResultActions({ tabKey }: { tabKey: string }) {
     </>
   );
 }
-function DocumentWorkspace({ tabKey }: { tabKey: string }) {
+function DocumentWorkspace({
+  tabKey,
+  onImportUrl,
+  onImportBase64,
+}: {
+  tabKey: string;
+  onImportUrl: () => void;
+  onImportBase64: () => void;
+}) {
   useLocale();
   const tab = useTabStore((s) => s.getTabByKey(tabKey))!;
   const editor = useRef<MonacoDataEditorRef>(null);
@@ -544,10 +554,17 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
               }}
               emptyState={
                 <WorkspaceWelcome
-                  onSample={() => {
-                    editor.current?.updateValue(JsonSample);
-                    editor.current?.focus();
+                  onSample={(content, options) => {
+                    editor.current?.updateValue(content);
+                    if (options?.view) {
+                      store.setView(tab.key, options.view);
+                    } else {
+                      editor.current?.focus();
+                    }
                   }}
+                  onOpenAI={() => editor.current?.showAiPrompt()}
+                  onImportUrl={onImportUrl}
+                  onImportBase64={onImportBase64}
                 />
               }
             />
@@ -807,6 +824,7 @@ export default function IndexPage() {
   const { pathname } = useLocation();
   const { toolId } = useParams();
   const [dragging, setDragging] = useState(false);
+  const tabsRef = useRef<DynamicTabsRef>(null);
   useEffect(() => {
     void useTabStore.getState().syncTabStore();
   }, []);
@@ -840,11 +858,16 @@ export default function IndexPage() {
         void importFiles(Array.from(event.dataTransfer.files));
       }}
     >
-      <DynamicTabs onSwitch={onTabSwitch} />
+      <DynamicTabs ref={tabsRef} onSwitch={onTabSwitch} />
       {!hydrated || !ready ? (
         <Loading />
       ) : tab?.kind === "document" ? (
-        <DocumentWorkspace key={tab.key} tabKey={tab.key} />
+        <DocumentWorkspace
+          key={tab.key}
+          tabKey={tab.key}
+          onImportUrl={() => tabsRef.current?.openImportDialog("url")}
+          onImportBase64={() => tabsRef.current?.openImportDialog("base64")}
+        />
       ) : (
         <Suspense fallback={<Loading />}>
           {tab?.kind === "toolbox" ? (
