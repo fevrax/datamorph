@@ -8,6 +8,7 @@ import {
   type DecoderKind,
   type DecodedToken,
 } from "./detectors";
+import { formatDecoderPillText } from "./hintFormatting";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { OPEN_TIME_ZONE_EVENT, resolveTimeZone } from "@/utils/timeZone";
 import clipboard from "@/utils/clipboard";
@@ -134,32 +135,52 @@ export function updateDecoder(
   }
   const tokens = scan(entry).filter((t) => t.kind === kind);
   const model = editor.getModel()!;
-  const lineEnd = kind === "timestamp" && model.getLanguageId() === "plaintext";
-  const lineHints = new Map<number, string[]>();
-  const hint = (content: string): monaco.editor.InjectedTextOptions => ({
-    content: "  " + content,
-    inlineClassName: "json-decoded-hint",
-    cursorStops: monaco.editor.InjectedTextCursorStops.None,
-  });
-  const decorations: monaco.editor.IModelDeltaDecoration[] = tokens.map((t) => {
-    if (lineEnd) {
-      const labels = lineHints.get(t.line) || [];
-      labels.push(t.decoded);
-      lineHints.set(t.line, labels);
+  const isPlainText = model.getLanguageId() === "plaintext";
+  const lineValues = new Map<number, string[]>();
+  const decorations: monaco.editor.IModelDeltaDecoration[] = tokens.map(
+    (token) => {
+      const labels = lineValues.get(token.line) || [];
+      labels.push(token.decoded);
+      lineValues.set(token.line, labels);
+      return {
+        range: new monaco.Range(
+          token.line,
+          token.start + 1,
+          token.line,
+          token.end + 1,
+        ),
+        options: {
+          inlineClassName: `json-decoded-value json-decoded-value-${kind}`,
+        },
+      };
+    },
+  );
+  const imageLabel = kind === "image" ? t("图片") : undefined;
+  for (const [line, values] of lineValues) {
+    if (
+      !isPlainText &&
+      kind !== "timestamp" &&
+      values.length > 2 &&
+      model.getLineLength(line) > 800
+    ) {
+      continue;
     }
-    return {
-      range: new monaco.Range(t.line, t.start + 1, t.line, t.end + 1),
-      options: {
-        inlineClassName: "json-decoded-value",
-        after: kind === "timestamp" && !lineEnd ? hint(t.decoded) : undefined,
-      },
-    };
-  });
-  for (const [line, labels] of lineHints) {
+    const text = formatDecoderPillText(kind, values, {
+      plainText: isPlainText,
+      imageLabel,
+    });
+    if (!text) continue;
     const column = model.getLineMaxColumn(line);
     decorations.push({
       range: new monaco.Range(line, column, line, column),
-      options: { showIfCollapsed: true, after: hint(labels.join(" · ")) },
+      options: {
+        showIfCollapsed: true,
+        after: {
+          content: ` ${text} `,
+          inlineClassName: `json-decoded-hint json-decoded-pill json-decoded-pill-${kind}`,
+          cursorStops: monaco.editor.InjectedTextCursorStops.None,
+        },
+      },
     });
   }
   collection.set(decorations);

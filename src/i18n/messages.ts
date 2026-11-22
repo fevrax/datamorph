@@ -1234,4 +1234,5 @@ export const messages = {
   直接粘贴: "Paste directly",
   命令面板: "Command palette",
   拖放文件至此: "Drop files here",
+  图片: "Image",
 } as const satisfies Record<string, string>;
