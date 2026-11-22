@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { FileJson2, Orbit, X } from "lucide-react";
 import { Button } from "@/components/ui";
 import "./assistant.css";
@@ -11,6 +13,7 @@ export default function AIAssistantHeader({
   contextLabel: string;
   onClose: () => void;
 }) {
+  useLocale();
   return (
     <header className="ai-dock-header">
       <div className="flex items-center justify-between gap-3">
@@ -19,7 +22,7 @@ export default function AIAssistantHeader({
             <Orbit className="size-4" />
           </span>
           <div>
-            <h2 className="text-sm font-medium">AI 助手</h2>
+            <h2 className="text-sm font-medium">{t("AI 助手")}</h2>
             <p className="mt-0.5 text-[10px] tracking-[0.18em] text-muted-foreground">
               JSON COPILOT
             </p>
@@ -29,7 +32,7 @@ export default function AIAssistantHeader({
           size="sm"
           isIconOnly
           variant="ghost"
-          aria-label="关闭辅助面板"
+          aria-label={t("关闭辅助面板")}
           onPress={onClose}
         >
           <X />

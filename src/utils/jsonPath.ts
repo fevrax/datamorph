@@ -1,3 +1,4 @@
+import { messageError } from "@/i18n/diagnostics";
 import { exec, type JsonValue } from "jsonpath-rfc9535";
 import parsePath from "jsonpath-rfc9535/parser";
 import { isLosslessNumber, isSafeNumber } from "lossless-json";
@@ -7,7 +8,7 @@ import JSON5 from "json5";
 export function queryJsonPath(source: unknown, expression: string): unknown[] {
   const path = expression.trim();
   if (!path.startsWith("$")) {
-    throw new Error("JSONPath 必须以 $ 开头，例如 $.users[*].name");
+    throw messageError("JSONPath 必须以 $ 开头，例如 $.users[*].name");
   }
   // Validate first: malformed paths must not look like successful empty queries.
   const ast = parsePath(path);
@@ -24,7 +25,7 @@ export function queryJsonPath(source: unknown, expression: string): unknown[] {
     for (const token of unquoted.match(/-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g) ||
       []) {
       if (!isSafeNumber(token)) {
-        throw new Error(
+        throw messageError(
           "过滤条件中的数字超出安全精度，请将长 ID 存为字符串后比较。",
         );
       }
@@ -33,7 +34,7 @@ export function queryJsonPath(source: unknown, expression: string): unknown[] {
   const native = (value: unknown): JsonValue => {
     if (isLosslessNumber(value)) {
       if (hasFilter && !isSafeNumber(value.value)) {
-        throw new Error(
+        throw messageError(
           "数据含超出安全精度的数字，暂不支持条件过滤；可用字段路径直接提取，或将长 ID 存为字符串。",
         );
       }

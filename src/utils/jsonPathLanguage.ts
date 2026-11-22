@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { messageError } from "@/i18n/diagnostics";
 import type { QueryLanguage } from "vanilla-jsoneditor-cn";
 import { parseJson, stringifyJson } from "./json";
 import { queryJsonPath } from "./jsonPath";
@@ -6,11 +8,14 @@ import { queryJsonPath } from "./jsonPath";
 export const jsonPathLanguage: QueryLanguage = {
   id: "jsonpath",
   name: "JSONPath",
-  description:
-    "<p>输入 JSONPath 表达式（如 <code>$.users[*].name</code>）选择节点。结果始终为数组，支持 RFC 9535 语法，不支持排序或对象重构。</p>",
+  get description() {
+    return t(
+      "<p>输入 JSONPath 表达式（如 <code>$.users[*].name</code>）选择节点。结果始终为数组，支持 RFC 9535 语法，不支持排序或对象重构。</p>",
+    );
+  },
   createQuery: (_json, { filter, sort, projection }) => {
     if (sort?.path && sort.direction) {
-      throw new Error("JSONPath 不支持排序，请清空排序选项。");
+      throw messageError("JSONPath 不支持排序，请清空排序选项。");
     }
     const segments = (path: (string | number)[]) =>
       path.map((key) => `[${JSON.stringify(key)}]`).join("");
@@ -26,7 +31,7 @@ export const jsonPathLanguage: QueryLanguage = {
     }
     if (projection?.paths?.length) {
       if (projection.paths.length > 1)
-        throw new Error("JSONPath 不支持对象重构，请只选择一个提取字段。");
+        throw messageError("JSONPath 不支持对象重构，请只选择一个提取字段。");
       if (query === "$") query += "[*]";
       query += segments(projection.paths[0]);
     }

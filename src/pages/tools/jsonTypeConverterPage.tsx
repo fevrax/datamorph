@@ -1,3 +1,6 @@
+import { errorText } from "@/i18n/diagnostics";
+import { t, type StaticMessage } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useToolAI } from "@/components/workspace/useToolAI";
 import { useBackgroundTask } from "@/components/workspace/useBackgroundTask";
@@ -36,7 +39,9 @@ const TARGET_LANGUAGES = [
   { value: "php", label: "PHP", icon: "devicon:php" },
   {
     value: "plaintext",
-    label: "JSON Schema（纯文本）",
+    get label() {
+      return t("JSON Schema（纯文本）");
+    },
     icon: "weui:text-filled",
   },
 ];
@@ -45,63 +50,81 @@ const TARGET_LANGUAGES = [
 const quickPrompts: QuickPrompt[] = [
   {
     id: "convert_to_typescript",
-    label: "转换为TS接口",
+    get label() {
+      return t("转换为TS接口");
+    },
     icon: "simple-icons:typescript",
     prompt: "请将这个JSON转换为TypeScript接口定义，添加适当的注释",
     color: "primary",
   },
   {
     id: "convert_to_go",
-    label: "转换为Go结构体",
+    get label() {
+      return t("转换为Go结构体");
+    },
     icon: "simple-icons:go",
     prompt: "请将这个JSON转换为Go语言结构体，包含json和form标签，添加中文注释",
     color: "secondary",
   },
   {
     id: "convert_to_java",
-    label: "转换为Java类",
+    get label() {
+      return t("转换为Java类");
+    },
     icon: "logos:java",
     prompt: "请将这个JSON转换为Java POJO类，添加Jackson注解和Lombok支持",
     color: "success",
   },
   {
     id: "convert_to_python",
-    label: "转换为Python类",
+    get label() {
+      return t("转换为Python类");
+    },
     icon: "simple-icons:python",
     prompt: "请将这个JSON转换为Python的Pydantic模型，添加字段验证和中文描述",
     color: "warning",
   },
   {
     id: "convert_to_csharp",
-    label: "转换为C#类",
+    get label() {
+      return t("转换为C#类");
+    },
     icon: "simple-icons:csharp",
     prompt: "请将这个JSON转换为C#类，使用属性和Newtonsoft.Json注解",
     color: "primary",
   },
   {
     id: "convert_to_rust",
-    label: "转换为Rust结构体",
+    get label() {
+      return t("转换为Rust结构体");
+    },
     icon: "simple-icons:rust",
     prompt: "请将这个JSON转换为Rust结构体，添加serde注解和类型注释",
     color: "danger",
   },
   {
     id: "convert_to_swift",
-    label: "转换为Swift结构",
+    get label() {
+      return t("转换为Swift结构");
+    },
     icon: "simple-icons:swift",
     prompt: "请将这个JSON转换为Swift结构体，实现Codable协议",
     color: "success",
   },
   {
     id: "convert_to_kotlin",
-    label: "转换为Kotlin类",
+    get label() {
+      return t("转换为Kotlin类");
+    },
     icon: "simple-icons:kotlin",
     prompt: "请将这个JSON转换为Kotlin数据类，添加序列化注解",
     color: "secondary",
   },
   {
     id: "convert_to_dart",
-    label: "转换为Dart类",
+    get label() {
+      return t("转换为Dart类");
+    },
     icon: "simple-icons:dart",
     prompt:
       "请将这个JSON转换为Dart类，使用json_serializable进行序列化，添加适当的类型注解",
@@ -109,14 +132,18 @@ const quickPrompts: QuickPrompt[] = [
   },
   {
     id: "generate_graphql",
-    label: "生成GraphQL Schema",
+    get label() {
+      return t("生成GraphQL Schema");
+    },
     icon: "simple-icons:graphql",
     prompt: "根据这个JSON生成一个完整的GraphQL Schema定义",
     color: "default",
   },
   {
     id: "generate_db_schema",
-    label: "生成数据库模型",
+    get label() {
+      return t("生成数据库模型");
+    },
     icon: "solar:database-outline",
     prompt: "根据这个JSON生成MySQL表结构定义和ORM模型",
     color: "warning",
@@ -126,6 +153,7 @@ const quickPrompts: QuickPrompt[] = [
 const useToolState = createToolStateHook("jsonTypeConverter");
 
 export default function JsonTypeConverterPage() {
+  useLocale();
   const { resolvedTheme: theme } = useTheme();
 
   // 编辑器引用
@@ -137,7 +165,7 @@ export default function JsonTypeConverterPage() {
   const [outputValue, setOutputValue] = useToolState("outputValue", "");
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isAiProcessing, setIsAiProcessing] = useState<boolean>(false);
-  const [processingStep, setProcessingStep] = useState<string>("");
+  const [processingStep, setProcessingStep] = useState<StaticMessage | "">("");
   const [isAiModalOpen, setIsAiModalOpen] = useState<boolean>(false);
   const [prompt, setPrompt] = useState<string>("");
 
@@ -166,13 +194,13 @@ export default function JsonTypeConverterPage() {
     outputEditorRef.current?.updateValue("");
     setInputValue("");
     setOutputValue("");
-    toast.success("内容已清空");
+    toast.success(t("内容已清空"));
   };
 
   // 使用quicktype进行类型转换
   const convertJsonToType = async () => {
     if (!inputValue) {
-      toast.warning("请先输入内容");
+      toast.warning(t("请先输入内容"));
 
       return;
     }
@@ -193,12 +221,12 @@ export default function JsonTypeConverterPage() {
       setOutputValue(result);
       outputEditorRef.current?.updateValue(result);
 
-      toast.success("转换成功");
+      toast.success(t("转换成功"));
       setProcessingStep("转换完成");
     } catch (error) {
       if ((error as Error).name === "AbortError") return;
       console.error("转换错误:", error);
-      toast.error(`转换失败: ${(error as Error).message}`);
+      toast.error(t("转换失败: {0}", { 0: errorText(error) }));
       setProcessingStep("");
     } finally {
       setIsProcessing(false);
@@ -208,26 +236,26 @@ export default function JsonTypeConverterPage() {
   // 复制输出内容
   const copyOutput = () => {
     if (!outputValue) {
-      toast.warning("暂无内容可复制");
+      toast.warning(t("暂无内容可复制"));
 
       return;
     }
 
     writeClipboardText(outputValue)
-      .then(() => toast.success("已复制到剪贴板"))
-      .catch(() => toast.error("复制失败"));
+      .then(() => toast.success(t("已复制到剪贴板")))
+      .catch(() => toast.error(t("复制失败")));
   };
 
   // AI 转换处理函数
   const handleAiConvert = async () => {
     if (!inputValue) {
-      toast.warning("请先输入 JSON 内容");
+      toast.warning(t("请先输入 JSON 内容"));
 
       return;
     }
 
     if (!prompt) {
-      toast.warning("请输入转换需求");
+      toast.warning(t("请输入转换需求"));
 
       return;
     }
@@ -240,7 +268,7 @@ export default function JsonTypeConverterPage() {
       const promptText = `${prompt}\n以下是 JSON 内容：\n\`\`\`json\n${inputValue}\n\`\`\`\n请仅返回转换后的代码并使用\`\`\`语言标记\`\`\`包裹，不要包含任何解释或其他内容。`;
 
       if (promptText.length > openAIService.maxTokens) {
-        toast.error("内容超出限制，请缩短内容或使用其他方式描述需求。");
+        toast.error(t("内容超出限制，请缩短内容或使用其他方式描述需求。"));
         setProcessingStep("");
         setIsAiProcessing(false);
 
@@ -286,7 +314,7 @@ export default function JsonTypeConverterPage() {
           outputEditorRef.current?.updateValue(cleanedResult);
           setTargetLanguage(detectedLang);
           setOutputValue(cleanedResult);
-          toast.success("转换成功");
+          toast.success(t("转换成功"));
           setProcessingStep("转换完成");
         },
         onError: () => {
@@ -295,7 +323,7 @@ export default function JsonTypeConverterPage() {
       });
     } catch (error) {
       console.error("AI转换错误:", error);
-      toast.error(`转换失败: ${(error as Error).message}`);
+      toast.error(t("转换失败: {0}", { 0: errorText(error) }));
     } finally {
       setIsAiProcessing(false);
       setIsAiModalOpen(false);
@@ -313,8 +341,8 @@ export default function JsonTypeConverterPage() {
   return (
     <ToolboxPageTemplate
       toolIcon="fluent-color:code-block-24"
-      toolName="JSON 对象类型转换器"
-      description="从 JSON 生成类型定义，左右对照源数据与代码。"
+      toolName={t("JSON 对象类型转换器")}
+      description={t("从 JSON 生成类型定义，左右对照源数据与代码。")}
       actions={
         <>
           <Button
@@ -323,7 +351,8 @@ export default function JsonTypeConverterPage() {
             isDisabled={busy || !inputValue}
             onPress={convertJsonToType}
           >
-            {isProcessing ? <Spinner size="sm" /> : <Code2 />}生成类型
+            {isProcessing ? <Spinner size="sm" /> : <Code2 />}
+            {t("生成类型")}
           </Button>
           <Button
             variant="outline"
@@ -331,7 +360,8 @@ export default function JsonTypeConverterPage() {
             isDisabled={busy}
             onPress={() => setIsAiModalOpen(true)}
           >
-            {isAiProcessing ? <Spinner size="sm" /> : <WandSparkles />}AI 转换
+            {isAiProcessing ? <Spinner size="sm" /> : <WandSparkles />}
+            {t("AI 转换")}
           </Button>
           <Button
             variant="ghost"
@@ -340,13 +370,13 @@ export default function JsonTypeConverterPage() {
             onPress={handleReset}
           >
             <RotateCcw />
-            重置
+            {t("重置")}
           </Button>
         </>
       }
       statusIndicator={
         <span role="status" aria-live="polite">
-          {processingStep || "JSON → 类型定义"}
+          {t(processingStep || "JSON → 类型定义")}
         </span>
       }
     >
@@ -354,9 +384,9 @@ export default function JsonTypeConverterPage() {
         <AIPromptOverlay
           isOpen={isAiModalOpen}
           prompt={prompt}
-          placeholderText="例如：生成 Go 结构体，添加 JSON 标签和中文注释"
+          placeholderText={t("例如：生成 Go 结构体，添加 JSON 标签和中文注释")}
           quickPrompts={quickPrompts}
-          tipText="支持各种语言的类型定义和自定义结构"
+          tipText={t("支持各种语言的类型定义和自定义结构")}
           onClose={() => setIsAiModalOpen(false)}
           onPromptChange={setPrompt}
           onQuickPromptClick={handleQuickPromptClick}
@@ -368,14 +398,14 @@ export default function JsonTypeConverterPage() {
           maxLeftWidth={70}
         >
           <ToolPanel
-            title="输入 JSON"
+            title={t("输入 JSON")}
             actions={
               <Button
                 size="sm"
                 variant="ghost"
                 onPress={() => inputEditorRef.current?.format()}
               >
-                格式化
+                {t("格式化")}
               </Button>
             }
           >
@@ -389,11 +419,11 @@ export default function JsonTypeConverterPage() {
             />
           </ToolPanel>
           <ToolPanel
-            title="输出类型"
+            title={t("输出类型")}
             actions={
               <>
                 <Select
-                  aria-label="目标语言"
+                  aria-label={t("目标语言")}
                   className="w-40"
                   selectedKeys={[targetLanguage]}
                   size="sm"
@@ -408,7 +438,7 @@ export default function JsonTypeConverterPage() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  aria-label="复制结果"
+                  aria-label={t("复制结果")}
                   isDisabled={!outputValue}
                   onPress={copyOutput}
                 >

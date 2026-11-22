@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { useEffect, useMemo, useState } from "react";
 import { Command } from "cmdk";
 import { Check, ChevronsUpDown, Globe2, Search } from "lucide-react";
@@ -21,6 +23,7 @@ import {
 } from "@/utils/timeZone";
 
 function TimeZoneList({ onSelect }: { onSelect: () => void }) {
+  useLocale();
   const value = useSettingsStore((s) => s.timestampTimeZone);
   const setTimeZone = useSettingsStore((s) => s.setTimestampTimeZone);
   const zones = useMemo(
@@ -29,7 +32,7 @@ function TimeZoneList({ onSelect }: { onSelect: () => void }) {
   );
   return (
     <Command
-      label="选择时间戳时区"
+      label={t("选择时间戳时区")}
       filter={(value, search, keywords) => {
         const normalize = (text: string) =>
           text.toLowerCase().replace(/_/g, " ");
@@ -46,14 +49,14 @@ function TimeZoneList({ onSelect }: { onSelect: () => void }) {
           aria-hidden="true"
         />
         <Command.Input
-          aria-label="搜索时区"
-          placeholder="搜索城市或时区…"
+          aria-label={t("搜索时区")}
+          placeholder={t("搜索城市或时区…")}
           className="h-10 w-full bg-transparent text-[13px] outline-none placeholder:text-muted-foreground"
         />
       </div>
       <Command.List className="max-h-[min(300px,45dvh)] overflow-y-auto overscroll-contain p-1.5">
         <Command.Empty className="px-3 py-6 text-center text-xs text-muted-foreground">
-          未找到时区，请尝试城市英文名
+          {t("未找到时区，请尝试城市英文名")}
         </Command.Empty>
         {zones.map((zone) => (
           <Command.Item
@@ -89,6 +92,7 @@ function TimeZoneList({ onSelect }: { onSelect: () => void }) {
 }
 
 export function TimeZoneSelector({ className }: { className?: string }) {
+  useLocale();
   const [open, setOpen] = useState(false);
   const value = useSettingsStore((s) => s.timestampTimeZone);
   return (
@@ -96,7 +100,7 @@ export function TimeZoneSelector({ className }: { className?: string }) {
       <PopoverTrigger>
         <button
           type="button"
-          aria-label="时间戳时区"
+          aria-label={t("时间戳时区")}
           title={resolveTimeZone(value)}
           className={cn(
             "flex min-h-9 w-full min-w-0 items-center gap-2 rounded-lg border border-input bg-background px-2.5 py-1.5 text-left text-[12px] transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -117,7 +121,7 @@ export function TimeZoneSelector({ className }: { className?: string }) {
         </button>
       </PopoverTrigger>
       <PopoverContent
-        aria-label="选择时间戳时区"
+        aria-label={t("选择时间戳时区")}
         collisionPadding={12}
         className="z-[140] w-72 max-w-[calc(100vw-1.5rem)] overflow-hidden p-0"
       >
@@ -129,6 +133,7 @@ export function TimeZoneSelector({ className }: { className?: string }) {
 
 /** The hover command also works in editors without a settings toolbar. */
 export function TimeZoneDialog() {
+  useLocale();
   const [open, setOpen] = useState(false);
   useEffect(() => {
     const show = () => setOpen(true);
@@ -138,9 +143,9 @@ export function TimeZoneDialog() {
   return (
     <Modal isOpen={open} onClose={() => setOpen(false)}>
       <ModalContent className="max-w-sm">
-        <ModalHeader>时间戳时区</ModalHeader>
+        <ModalHeader>{t("时间戳时区")}</ModalHeader>
         <p className="px-5 pb-3 text-xs text-muted-foreground">
-          选择后立即应用于所有编辑器，也可在系统设置中更改。
+          {t("选择后立即应用于所有编辑器，也可在系统设置中更改。")}
         </p>
         <TimeZoneList onSelect={() => setOpen(false)} />
       </ModalContent>

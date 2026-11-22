@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 export const jsonPathSample = {
   users: [
     { id: 1, name: "张三", age: 25, department: "技术部", active: true },
@@ -10,51 +11,99 @@ export const jsonPathSample = {
 
 export const jsonPathExamples = [
   {
-    title: "提取姓名",
+    get title() {
+      return t("提取姓名");
+    },
     path: "$.users[*].name",
-    description: "遍历数组，获取每位用户的姓名",
-    category: "基础",
+    get description() {
+      return t("遍历数组，获取每位用户的姓名");
+    },
+    get category() {
+      return t("基础");
+    },
   },
   {
-    title: "第一个用户",
+    get title() {
+      return t("第一个用户");
+    },
     path: "$.users[0]",
-    description: "数组下标从 0 开始",
-    category: "基础",
+    get description() {
+      return t("数组下标从 0 开始");
+    },
+    get category() {
+      return t("基础");
+    },
   },
   {
-    title: "条件筛选",
+    get title() {
+      return t("条件筛选");
+    },
     path: "$.users[?(@.age >= 28)]",
-    description: "筛选年龄大于等于 28 的用户",
-    category: "筛选",
+    get description() {
+      return t("筛选年龄大于等于 28 的用户");
+    },
+    get category() {
+      return t("筛选");
+    },
   },
   {
-    title: "组合条件",
+    get title() {
+      return t("组合条件");
+    },
     path: "$.users[?(@.active == true && @.age < 30)].name",
-    description: "获取活跃且小于 30 岁的用户姓名",
-    category: "筛选",
+    get description() {
+      return t("获取活跃且小于 30 岁的用户姓名");
+    },
+    get category() {
+      return t("筛选");
+    },
   },
   {
-    title: "数组切片",
+    get title() {
+      return t("数组切片");
+    },
     path: "$.users[0:2]",
-    description: "获取前两位用户，不含结束下标",
-    category: "基础",
+    get description() {
+      return t("获取前两位用户，不含结束下标");
+    },
+    get category() {
+      return t("基础");
+    },
   },
   {
-    title: "递归查找",
+    get title() {
+      return t("递归查找");
+    },
     path: "$..name",
-    description: "查找任意层级的 name 字段",
-    category: "进阶",
+    get description() {
+      return t("查找任意层级的 name 字段");
+    },
+    get category() {
+      return t("进阶");
+    },
   },
   {
-    title: "中文字段值",
+    get title() {
+      return t("中文字段值");
+    },
     path: "$.users[?(@.department == '技术部')].name",
-    description: "提取技术部用户的姓名",
-    category: "筛选",
+    get description() {
+      return t("提取技术部用户的姓名");
+    },
+    get category() {
+      return t("筛选");
+    },
   },
   {
-    title: "特殊字段名",
+    get title() {
+      return t("特殊字段名");
+    },
     path: "$.metadata['last updated']",
-    description: "包含空格或点号的键使用方括号",
-    category: "进阶",
+    get description() {
+      return t("包含空格或点号的键使用方括号");
+    },
+    get category() {
+      return t("进阶");
+    },
   },
 ] as const;

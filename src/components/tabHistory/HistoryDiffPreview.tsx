@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { useEffect, useRef, useState } from "react";
 import * as monaco from "monaco-editor";
 import { getMonacoTheme } from "@/components/monacoEditor/editorTheme";
@@ -21,6 +23,7 @@ export default function HistoryDiffPreview({
   filename?: string;
   theme: string;
 }) {
+  useLocale();
   const theme = getMonacoTheme(requestedTheme);
   const originalLanguage = useDataLanguage(
     original,
@@ -67,8 +70,8 @@ export default function HistoryDiffPreview({
           readOnly: true,
           domReadOnly: true,
           originalEditable: false,
-          originalAriaLabel: "历史版本内容，只读",
-          modifiedAriaLabel: "当前文档内容，只读",
+          originalAriaLabel: t("历史版本内容，只读"),
+          modifiedAriaLabel: t("当前文档内容，只读"),
           renderSideBySide: true,
           useInlineViewWhenSpaceIsLimited: true,
           renderSideBySideInlineBreakpoint: 520,
@@ -135,14 +138,14 @@ export default function HistoryDiffPreview({
           ref={host}
           className="h-full w-full"
           role="region"
-          aria-label="历史与当前内容差异"
+          aria-label={t("历史与当前内容差异")}
         />
         {status !== "ready" && (
           <div className="absolute inset-0 flex items-center justify-center bg-background">
             {status === "loading" ? (
-              <Spinner label="正在准备比较…" />
+              <Spinner label={t("正在准备比较…")} />
             ) : (
-              <p role="alert">无法加载比较，请切换到内容预览。</p>
+              <p role="alert">{t("无法加载比较，请切换到内容预览。")}</p>
             )}
           </div>
         )}

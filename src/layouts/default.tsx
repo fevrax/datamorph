@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { useTabMetadata } from "@/store/useTabMetadata";
 import "@/styles/globals.css";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -21,6 +23,7 @@ import { useToolboxStore } from "@/store/useToolboxStore";
 import { ThemeSwitch } from "@/components/button/ThemeSwitch";
 import { WorkspaceActionsContext } from "@/components/workspace/WorkspaceActions";
 export default function DefaultLayout({ children }: { children: ReactNode }) {
+  useLocale();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const expand = useSettingsStore((s) => s.expandSidebar);
@@ -40,7 +43,6 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
         ? "tools"
         : "editor";
   useEffect(() => {
-    void useSettingsStore.getState().syncSettingsStore().catch(console.error);
     const resize = () => setNarrow(window.innerWidth < 1024);
     window.addEventListener("resize", resize);
     const key = (e: KeyboardEvent) => {
@@ -81,26 +83,26 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
           </span>
           {!compact && (
             <span className="brand-label">
-              Datamorph<small>数据处理工作台</small>
+              Datamorph<small>{t("数据处理工作台")}</small>
             </span>
           )}
         </div>
         {drawer && (
           <button
             className="nav-icon-button"
-            aria-label="关闭导航"
+            aria-label={t("关闭导航")}
             onClick={() => setMobile(false)}
           >
             <X />
           </button>
         )}
       </div>
-      <nav className="nav-workspace" aria-label="工作空间">
-        {!compact && <div className="nav-section">工作空间</div>}
+      <nav className="nav-workspace" aria-label={t("工作空间")}>
+        {!compact && <div className="nav-section">{t("工作空间")}</div>}
         {(
           [
-            { id: "editor", label: "编辑器", Icon: Braces },
-            { id: "tools", label: "工具箱", Icon: Blocks },
+            { id: "editor", label: t("编辑器"), Icon: Braces },
+            { id: "tools", label: t("工具箱"), Icon: Blocks },
           ] as const
         ).map(({ id, label, Icon }) => (
           <Tooltip
@@ -129,29 +131,29 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
         ))}
       </nav>
       <div className="nav-bottom">
-        <Tooltip content="设置" placement="right" isDisabled={!compact}>
+        <Tooltip content={t("设置")} placement="right" isDisabled={!compact}>
           <button
             className={`nav-link ${section === "settings" ? "active" : ""}`}
             onClick={() => go("settings")}
-            aria-label="设置"
+            aria-label={t("设置")}
             aria-current={section === "settings" ? "page" : undefined}
           >
             <span className="nav-icon">
               <Settings2 />
             </span>
-            {!compact && <span className="nav-label">设置</span>}
+            {!compact && <span className="nav-label">{t("设置")}</span>}
           </button>
         </Tooltip>
         <div className="nav-utilities">
           <ThemeSwitch isCollapsed={compact} className="nav-theme" />
           {!drawer && (
             <Tooltip
-              content={compact ? "展开侧栏" : "折叠侧栏"}
+              content={compact ? t("展开侧栏") : t("折叠侧栏")}
               placement="right"
             >
               <button
                 className="nav-icon-button nav-collapse"
-                aria-label={compact ? "展开侧栏" : "折叠侧栏"}
+                aria-label={compact ? t("展开侧栏") : t("折叠侧栏")}
                 aria-expanded={!compact}
                 onClick={() => {
                   setExpand(compact);
@@ -195,7 +197,7 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
             aria-describedby={undefined}
             className="workbench-nav nav-drawer fixed inset-y-0 left-0 z-50"
           >
-            <Dialog.Title className="sr-only">导航</Dialog.Title>
+            <Dialog.Title className="sr-only">{t("导航")}</Dialog.Title>
             {nav(false, true)}
           </Dialog.Content>
         </Dialog.Portal>
@@ -203,13 +205,13 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
       <Command.Dialog
         open={commands}
         onOpenChange={setCommands}
-        label="搜索标签与操作"
+        label={t("搜索标签与操作")}
         contentClassName="command-dialog"
       >
-        <Command.Input placeholder="搜索标签、工具或操作…" />
+        <Command.Input placeholder={t("搜索标签、工具或操作…")} />
         <Command.List>
-          <Command.Empty>没有匹配的结果</Command.Empty>
-          <Command.Group heading="操作">
+          <Command.Empty>{t("没有匹配的结果")}</Command.Empty>
+          <Command.Group heading={t("操作")}>
             <Command.Item
               onSelect={() =>
                 run(() => {
@@ -219,18 +221,18 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
               }
             >
               <Plus />
-              新建文档
+              {t("新建文档")}
             </Command.Item>
             <Command.Item onSelect={() => run(() => go("tools"))}>
               <Blocks />
-              打开工具箱
+              {t("打开工具箱")}
             </Command.Item>
             <Command.Item onSelect={() => run(() => go("settings"))}>
               <Settings2 />
-              设置
+              {t("设置")}
             </Command.Item>
           </Command.Group>
-          <Command.Group heading="已打开的标签">
+          <Command.Group heading={t("已打开的标签")}>
             {tabs.map((tab) => (
               <Command.Item
                 key={tab.key}
@@ -247,10 +249,11 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
               </Command.Item>
             ))}
           </Command.Group>
-          <Command.Group heading="工具">
+          <Command.Group heading={t("工具")}>
             {useToolboxStore.getState().tools.map((tool) => (
               <Command.Item
                 key={tool.id}
+                value={`${t(tool.name)} ${tool.id}`}
                 onSelect={() =>
                   run(() => {
                     useTabStore.getState().addToolTab(tool);
@@ -259,7 +262,7 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
                 }
               >
                 <Blocks />
-                {tool.name}
+                {t(tool.name)}
               </Command.Item>
             ))}
           </Command.Group>

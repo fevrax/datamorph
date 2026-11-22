@@ -1,3 +1,4 @@
+import { errorDetails, messageError } from "@/i18n/diagnostics";
 import { parseJson } from "@/utils/json";
 import { parseDataFormat } from "@/utils/dataFormatConverter";
 import {
@@ -19,12 +20,12 @@ self.onmessage = ({ data }: MessageEvent<ColumnRequest>) => {
           : parseJson(content),
       );
     }
-    if (!browse) throw new Error("文档未加载");
+    if (!browse) throw messageError("文档未加载");
     response = { id: data.id, view: browse(data.path, data.pages) };
   } catch (error) {
     response = {
       id: data.id,
-      error: error instanceof Error ? error.message : String(error),
+      error: errorDetails(error),
     };
   }
   self.postMessage(response);

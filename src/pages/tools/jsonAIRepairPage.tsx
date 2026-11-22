@@ -1,3 +1,5 @@
+import { t, type StaticMessage } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { useToolAI } from "@/components/workspace/useToolAI";
 import { useBackgroundTask } from "@/components/workspace/useBackgroundTask";
 import { createToolStateHook } from "@/components/workspace/ToolContext";
@@ -20,6 +22,7 @@ import { parseJson, stringifyJson } from "@/utils/json";
 const useToolState = createToolStateHook("jsonAIRepair");
 
 export default function JsonAIRepairPage() {
+  useLocale();
   const { resolvedTheme: theme } = useTheme();
 
   const editorRef = useRef<MonacoDiffEditorRef>(null);
@@ -38,7 +41,7 @@ export default function JsonAIRepairPage() {
   const [isBasicProcessing, setIsBasicProcessing] = useState<boolean>(false);
   const [isAiProcessing, setIsAiProcessing] = useState<boolean>(false);
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
-  const [processingStep, setProcessingStep] = useState<string>("");
+  const [processingStep, setProcessingStep] = useState<StaticMessage | "">("");
 
   // 初始化时同步配置
   useEffect(() => {
@@ -55,7 +58,7 @@ export default function JsonAIRepairPage() {
     setProcessingStep("正在处理 JSON...");
     try {
       if (originalValue === "") {
-        toast.warning("暂无内容");
+        toast.warning(t("暂无内容"));
 
         return false;
       }
@@ -65,13 +68,13 @@ export default function JsonAIRepairPage() {
       setFixedValue(repaired);
 
       editorRef.current?.updateModifiedValue(repaired);
-      toast.success("修复成功");
+      toast.success(t("修复成功"));
 
       return true;
     } catch (e) {
       if ((e as Error).name === "AbortError") return false;
       console.error("repairJson", e);
-      toast.error("修复失败，可能不是有效的 Json 数据");
+      toast.error(t("修复失败，可能不是有效的 Json 数据"));
 
       return false;
     } finally {
@@ -90,13 +93,13 @@ export default function JsonAIRepairPage() {
 
     // 验证JSON长度
     if (originalValue.length === 0) {
-      toast.warning("暂无内容");
+      toast.warning(t("暂无内容"));
       setIsAiProcessing(false);
       setIsStreaming(false);
 
       return false;
     } else if (originalValue.length > 10000) {
-      toast.warning("内容过长，请缩短后再尝试");
+      toast.warning(t("内容过长，请缩短后再尝试"));
       setIsAiProcessing(false);
       setIsStreaming(false);
 
@@ -110,7 +113,7 @@ ${originalValue}
 \`\`\``;
 
     if (promptText.length > openAIService.maxTokens) {
-      toast.error("内容超出限制，请缩短内容或使用其他方式描述需求。");
+      toast.error(t("内容超出限制，请缩短内容或使用其他方式描述需求。"));
       setProcessingStep("");
       setIsAiProcessing(false);
 
@@ -174,7 +177,7 @@ ${originalValue}
   // 重置函数
   const handleReset = () => {
     editorRef.current?.clear(MonacoDiffEditorEditorType.all);
-    toast.success("内容已清空");
+    toast.success(t("内容已清空"));
   };
 
   // 将修复后的 JSON 应用为新的原始内容
@@ -182,7 +185,7 @@ ${originalValue}
     if (fixedValue) {
       editorRef.current?.updateOriginalValue(fixedValue);
       editorRef.current?.updateModifiedValue("");
-      toast.success("已应用修复后的内容");
+      toast.success(t("已应用修复后的内容"));
     }
   };
 
@@ -190,8 +193,8 @@ ${originalValue}
   return (
     <ToolboxPageTemplate
       toolIcon="fluent-emoji-flat:magic-wand"
-      toolName="JSON AI 修复"
-      description="先修复，再对照原文检查，确认后应用结果。"
+      toolName={t("JSON AI 修复")}
+      description={t("先修复，再对照原文检查，确认后应用结果。")}
       actions={
         <>
           <Button
@@ -200,7 +203,8 @@ ${originalValue}
             isDisabled={busy || !originalValue}
             onPress={basicJsonFix}
           >
-            {isBasicProcessing ? <Spinner size="sm" /> : <Wrench />}自动修复
+            {isBasicProcessing ? <Spinner size="sm" /> : <Wrench />}
+            {t("自动修复")}
           </Button>
           <Button
             variant="outline"
@@ -208,7 +212,8 @@ ${originalValue}
             isDisabled={busy || !originalValue}
             onPress={aiJsonFix}
           >
-            {isAiProcessing ? <Spinner size="sm" /> : <WandSparkles />}AI 修复
+            {isAiProcessing ? <Spinner size="sm" /> : <WandSparkles />}
+            {t("AI 修复")}
           </Button>
           <Button
             variant="ghost"
@@ -217,25 +222,27 @@ ${originalValue}
             onPress={handleReset}
           >
             <RotateCcw />
-            重置
+            {t("重置")}
           </Button>
         </>
       }
       statusIndicator={
         <span role="status" aria-live="polite">
-          {isStreaming ? "正在生成修复结果…" : processingStep}
+          {isStreaming
+            ? t("正在生成修复结果…")
+            : processingStep && t(processingStep)}
         </span>
       }
     >
-      <section className="tool-panel flex-1" aria-label="修复前后对照">
+      <section className="tool-panel flex-1" aria-label={t("修复前后对照")}>
         <div className="tool-diff-labels">
           <div>
-            <span>原始 JSON</span>
-            <span>可编辑</span>
+            <span>{t("原始 JSON")}</span>
+            <span>{t("可编辑")}</span>
           </div>
           <div>
-            <span>修复结果</span>
-            <span>审阅后应用</span>
+            <span>{t("修复结果")}</span>
+            <span>{t("审阅后应用")}</span>
           </div>
         </div>
         <MonacoDiffOperationBar
@@ -255,8 +262,8 @@ ${originalValue}
             language="json"
             originalValue={originalValue}
             modifiedValue={fixedValue}
-            originalAriaLabel="原始 JSON"
-            modifiedAriaLabel="修复结果"
+            originalAriaLabel={t("原始 JSON")}
+            modifiedAriaLabel={t("修复结果")}
             theme={theme === "dark" ? "vs-dark" : "vs-light"}
             onUpdateOriginalValue={setOriginalValue}
             onUpdateModifiedValue={setFixedValue}
@@ -268,8 +275,8 @@ ${originalValue}
       <div className="tool-review-footer">
         <span>
           {fixedValue
-            ? "检查差异后，将修复结果应用到原文。"
-            : "生成修复结果后，可在这里确认并应用。"}
+            ? t("检查差异后，将修复结果应用到原文。")
+            : t("生成修复结果后，可在这里确认并应用。")}
         </span>
         <Button
           color="primary"
@@ -278,7 +285,7 @@ ${originalValue}
           onPress={applyFixedContent}
         >
           <Check />
-          应用修复
+          {t("应用修复")}
         </Button>
       </div>
     </ToolboxPageTemplate>

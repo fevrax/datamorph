@@ -1,4 +1,5 @@
 import { LosslessNumber } from "lossless-json";
+import type { ErrorDetails } from "@/i18n/diagnostics";
 
 export type NodePath = (string | number)[];
 
@@ -14,7 +15,7 @@ export type ColumnRequest = {
 
 export type ColumnResponse =
   | { id: number; view: ReturnType<typeof browseColumns> }
-  | { id: number; error: string };
+  | { id: number; error: ErrorDetails };
 
 export function formatNodePath(path: NodePath) {
   return path.reduce<string>((result, key) => {

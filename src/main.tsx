@@ -1,3 +1,5 @@
+import { errorText } from "@/i18n/diagnostics";
+import { t } from "@/i18n";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { HashRouter } from "react-router-dom";
@@ -16,6 +18,8 @@ import UtoolsListener from "@/services/utoolsListener";
 import { PWAUpdateManager } from "@/components/pwa/PWAUpdateManager";
 import { TimeZoneDialog } from "@/components/setting/TimeZoneSelector";
 import { ThemeColorManager } from "@/components/ThemeColorManager";
+import { useSettingsStore } from "@/store/useSettingsStore";
+import { getLocale, subscribeLocale } from "@/i18n/locale";
 
 // 初始化存储系统
 const initializeStorage = async () => {
@@ -50,6 +54,9 @@ const initializeUtoolsListener = () => {
 // 监听应用加载完成事件
 async function startApp() {
   await initializeStorage();
+  await useSettingsStore.getState().syncSettingsStore().catch(console.error);
+  updateDocumentLanguage();
+  subscribeLocale(updateDocumentLanguage);
   initializeUtoolsListener();
   ReactDOM.createRoot(document.getElementById("root")!).render(
     <React.StrictMode>
@@ -70,7 +77,14 @@ async function startApp() {
     </React.StrictMode>,
   );
 }
+function updateDocumentLanguage() {
+  document.documentElement.lang = getLocale();
+  document.title = `Datamorph - ${t("数据处理工作台")}`;
+}
 void startApp().catch((error) => {
+  updateDocumentLanguage();
   const root = document.getElementById("root")!;
-  root.textContent = `数据迁移或恢复失败，旧数据已保留。请刷新重试。${String(error)}`;
+  root.textContent = t("数据迁移或恢复失败，旧数据已保留。请刷新重试。{0}", {
+    0: errorText(error),
+  });
 });

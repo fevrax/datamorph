@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { useToolState } from "@/components/workspace/ToolContext";
 import { VirtualRows } from "@/components/ui/virtual-rows";
 import React, {
@@ -79,6 +81,7 @@ const JsonTable: React.FC<JsonTableProps> = ({
   globalFilter,
   onColumnFilterChange,
 }) => {
+  useLocale();
   const [currentPath, setCurrentPath] = useToolState<string>(
     "table:currentPath",
     "root",
@@ -731,7 +734,7 @@ const JsonTable: React.FC<JsonTableProps> = ({
   // 渲染根表格
   const renderRootTable = () => {
     if (data === undefined)
-      return <div className="text-center py-2">没有数据</div>;
+      return <div className="text-center py-2">{t("没有数据")}</div>;
 
     if (Array.isArray(data)) {
       if (isObjectArray(data)) {

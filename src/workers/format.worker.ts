@@ -1,4 +1,5 @@
 import { executeFormatTask, type FormatTaskInput } from "./formatTasks";
+import { errorDetails } from "@/i18n/diagnostics";
 
 self.onmessage = async (
   event: MessageEvent<{ id: number; input: FormatTaskInput }>,
@@ -11,7 +12,7 @@ self.onmessage = async (
   } catch (error) {
     self.postMessage({
       id: event.data.id,
-      error: error instanceof Error ? error.message : String(error),
+      error: errorDetails(error),
     });
   }
 };

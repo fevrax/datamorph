@@ -1,3 +1,4 @@
+import { messageError } from "@/i18n/diagnostics";
 import jwt from "jsonwebtoken";
 import { isLosslessNumber } from "lossless-json";
 import { parseJson, stringifyJson } from "./json";
@@ -7,7 +8,7 @@ function nativeHeader(value: unknown): unknown {
   if (isLosslessNumber(value)) {
     const native = value.valueOf();
     if (typeof native !== "number")
-      throw new Error(
+      throw messageError(
         "JWT Header 中的数字超出安全范围，请将该字段保存为字符串",
       );
     return native;
@@ -26,14 +27,14 @@ export function encodeJwtLossless(
   algorithm: string,
 ): string {
   if (!payload || typeof payload !== "object" || Array.isArray(payload))
-    throw new Error("无效的 payload 格式");
+    throw messageError("无效的 payload 格式");
   const claims = { ...payload } as Record<string, unknown>;
   for (const name of ["iat", "nbf", "exp"]) {
     const value = claims[name];
     if (value !== undefined) {
       const native = isLosslessNumber(value) ? value.valueOf() : value;
       if (typeof native !== "number" || !Number.isFinite(native))
-        throw new Error(`${name} 必须是有效的数字时间戳`);
+        throw messageError("{0} 必须是有效的数字时间戳", { 0: name });
     }
   }
   if (claims.iat === undefined) claims.iat = Math.floor(Date.now() / 1000);
@@ -53,11 +54,11 @@ export function decodeJwtLossless(token: string): {
   payload: unknown;
 } {
   const parts = token.trim().split(".");
-  if (parts.length !== 3) throw new Error("无效的 JWT 格式，应包含三个部分");
+  if (parts.length !== 3) throw messageError("无效的 JWT 格式，应包含三个部分");
   const decode = (part: string) =>
     parseJson(decodeToText(part, "base64url", DEFAULT_ENCODING_OPTIONS));
   const header = decode(parts[0]);
   if (!header || typeof header !== "object" || typeof header.alg !== "string")
-    throw new Error("无效的 JWT Header");
+    throw messageError("无效的 JWT Header");
   return { header, payload: decode(parts[1]) };
 }

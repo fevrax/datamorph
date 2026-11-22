@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { writeClipboardText } from "@/utils/clipboard";
 import React, { useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
@@ -69,6 +71,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
   onApplyCodeToLeft,
   onApplyCodeToRight,
 }) => {
+  useLocale();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -92,8 +95,8 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
             isIconOnly
             className="size-7 min-w-7 bg-transparent p-0"
             size="sm"
-            title={isCollapsed ? "展开代码" : "收起代码"}
-            aria-label={isCollapsed ? "展开代码" : "收起代码"}
+            title={isCollapsed ? t("展开代码") : t("收起代码")}
+            aria-label={isCollapsed ? t("展开代码") : t("收起代码")}
             aria-expanded={!isCollapsed}
             variant="flat"
             onPress={toggleCollapse}
@@ -111,24 +114,24 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
               <Button
                 className="ai-code-apply h-7 px-2 text-xs"
                 size="sm"
-                title="应用到左侧编辑器"
+                title={t("应用到左侧编辑器")}
                 variant="flat"
                 onPress={() => onApplyCodeToLeft && onApplyCodeToLeft(content)}
               >
                 <ApplyIcon />
-                应用到左侧
+                {t("应用到左侧")}
               </Button>
               <Button
                 className="ai-code-apply h-7 px-2 text-xs"
                 size="sm"
-                title="应用到右侧编辑器"
+                title={t("应用到右侧编辑器")}
                 variant="flat"
                 onPress={() =>
                   onApplyCodeToRight && onApplyCodeToRight(content)
                 }
               >
                 <ApplyIcon />
-                应用到右侧
+                {t("应用到右侧")}
               </Button>
             </>
           ) : (
@@ -137,12 +140,12 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
               <Button
                 className="ai-code-apply h-7 px-2 text-xs"
                 size="sm"
-                title="应用到编辑器"
+                title={t("应用到编辑器")}
                 variant="flat"
                 onPress={() => onApplyCode(content)}
               >
                 <ApplyIcon />
-                预览修改
+                {t("预览修改")}
               </Button>
             )
           )}
@@ -150,12 +153,12 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
             isIconOnly
             className="size-7 min-w-7 bg-transparent p-0"
             size="sm"
-            title="复制代码"
-            aria-label="复制代码"
+            title={t("复制代码")}
+            aria-label={t("复制代码")}
             variant="flat"
             onPress={() => {
               writeClipboardText(content);
-              toast.success("已复制代码");
+              toast.success(t("已复制代码"));
             }}
           >
             <CopyIcon />
@@ -200,6 +203,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   onApplyCodeToLeft,
   onApplyCodeToRight,
 }) => {
+  useLocale();
   // 正确使用钩子 - 始终在组件顶层无条件调用
   const { resolvedTheme: theme } = useTheme();
 
@@ -348,7 +352,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           img({ node: _node, alt, src, ...props }) {
             return (
               <img
-                alt={alt || "Markdown图片"}
+                alt={alt || t("Markdown图片")}
                 className="rounded-md max-w-full h-auto my-4 border border-gray-200 dark:border-gray-700 shadow-sm"
                 src={src}
                 {...props}

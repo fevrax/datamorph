@@ -1,3 +1,6 @@
+import { t } from "@/i18n";
+import { errorDetails, errorText, type ErrorDetails } from "@/i18n/diagnostics";
+import { useLocale } from "@/i18n/useLocale";
 import { useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import { ListOrdered, RotateCcw, Trash2 } from "lucide-react";
@@ -27,11 +30,12 @@ message User {
 }`;
 
 export default function ProtoSortPage() {
+  useLocale();
   const [input, setInput] = useToolState("inputValue", "");
   const [output, setOutput] = useToolState("outputValue", "");
   const [hasResult, setHasResult] = useToolState("hasResult", false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<ErrorDetails>();
   const [settingsTarget, setSettingsTarget] = useState<HTMLSpanElement | null>(
     null,
   );
@@ -42,7 +46,7 @@ export default function ProtoSortPage() {
   function clearResult() {
     setOutput("");
     setHasResult(false);
-    setError("");
+    setError(undefined);
   }
   function updateInput(value: string) {
     if (value === input) return;
@@ -63,24 +67,23 @@ export default function ProtoSortPage() {
       setOutput(result.content ?? "");
       setHasResult(true);
     } catch (error) {
-      if ((error as Error).name !== "AbortError")
-        setError((error as Error).message);
+      if ((error as Error).name !== "AbortError") setError(errorDetails(error));
     } finally {
       setBusy(false);
     }
   }
   const status = busy
-    ? "正在重新编号…"
+    ? t("正在重新编号…")
     : hasResult
       ? output === input
-        ? "编号无需调整"
-        : "已生成排序结果"
-      : "待排序";
+        ? t("编号无需调整")
+        : t("已生成排序结果")
+      : t("待排序");
 
   return (
     <ToolboxPageTemplate
-      toolName="Protobuf 排序工具"
-      description="为字段和枚举值重新编号，左右对照检查每一处变化。"
+      toolName={t("Protobuf 排序工具")}
+      description={t("为字段和枚举值重新编号，左右对照检查每一处变化。")}
       toolIcon="mdi:sort-alphabetical-ascending"
       actions={
         <>
@@ -90,7 +93,7 @@ export default function ProtoSortPage() {
             onPress={() => void sort()}
           >
             <ListOrdered />
-            重新排序编号
+            {t("重新排序编号")}
           </Button>
           <Button
             variant="outline"
@@ -100,7 +103,7 @@ export default function ProtoSortPage() {
             }}
           >
             <RotateCcw />
-            载入示例
+            {t("载入示例")}
           </Button>
           <Button
             variant="ghost"
@@ -110,7 +113,7 @@ export default function ProtoSortPage() {
             }}
           >
             <Trash2 />
-            清空
+            {t("清空")}
           </Button>
         </>
       }
@@ -127,11 +130,11 @@ export default function ProtoSortPage() {
       }
     >
       <details className="tool-examples">
-        <summary>编号规则 · 字段从 1 开始，枚举从 0 开始</summary>
+        <summary>{t("编号规则 · 字段从 1 开始，枚举从 0 开始")}</summary>
         <p className="text-muted-foreground">
-          每个 message 从 1 开始编号，oneof 共用序列，嵌套 message
-          独立编号；每个 enum 从 0 开始编号。均跳过保留范围，并保留声明了
-          allow_alias 的枚举别名。
+          {t(
+            "每个 message 从 1 开始编号，oneof 共用序列，嵌套 message\n          独立编号；每个 enum 从 0 开始编号。均跳过保留范围，并保留声明了\n          allow_alias 的枚举别名。",
+          )}
         </p>
       </details>
       {error && (
@@ -139,25 +142,25 @@ export default function ProtoSortPage() {
           role="alert"
           className="mb-3 rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive"
         >
-          排序失败：{error}
+          {t("排序失败：")} {errorText(error)}
         </p>
       )}
-      <section aria-label="排序前后差异" className="tool-panel flex-1">
+      <section aria-label={t("排序前后差异")} className="tool-panel flex-1">
         <div className="tool-diff-labels">
           <div>
-            <span>排序前</span>
-            <span className="text-muted-foreground">可编辑</span>
+            <span>{t("排序前")}</span>
+            <span className="text-muted-foreground">{t("可编辑")}</span>
           </div>
           <div>
-            <span>排序后</span>
-            <span className="text-muted-foreground">只读</span>
+            <span>{t("排序后")}</span>
+            <span className="text-muted-foreground">{t("只读")}</span>
           </div>
         </div>
         <div className="min-h-0 flex-1">
           <MonacoDiffEditor
             ref={editor}
             tabKey="proto-sort"
-            tabTitle="Protobuf 排序工具"
+            tabTitle={t("Protobuf 排序工具")}
             originalValue={input}
             modifiedValue={hasResult ? output : input}
             onUpdateOriginalValue={updateInput}
@@ -165,8 +168,8 @@ export default function ProtoSortPage() {
             languageMode="manual"
             modifiedReadOnly
             useInlineViewWhenSpaceIsLimited={false}
-            originalAriaLabel="排序前"
-            modifiedAriaLabel="排序后"
+            originalAriaLabel={t("排序前")}
+            modifiedAriaLabel={t("排序后")}
             theme={resolvedTheme === "dark" ? "vs-dark" : "vs-light"}
             settingsBarTarget={settingsTarget}
             languageBarTarget={null}

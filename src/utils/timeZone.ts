@@ -1,25 +1,64 @@
+import { t } from "@/i18n";
 export const LOCAL_TIME_ZONE = "local";
 
 export const COMMON_TIME_ZONES: Record<string, string> = {
-  UTC: "协调世界时",
-  "Asia/Shanghai": "北京 / 上海",
-  "Asia/Hong_Kong": "香港",
-  "Asia/Taipei": "台北",
-  "Asia/Tokyo": "东京",
-  "Asia/Seoul": "首尔",
-  "Asia/Singapore": "新加坡",
-  "Asia/Kolkata": "印度",
-  "Asia/Dubai": "迪拜",
-  "Europe/London": "伦敦",
-  "Europe/Paris": "巴黎",
-  "Europe/Berlin": "柏林",
-  "America/New_York": "纽约",
-  "America/Chicago": "芝加哥",
-  "America/Denver": "丹佛",
-  "America/Los_Angeles": "洛杉矶",
-  "America/Sao_Paulo": "圣保罗",
-  "Australia/Sydney": "悉尼",
-  "Pacific/Auckland": "奥克兰",
+  get UTC() {
+    return t("协调世界时");
+  },
+  get "Asia/Shanghai"() {
+    return t("北京 / 上海");
+  },
+  get "Asia/Hong_Kong"() {
+    return t("香港");
+  },
+  get "Asia/Taipei"() {
+    return t("台北");
+  },
+  get "Asia/Tokyo"() {
+    return t("东京");
+  },
+  get "Asia/Seoul"() {
+    return t("首尔");
+  },
+  get "Asia/Singapore"() {
+    return t("新加坡");
+  },
+  get "Asia/Kolkata"() {
+    return t("印度");
+  },
+  get "Asia/Dubai"() {
+    return t("迪拜");
+  },
+  get "Europe/London"() {
+    return t("伦敦");
+  },
+  get "Europe/Paris"() {
+    return t("巴黎");
+  },
+  get "Europe/Berlin"() {
+    return t("柏林");
+  },
+  get "America/New_York"() {
+    return t("纽约");
+  },
+  get "America/Chicago"() {
+    return t("芝加哥");
+  },
+  get "America/Denver"() {
+    return t("丹佛");
+  },
+  get "America/Los_Angeles"() {
+    return t("洛杉矶");
+  },
+  get "America/Sao_Paulo"() {
+    return t("圣保罗");
+  },
+  get "Australia/Sydney"() {
+    return t("悉尼");
+  },
+  get "Pacific/Auckland"() {
+    return t("奥克兰");
+  },
 };
 
 export function getLocalTimeZone(): string {
@@ -44,7 +83,7 @@ export function resolveTimeZone(value = LOCAL_TIME_ZONE): string {
 }
 
 export function getTimeZoneLabel(value: string): string {
-  if (value === LOCAL_TIME_ZONE) return "跟随本地时区";
+  if (value === LOCAL_TIME_ZONE) return t("跟随本地时区");
   return COMMON_TIME_ZONES[value] || value.replace(/_/g, " ");
 }
 

@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { useTheme } from "next-themes";
 import { Moon, Sun, Monitor } from "lucide-react";
 import {
@@ -17,6 +19,7 @@ export function ThemeSwitch({
   onToggle?: (theme: string) => void;
   classNames?: Record<string, string>;
 }) {
+  useLocale();
   const { theme, setTheme } = useTheme();
   const Icon = theme === "system" ? Monitor : theme === "dark" ? Moon : Sun;
   return (
@@ -25,18 +28,18 @@ export function ThemeSwitch({
         <Button
           variant="ghost"
           className={className}
-          aria-label="界面主题"
+          aria-label={t("界面主题")}
           isIconOnly={isCollapsed}
         >
           <Icon />
-          {!isCollapsed && "界面主题"}
+          {!isCollapsed && t("界面主题")}
         </Button>
       </DropdownTrigger>
       <DropdownMenu>
         {[
-          ["system", "跟随系统"],
-          ["light", "浅色"],
-          ["dark", "深色"],
+          ["system", t("跟随系统")],
+          ["light", t("浅色")],
+          ["dark", t("深色")],
         ].map(([value, label]) => (
           <DropdownItem
             key={value}

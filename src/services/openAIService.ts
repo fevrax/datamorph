@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { messageError } from "@/i18n/diagnostics";
 import OpenAI from "openai";
 import { ChatCompletionMessageParam } from "openai/resources";
 
@@ -91,7 +93,7 @@ export class OpenAIService {
     await state.fetchModels(route);
     const latest = useOpenAIConfigStore.getState();
     const model = latest[AI_ROUTE_CONFIG_KEYS[route]].model;
-    if (!model) throw new Error("API 暂未返回可用模型，请检查配置后重试");
+    if (!model) throw messageError("API 暂未返回可用模型，请检查配置后重试");
     if (this.routeType === route) this.config.model = model;
     return model;
   }
@@ -111,7 +113,7 @@ export class OpenAIService {
     // 如果是 utools 线路，不需要初始化 OpenAI 客户端
     if (this.routeType === "utools") {
       if (!isUtoolsAvailable) {
-        toast.error("uTools API 不可用，请确保在 uTools 环境中运行");
+        toast.error(t("uTools API 不可用，请确保在 uTools 环境中运行"));
         this.openai = null;
       }
 
@@ -184,7 +186,7 @@ export class OpenAIService {
     // 如果是 utools 线路，检查 utools 是否可用
     if (this.routeType === "utools") {
       if (!isUtoolsAvailable) {
-        toast.error("uTools API 不可用，请确保在 uTools 环境中运行");
+        toast.error(t("uTools API 不可用，请确保在 uTools 环境中运行"));
 
         return false;
       }
@@ -197,14 +199,14 @@ export class OpenAIService {
 
       if (!apiKey) {
         if (this.routeType === "custom" || this.routeType === "ssooai") {
-          toast.error("请在设置中输入您的 API 密钥");
+          toast.error(t("请在设置中输入您的 API 密钥"));
         } else {
-          toast.error("站点 AI 线路不可用，请配置私有API或联系站点管理员");
+          toast.error(t("站点 AI 线路不可用，请配置私有API或联系站点管理员"));
         }
       } else {
         this.initOpenAI();
         if (!this.openai) {
-          toast.error("OpenAI 服务初始化失败");
+          toast.error(t("OpenAI 服务初始化失败"));
 
           return false;
         }
@@ -228,7 +230,7 @@ export class OpenAIService {
       async (request, guarded) => {
         request.check();
         if (!this.validateService())
-          throw new Error("AI服务未初始化或配置错误");
+          throw messageError("AI服务未初始化或配置错误");
         const model = await this.resolveModel();
         request.check();
 
@@ -248,7 +250,7 @@ export class OpenAIService {
             ),
           );
         }
-        guarded.onProcessing?.("Connecting to OpenAI...");
+        guarded.onProcessing?.("正在连接 OpenAI...");
 
         return collectOpenAIStream(request, guarded, () =>
           this.openai!.chat.completions.create(
@@ -270,7 +272,7 @@ export class OpenAIService {
             (error as Error & { status?: number }).status === 503
           ) {
             callbacks.onError?.(
-              new Error("站点 AI 线路尚未配置，请使用私有API。"),
+              messageError("站点 AI 线路尚未配置，请使用私有API。"),
             );
           } else callbacks.onError?.(error);
         },
@@ -298,14 +300,14 @@ export class OpenAIService {
         case "default":
           // 测试默认线路
           if (!this.openai) {
-            throw new Error("默认线路初始化失败");
+            throw messageError("默认线路初始化失败");
           }
 
           // 简单测试API可用性
           if (this.openai) {
             await this.openai.models.list();
           } else {
-            throw new Error("API客户端初始化失败");
+            throw messageError("API客户端初始化失败");
           }
 
           return true;
@@ -318,11 +320,11 @@ export class OpenAIService {
             useOpenAIConfigStore.getState().ssooaiRoute.proxyUrl;
 
           if (!ssooaiApiKey) {
-            throw new Error("请提供SSOOAI API密钥");
+            throw messageError("请提供SSOOAI API密钥");
           }
 
           if (!ssooaiProxyUrl) {
-            throw new Error("SSOOAI API地址配置错误");
+            throw messageError("SSOOAI API地址配置错误");
           }
 
           // 临时创建SSOOAI客户端
@@ -343,19 +345,19 @@ export class OpenAIService {
         case "utools":
           // 测试utools线路
           if (!isUtoolsAvailable) {
-            throw new Error("uTools API 不可用，请确保在 uTools 环境中运行");
+            throw messageError("uTools API 不可用，请确保在 uTools 环境中运行");
           }
 
           // 检查是否有可用模型
           const utoolsModels = useOpenAIConfigStore.getState().utoolsModels;
 
           if (!utoolsModels || utoolsModels.length === 0) {
-            throw new Error("未找到可用的 uTools 模型");
+            throw messageError("未找到可用的 uTools 模型");
           }
 
           // 简单测试一下 utools.ai API 是否可用
           if (!(window as any).utools || !(window as any).utools.ai) {
-            throw new Error("uTools AI 功能不可用");
+            throw messageError("uTools AI 功能不可用");
           }
 
           return true;
@@ -368,14 +370,14 @@ export class OpenAIService {
               useOpenAIConfigStore.getState().customRoute.proxyUrl;
 
             if (!apiKey) {
-              throw new Error("请提供API密钥");
+              throw messageError("请提供API密钥");
             }
 
             if (!proxyUrl) {
-              throw new Error("请提供API地址");
+              throw messageError("请提供API地址");
             }
 
-            throw new Error("自定义线路初始化失败");
+            throw messageError("自定义线路初始化失败");
           }
 
           // 简单测试API可用性
@@ -385,13 +387,13 @@ export class OpenAIService {
             // 测试成功后，获取模型列表
             await useOpenAIConfigStore.getState().fetchCustomModels();
           } else {
-            throw new Error("API客户端初始化失败");
+            throw messageError("API客户端初始化失败");
           }
 
           return true;
 
         default:
-          throw new Error("未知的线路类型");
+          throw messageError("未知的线路类型");
       }
     } catch (error) {
       console.error("测试线路失败:", error);
@@ -445,7 +447,7 @@ export class OpenAIService {
   }): Promise<any> {
     // 验证服务是否已初始化
     if (!this.validateService()) {
-      throw new Error("AI服务未初始化或配置错误");
+      throw messageError("AI服务未初始化或配置错误");
     }
 
     const modelToUse = options.model || (await this.resolveModel());
@@ -455,7 +457,7 @@ export class OpenAIService {
       // 为utools线路提供特殊处理
       if (this.routeType === "utools") {
         if (!isUtoolsAvailable) {
-          throw new Error("uTools API 不可用");
+          throw messageError("uTools API 不可用");
         }
 
         return new Promise((resolve, reject) => {
@@ -506,7 +508,7 @@ export class OpenAIService {
 
       // 对于其他线路，使用普通的完成请求
       if (!this.openai) {
-        throw new Error("OpenAI客户端未初始化");
+        throw messageError("OpenAI客户端未初始化");
       }
 
       const response = await this.openai.chat.completions.create({

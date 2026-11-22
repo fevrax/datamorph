@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import toast from "@/utils/toast";
 import { LOCAL_TIME_ZONE, normalizeTimeZone } from "@/utils/timeZone";
 // useSettingsStore.ts
@@ -5,6 +6,11 @@ import { create } from "zustand";
 import { devtools, subscribeWithSelector } from "zustand/middleware";
 
 import { StorageManager } from "@/lib/storage/StorageManager";
+import {
+  normalizeLocale,
+  setLocalePreference,
+  type Locale,
+} from "@/i18n/locale";
 
 const storageManager = new StorageManager();
 
@@ -19,6 +25,8 @@ export type MonacoEditorCDN = "local" | "cdn";
 
 // 全局设置状态接口
 export interface SettingsState {
+  locale?: Locale;
+  setInterfaceLocale: (locale: Locale) => Promise<void>;
   // 侧边栏展开状态
   expandSidebar: boolean;
   // Monaco 编辑器 CDN 配置
@@ -71,6 +79,11 @@ export const useSettingsStore = create<SettingsState>()(
   subscribeWithSelector(
     devtools(
       (set) => ({
+        locale: undefined,
+        setInterfaceLocale: async (locale) => {
+          set({ locale });
+          await flushSettingsStore().catch(reportSettingsSaveError);
+        },
         // 初始状态
         expandSidebar: true,
         monacoEditorCDN: "local",
@@ -123,16 +136,20 @@ export const useSettingsStore = create<SettingsState>()(
           set({ persistentDataEnabled: value }),
         setSettings: (settings: Partial<SettingsState>) => set(settings),
         // 从存储同步设置数据
-        syncSettingsStore: async () => {
-          const settings = await storageManager.get<SettingsState>(DB_SETTINGS);
-
-          if (settings) {
-            set({
-              ...settings,
-              timestampTimeZone: normalizeTimeZone(settings.timestampTimeZone),
-            });
-          }
-        },
+        syncSettingsStore: () =>
+          (settingsHydration ??= (async () => {
+            const settings =
+              await storageManager.get<SettingsState>(DB_SETTINGS);
+            if (settings) {
+              set({
+                ...settings,
+                locale: normalizeLocale(settings.locale),
+                timestampTimeZone: normalizeTimeZone(
+                  settings.timestampTimeZone,
+                ),
+              });
+            }
+          })()),
       }),
       { name: "settingsStore", enabled: true },
     ),
@@ -140,12 +157,14 @@ export const useSettingsStore = create<SettingsState>()(
 );
 
 const DB_SETTINGS = "settings";
+let settingsHydration: Promise<void> | undefined;
 
 // 防抖保存设置到存储
 let settingsSaveTimeout: NodeJS.Timeout;
 const timeout = 1000;
 
 const getPersistedSettings = (settings: SettingsState) => ({
+  locale: settings.locale,
   expandSidebar: settings.expandSidebar,
   monacoEditorCDN: settings.monacoEditorCDN,
   chatStyle: settings.chatStyle,
@@ -165,26 +184,36 @@ const getPersistedSettings = (settings: SettingsState) => ({
   persistentDataEnabled: settings.persistentDataEnabled,
 });
 
-const persistSettings = (settings: SettingsState) =>
-  storageManager.set(DB_SETTINGS, getPersistedSettings(settings));
+let pendingWrite = Promise.resolve();
+
+function persistSettings(settings: SettingsState): Promise<void> {
+  const data = getPersistedSettings(settings);
+  const write = pendingWrite.then(() => storageManager.set(DB_SETTINGS, data));
+  pendingWrite = write.catch(() => {});
+  return write;
+}
+
+function reportSettingsSaveError(error: unknown) {
+  console.error("Settings save failed", error);
+  toast.error(
+    t("设置未能保存到本地"),
+    t("当前设置仍在本窗口生效，请检查可用存储空间。"),
+  );
+}
 
 export async function flushSettingsStore(): Promise<void> {
   clearTimeout(settingsSaveTimeout);
   await persistSettings(useSettingsStore.getState());
 }
 
+useSettingsStore.subscribe((state) => state.locale, setLocalePreference);
+
 useSettingsStore.subscribe(
   (state) => state,
   (settings) => {
     clearTimeout(settingsSaveTimeout);
     settingsSaveTimeout = setTimeout(() => {
-      void persistSettings(settings).catch((error) => {
-        console.error("Settings save failed", error);
-        toast.error(
-          "设置未能保存到本地",
-          "当前设置仍在本窗口生效，请检查可用存储空间。",
-        );
-      });
+      void persistSettings(settings).catch(reportSettingsSaveError);
     }, timeout);
   },
 );

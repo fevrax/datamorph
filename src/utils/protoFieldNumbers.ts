@@ -1,3 +1,4 @@
+import { messageError } from "@/i18n/diagnostics";
 interface Token {
   text: string;
   start: number;
@@ -32,7 +33,7 @@ function tokenize(source: string): Token[] {
     const text = match[0];
     if (/^\s|^\/\//.test(text) || text.startsWith("/*")) continue;
     if (text === '"' || text === "'" || source.startsWith("/*", match.index))
-      throw new Error("Protobuf 字符串或注释未闭合");
+      throw messageError("Protobuf 字符串或注释未闭合");
     tokens.push({ text, start: match.index, end: pattern.lastIndex });
   }
   return tokens;
@@ -48,7 +49,7 @@ function integer(token: Token | undefined, max = MAX_FIELD_NUMBER): number {
         ? Number(text)
         : NaN;
   if (!Number.isInteger(value) || value < 0 || value > max)
-    throw new Error("Protobuf 编号或保留范围无效");
+    throw messageError("Protobuf 编号或保留范围无效");
   return value;
 }
 
@@ -66,23 +67,23 @@ export function renumberProtoFields(source: string): string {
     else if (closing.has(token.text)) {
       const open = stack.pop();
       if (open === undefined || tokens[open].text !== closing.get(token.text))
-        throw new Error("Protobuf 括号不匹配");
+        throw messageError("Protobuf 括号不匹配");
       pairs.set(open, index);
     }
   });
-  if (stack.length) throw new Error("Protobuf 括号未闭合");
+  if (stack.length) throw messageError("Protobuf 括号未闭合");
 
   const messages: Message[] = [];
   const enums: Enum[] = [];
   const text = (index: number) => tokens[index]?.text;
   function expect(index: number, expected: string): number {
     if (text(index) !== expected)
-      throw new Error(`Protobuf 语法不完整，预期 ${expected}`);
+      throw messageError("Protobuf 语法不完整，预期 {0}", { 0: expected });
     return index + 1;
   }
   function identifier(index: number): number {
     if (!IDENTIFIER.test(text(index) ?? ""))
-      throw new Error("Protobuf 字段或类型名称无效");
+      throw messageError("Protobuf 字段或类型名称无效");
     return index + 1;
   }
   function typeName(index: number): number {
@@ -97,7 +98,7 @@ export function renumberProtoFields(source: string): string {
       const close = pairs.get(index);
       if (close !== undefined) index = close;
     }
-    throw new Error("Protobuf 语句缺少分号");
+    throw messageError("Protobuf 语句缺少分号");
   }
   function enumNumber(index: number): EnumValue {
     const sign = text(index) === "-" ? tokens[index++] : undefined;
@@ -134,7 +135,7 @@ export function renumberProtoFields(source: string): string {
         } else last = rangeNumber();
       }
       if ((!isEnum && first < 1) || last < first)
-        throw new Error("Protobuf 保留范围无效");
+        throw messageError("Protobuf 保留范围无效");
       unavailable.push([first, last]);
       if (index < end) index = expect(index, ",");
     }
@@ -206,7 +207,7 @@ export function renumberProtoFields(source: string): string {
     return expect(index, ";");
   }
   function scope(start: number, end: number, message?: Message, depth = 0) {
-    if (depth > 256) throw new Error("Protobuf 嵌套层级过深");
+    if (depth > 256) throw messageError("Protobuf 嵌套层级过深");
     for (let index = start; index < end; ) {
       const keyword = text(index);
       if (keyword === ";") index++;
@@ -247,7 +248,7 @@ export function renumberProtoFields(source: string): string {
         if (number <= last) number = last + 1;
         rangeIndex++;
       }
-      if (number > max) throw new Error("Protobuf 已无可用编号");
+      if (number > max) throw messageError("Protobuf 已无可用编号");
       return number++;
     };
   }

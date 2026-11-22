@@ -1,5 +1,8 @@
+import { errorText } from "@/i18n/diagnostics";
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import type { TextChange } from "@/store/useTabStore";
-import { useTabMetadata } from "@/store/useTabMetadata";
+import { getTabDisplayTitle, useTabMetadata } from "@/store/useTabMetadata";
 import {
   DocumentActions,
   type DocumentAction,
@@ -92,7 +95,7 @@ const Toolbox = lazy(() => import("@/pages/toolboxPage"));
 const onTabSwitch = () => {};
 const Loading = () => (
   <div className="flex h-full items-center justify-center">
-    <Spinner label="正在准备工作区…" />
+    <Spinner label={t("正在准备工作区…")} />
   </div>
 );
 export function downloadText(content: string, title: string) {
@@ -106,6 +109,7 @@ export function downloadText(content: string, title: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 function ToolResultActions({ tabKey }: { tabKey: string }) {
+  useLocale();
   const tab = useTabStore((s) => s.getTabByKey(tabKey))!;
   const [preview, setPreview] = useState(false);
   const [baseRevision, setBaseRevision] = useState<number>();
@@ -124,14 +128,18 @@ function ToolResultActions({ tabKey }: { tabKey: string }) {
     <>
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t bg-muted/40 px-3 py-2">
         <span className="text-xs text-muted-foreground">
-          {tab.source ? `来源：${tab.source.title}` : "转换结果"}
+          {tab.source
+            ? t("来源：{0}", {
+                0: source ? getTabDisplayTitle(source) : tab.source.title,
+              })
+            : t("转换结果")}
         </span>
         <div className="flex gap-2">
           <Button
             size="sm"
-            onPress={() => void clipboard.copy(result, "已复制结果")}
+            onPress={() => void clipboard.copy(result, t("已复制结果"))}
           >
-            复制结果
+            {t("复制结果")}
           </Button>
           <Button
             size="sm"
@@ -139,7 +147,7 @@ function ToolResultActions({ tabKey }: { tabKey: string }) {
               downloadText(result, protoResult ? "result.proto" : "result.txt")
             }
           >
-            下载
+            {t("下载")}
           </Button>
           <Button
             size="sm"
@@ -149,7 +157,7 @@ function ToolResultActions({ tabKey }: { tabKey: string }) {
                 .addTab(protoResult ? "result.proto" : "result.json", result)
             }
           >
-            新建标签
+            {t("新建标签")}
           </Button>
           {source && (
             <Button
@@ -161,14 +169,16 @@ function ToolResultActions({ tabKey }: { tabKey: string }) {
                 setPreview(true);
               }}
             >
-              替换来源…
+              {t("替换来源…")}
             </Button>
           )}
         </div>
       </div>
       <Modal isOpen={preview} onClose={() => setPreview(false)} size="5xl">
         <ModalContent>
-          <ModalHeader>预览替换 · {source?.title}</ModalHeader>
+          <ModalHeader>
+            {t("预览替换 ·")} {source && getTabDisplayTitle(source)}
+          </ModalHeader>
           <ModalBody>
             <DiffPreview
               original={source?.content || ""}
@@ -177,12 +187,12 @@ function ToolResultActions({ tabKey }: { tabKey: string }) {
             {(source?.revision !== baseRevision ||
               source?.revision !== tab.source?.revision) && (
               <p className="mt-2 text-sm text-warning">
-                来源已发生变化，请查看最新差异后再次确认。
+                {t("来源已发生变化，请查看最新差异后再次确认。")}
               </p>
             )}
           </ModalBody>
           <ModalFooter>
-            <Button onPress={() => setPreview(false)}>取消</Button>
+            <Button onPress={() => setPreview(false)}>{t("取消")}</Button>
             <Button
               color="primary"
               isDisabled={!source}
@@ -196,10 +206,12 @@ function ToolResultActions({ tabKey }: { tabKey: string }) {
                   .getState()
                   .updateTabContent(source.key, pendingResult.current);
                 setPreview(false);
-                toast.success("已更新来源文件，可通过历史恢复");
+                toast.success(t("已更新来源文件，可通过历史恢复"));
               }}
             >
-              {source?.revision !== baseRevision ? "确认最新版本" : "应用替换"}
+              {source?.revision !== baseRevision
+                ? t("确认最新版本")
+                : t("应用替换")}
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -208,6 +220,7 @@ function ToolResultActions({ tabKey }: { tabKey: string }) {
   );
 }
 function DocumentWorkspace({ tabKey }: { tabKey: string }) {
+  useLocale();
   const tab = useTabStore((s) => s.getTabByKey(tabKey))!;
   const editor = useRef<MonacoDataEditorRef>(null);
   const diff = useRef<MonacoDiffEditorRef>(null);
@@ -243,10 +256,10 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
   const storageError = useTabStore((s) => s.storageError);
   const files = useTabMetadata();
   const viewList: [DocumentView, string, typeof Braces][] = [
-    ["code", "编辑", Braces],
-    ["tree", "树形", Network],
-    ["table", "表格", Table2],
-    ["columns", "栏列", Columns3],
+    ["code", t("编辑"), Braces],
+    ["tree", t("树形"), Network],
+    ["table", t("表格"), Table2],
+    ["columns", t("栏列"), Columns3],
   ];
   const update = useCallback(
     (content: string, changes?: readonly TextChange[]) =>
@@ -310,7 +323,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
         current?.revision !== revision ||
         current?.editorSettings.language !== language
       ) {
-        toast.warning("内容已变化，请重新执行操作");
+        toast.warning(t("内容已变化，请重新执行操作"));
         return;
       }
       if (result.content !== undefined) {
@@ -319,7 +332,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
       }
     } catch (error) {
       if ((error as Error).name !== "AbortError")
-        toast.error("处理失败", (error as Error).message);
+        toast.error(t("处理失败"), errorText(error));
     } finally {
       setBusy(false);
     }
@@ -331,7 +344,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
         : type === "node"
           ? stringifyJson(table.current?.getSelectedNode() ?? null)
           : tab.content;
-    void clipboard.copy(value ?? "", "已复制");
+    void clipboard.copy(value ?? "", t("已复制"));
     return true;
   };
   return (
@@ -365,7 +378,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
             onPress={() => setCompare(true)}
           >
             <Columns2 />
-            对比
+            {t("对比")}
           </Button>
         </div>
         <DocumentActions
@@ -380,7 +393,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
           actions={[
             {
               key: "ai",
-              label: "AI 助手",
+              label: t("AI 助手"),
               icon: Sparkles,
               onPress: () => {
                 if (view === "diff") diff.current?.showAiPrompt();
@@ -394,7 +407,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
               ? [
                   {
                     key: "format",
-                    label: "格式化",
+                    label: t("格式化"),
                     icon: WandSparkles,
                     disabled: busy,
                     onPress: () => {
@@ -408,7 +421,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
               ? [
                   {
                     key: "renumber-proto",
-                    label: "重新排序编号",
+                    label: t("重新排序编号"),
                     icon: ListOrdered,
                     disabled: busy || !tab.content.trim(),
                     onPress: () => void action("renumber-proto"),
@@ -419,9 +432,10 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
               ? [
                   {
                     key: "copy",
-                    label: "复制",
+                    label: t("复制"),
                     icon: Copy,
-                    onPress: () => void clipboard.copy(tab.content, "已复制"),
+                    onPress: () =>
+                      void clipboard.copy(tab.content, t("已复制")),
                   },
                 ]
               : []),
@@ -429,7 +443,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
               ? [
                   {
                     key: "clear",
-                    label: "清空",
+                    label: t("清空"),
                     icon: Trash2,
                     onPress: () => {
                       if (editor.current) {
@@ -443,12 +457,12 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
             ...(jsonSupported && view !== "columns"
               ? (
                   [
-                    ["压缩", "compress", Minimize2],
-                    ["字段升序", "sort", ArrowDownAZ],
-                    ["字段降序", "sort-desc", ArrowUpAZ],
-                    ["转义", "escape", CodeXml],
-                    ["删除转义", "unescape", TextQuote],
-                    ["删除注释", "comments", MessageSquareOff],
+                    [t("压缩"), "compress", Minimize2],
+                    [t("字段升序"), "sort", ArrowDownAZ],
+                    [t("字段降序"), "sort-desc", ArrowUpAZ],
+                    [t("转义"), "escape", CodeXml],
+                    [t("删除转义"), "unescape", TextQuote],
+                    [t("删除注释"), "comments", MessageSquareOff],
                   ] as const
                 ).map(
                   ([label, key, icon]): DocumentAction => ({
@@ -466,7 +480,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
               : []),
             {
               key: "download",
-              label: "下载",
+              label: t("下载"),
               icon: Download,
               onPress: () =>
                 downloadText(
@@ -482,7 +496,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
               ? [
                   {
                     key: "history",
-                    label: "历史",
+                    label: t("历史"),
                     icon: History,
                     onPress: () => setHistory(true),
                   },
@@ -493,14 +507,14 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
       </div>
       {showBusy && (
         <div className="flex items-center justify-between border-b bg-accent px-3 py-1 text-xs">
-          <Spinner size="sm" label="正在后台处理…" />
+          <Spinner size="sm" label={t("正在后台处理…")} />
           <Button
             size="sm"
             variant="ghost"
             onPress={() => cancelJsonTask("action:" + tab.key)}
           >
             <X />
-            取消
+            {t("取消")}
           </Button>
         </div>
       )}
@@ -574,7 +588,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
               languageBarTarget={languageTarget}
               indentationBarTarget={indentationTarget}
               tabKey={tab.key}
-              tabTitle={tab.title}
+              tabTitle={getTabDisplayTitle(tab)}
               originalValue={tab.content}
               modifiedValue={tab.diffModifiedValue || ""}
               language={tab.editorSettings.language}
@@ -620,32 +634,40 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
             }}
           >
             {validation.error
-              ? `错误 · ${validation.error.line}:${validation.error.column}`
+              ? t("错误 · {0}:{1}", {
+                  0: validation.error.line,
+                  1: validation.error.column,
+                })
               : tab.content
                 ? ["json", "json5"].includes(tab.editorSettings.language)
-                  ? "✓ JSON 有效"
-                  : `${DATA_FORMATS.find(({ id }) => id === tab.editorSettings.language)?.name ?? tab.editorSettings.language.toUpperCase()} · 未校验`
-                : "等待输入"}
+                  ? t("✓ JSON 有效")
+                  : t("{0} · 未校验", {
+                      0:
+                        DATA_FORMATS.find(
+                          ({ id }) => id === tab.editorSettings.language,
+                        )?.name ?? tab.editorSettings.language.toUpperCase(),
+                    })
+                : t("等待输入")}
           </button>
           <button
             type="button"
             className={storageError ? "truncate text-destructive" : "truncate"}
             title={
               storageError ||
-              (persistence ? "文档自动保存到本地" : "仅在当前窗口保存")
+              (persistence ? t("文档自动保存到本地") : t("仅在当前窗口保存"))
             }
             onClick={() => {
               if (storageError) void downloadRecoveryData();
             }}
           >
             {storageError
-              ? "保存失败 · 请下载备份"
+              ? t("保存失败 · 请下载备份")
               : !persistence
-                ? "仅在当前窗口保存"
+                ? t("仅在当前窗口保存")
                 : saveStatus === "saving"
-                  ? "正在保存…"
+                  ? t("正在保存…")
                   : saveStatus === "saved"
-                    ? "已保存"
+                    ? t("已保存")
                     : ""}
           </button>
         </div>
@@ -653,13 +675,15 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
           <span ref={setStatusTarget} className="status-cursor" />
           <span
             className="status-character-count"
-            title={`总字符数：${tab.content.length.toLocaleString()}`}
+            title={t("总字符数：{0}", {
+              0: tab.content.length.toLocaleString(),
+            })}
           >
-            {tab.content.length.toLocaleString()} 字符
+            {tab.content.length.toLocaleString()} {t("字符")}
           </span>
           <span
             className="status-file-size"
-            title={`${fileBytes.toLocaleString()} 字节 · UTF-8`}
+            title={t("{0} 字节 · UTF-8", { 0: fileBytes.toLocaleString() })}
           >
             {fileBytes < 1024
               ? `${fileBytes} B`
@@ -688,10 +712,10 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
           >
             {(view === "tree" || view === "table") && (
               <>
-                {tab.editorSettings.indentMode !== "manual" && "自动 · "}
+                {tab.editorSettings.indentMode !== "manual" && t("自动 ·")}
                 {tab.editorSettings.insertSpaces === false
-                  ? `Tab · 宽度 ${tab.editorSettings.indentSize}`
-                  : `${tab.editorSettings.indentSize} 空格`}
+                  ? t("Tab · 宽度 {0}", { 0: tab.editorSettings.indentSize })
+                  : t("{0} 空格", { 0: tab.editorSettings.indentSize })}
               </>
             )}
           </span>
@@ -701,7 +725,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
         <TabHistoryModal
           isOpen={history}
           onClose={() => setHistory(false)}
-          documentTitle={tab.title}
+          documentTitle={getTabDisplayTitle(tab)}
           language={tab.editorSettings.language}
           languageMode={tab.editorSettings.languageMode}
           filename={tab.editorSettings.filename}
@@ -709,7 +733,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
           historyItems={tab.history}
           onRestore={(id) => {
             store.restoreTabHistory(tab.key, id);
-            toast.success("已恢复历史版本");
+            toast.success(t("已恢复历史版本"));
           }}
           onOpenInNewTab={(item) => {
             const title = item.title || tab.title;
@@ -730,14 +754,14 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
       )}
       <Modal isOpen={compare} onClose={() => setCompare(false)}>
         <ModalContent>
-          <ModalHeader>选择比较对象</ModalHeader>
+          <ModalHeader>{t("选择比较对象")}</ModalHeader>
           <ModalBody>
             <Select
-              aria-label="比较对象"
+              aria-label={t("比较对象")}
               selectedKeys={[other]}
               onChange={(e) => setOther(e.target.value)}
             >
-              <SelectItem key="blank">空白内容，手动粘贴</SelectItem>
+              <SelectItem key="blank">{t("空白内容，手动粘贴")}</SelectItem>
               {files
                 .filter((f) => f.kind === "document" && f.key !== tab.key)
                 .map((f) => (
@@ -746,7 +770,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
             </Select>
           </ModalBody>
           <ModalFooter>
-            <Button onPress={() => setCompare(false)}>取消</Button>
+            <Button onPress={() => setCompare(false)}>{t("取消")}</Button>
             <Button
               color="primary"
               onPress={() => {
@@ -760,7 +784,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
                 setCompare(false);
               }}
             >
-              开始对比
+              {t("开始对比")}
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -769,6 +793,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
   );
 }
 export default function IndexPage() {
+  useLocale();
   const ready = useMonacoInit();
   const hydrated = useTabStore((s) => s.hydrated);
   const key = useTabStore((s) => s.activeTabKey);
@@ -832,14 +857,14 @@ export default function IndexPage() {
               <ToolResultActions tabKey={tab.key} />
             </ToolContext.Provider>
           ) : (
-            <div className="p-8 text-muted-foreground">未找到工具</div>
+            <div className="p-8 text-muted-foreground">{t("未找到工具")}</div>
           )}
         </Suspense>
       )}
       {dragging && (
         <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center border-2 border-dashed border-primary bg-background/90 text-primary">
           <Upload className="mr-3 size-6" />
-          释放文件以导入
+          {t("释放文件以导入")}
         </div>
       )}
     </div>

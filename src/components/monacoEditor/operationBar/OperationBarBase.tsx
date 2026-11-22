@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import React, { useEffect, useState } from "react";
 import {
   Button,
@@ -228,11 +229,11 @@ export const renderMoreMenu = (
           startContent={<Icon icon="mingcute:more-2-fill" width={16} />}
           variant="light"
         >
-          更多
+          {t("更多")}
         </Button>
       </DropdownTrigger>
       <DropdownMenu
-        aria-label="更多操作"
+        aria-label={t("更多操作")}
         onMouseEnter={() =>
           clearMoreDropdownTimeout && clearMoreDropdownTimeout()
         }

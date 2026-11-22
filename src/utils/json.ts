@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { message, messageError, type Diagnostic } from "@/i18n/diagnostics";
 // 用于匹配需要转义的字符的正则表达式
 
 // eslint-disable-next-line no-control-regex,no-misleading-character-class
@@ -63,7 +65,7 @@ export function stringifyJson(value: any, space?: number | string): string {
   const result = losslessStringify(value, null, space);
 
   if (result === undefined) {
-    throw new Error("序列化失败");
+    throw messageError("序列化失败");
   }
 
   return result;
@@ -90,6 +92,7 @@ export function escapeJson(input: string): string {
 }
 
 export interface JsonErrorInfo {
+  diagnostic?: Diagnostic;
   error?: Error;
   detail?: string;
   contextStartLine?: number;
@@ -113,6 +116,7 @@ export function jsonParseError(jsonString: string): JsonErrorInfo | undefined {
     if (!(error instanceof Error)) {
       return {
         message: `未知错误类型: ${error}`,
+        diagnostic: message("未知错误类型: {0}", { 0: error }),
         line: 0,
         column: 0,
         context: "",
@@ -126,6 +130,7 @@ export function jsonParseError(jsonString: string): JsonErrorInfo | undefined {
           line: Number.parseInt(match[2]),
           column: Number.parseInt(match[3]),
           message: `JSON解析错误`,
+          diagnostic: message("JSON解析错误"),
         }),
       },
       {
@@ -136,6 +141,7 @@ export function jsonParseError(jsonString: string): JsonErrorInfo | undefined {
           errorToken: match[1].trim(),
           errorContext: match[2].trim(),
           message: `JSON解析错误：意外的字符`,
+          diagnostic: message("JSON解析错误：意外的字符"),
         }),
       },
       {
@@ -146,6 +152,7 @@ export function jsonParseError(jsonString: string): JsonErrorInfo | undefined {
           errorToken: match[1],
           errorContext: match[2],
           message: `JSON解析错误：意外的字符`,
+          diagnostic: message("JSON解析错误：意外的字符"),
         }),
       },
       {
@@ -153,6 +160,7 @@ export function jsonParseError(jsonString: string): JsonErrorInfo | undefined {
         handler: (match: RegExpMatchArray) => ({
           position: Number.parseInt(match[1]),
           message: `JSON解析错误：字符串中存在非法控制字符，`,
+          diagnostic: message("JSON解析错误：字符串中存在非法控制字符，"),
         }),
       },
     ];
@@ -173,6 +181,7 @@ export function jsonParseError(jsonString: string): JsonErrorInfo | undefined {
     return {
       error,
       message: `未知JSON解析错误，无法定位到错误行。`,
+      diagnostic: message("未知JSON解析错误，无法定位到错误行。"),
       line: 0,
       column: 0,
       context: "",
@@ -190,6 +199,7 @@ export function json5ParseError(jsonString: string): JsonErrorInfo | undefined {
     if (!(error instanceof Error)) {
       return {
         message: `未知错误类型: ${error}`,
+        diagnostic: message("未知错误类型: {0}", { 0: error }),
         line: 0,
         column: 0,
         context: "",
@@ -267,7 +277,8 @@ function getErrorInfo(
 
   return {
     error,
-    message: result.message || "未知错误",
+    message: result.message || t("未知错误"),
+    diagnostic: result.diagnostic ?? message("未知错误"),
     line: line || 0,
     column: column || 0,
     context,

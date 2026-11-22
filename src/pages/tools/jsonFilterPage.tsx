@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { useRef } from "react";
 import { useTheme } from "next-themes";
 import { RotateCcw } from "lucide-react";
@@ -12,6 +14,7 @@ import { stringifyJson } from "@/utils/json";
 
 const useToolState = createToolStateHook("jsonPath");
 export default function JsonPathPage() {
+  useLocale();
   const [input, setInput] = useToolState("inputValue", () =>
     stringifyJson(jsonPathSample, 2),
   );
@@ -20,9 +23,9 @@ export default function JsonPathPage() {
 
   return (
     <ToolboxPageTemplate
-      toolName="JSONPath 查询"
+      toolName={t("JSONPath 查询")}
       toolIcon="mdi:filter"
-      description="在顶部输入查询，左右对照源数据与匹配结果。"
+      description={t("在顶部输入查询，左右对照源数据与匹配结果。")}
       actions={
         <Button
           size="sm"
@@ -33,16 +36,16 @@ export default function JsonPathPage() {
           }}
         >
           <RotateCcw />
-          载入示例数据
+          {t("载入示例数据")}
         </Button>
       }
-      statusIndicator="实时查询 · 结果始终为数组"
+      statusIndicator={t("实时查询 · 结果始终为数组")}
     >
       <div className="tool-panel flex-1">
         <MonacoDataEditor
           ref={editor}
           tabKey="jsonpath-playground"
-          tabTitle="JSONPath 查询"
+          tabTitle={t("JSONPath 查询")}
           language="json"
           languageMode="manual"
           value={input}
@@ -53,8 +56,8 @@ export default function JsonPathPage() {
         />
       </div>
       <details className="tool-examples">
-        <summary>查询示例与速查 · 点击套用</summary>
-        <section className="tool-examples-grid" aria-label="JSONPath 示例">
+        <summary>{t("查询示例与速查 · 点击套用")}</summary>
+        <section className="tool-examples-grid" aria-label={t("JSONPath 示例")}>
           {jsonPathExamples.map((example) => (
             <button
               key={example.path}

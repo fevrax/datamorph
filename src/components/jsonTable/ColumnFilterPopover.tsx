@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { VirtualList } from "@/components/ui/virtual-list";
 import React, { useState, useMemo, useEffect } from "react";
 import {
@@ -32,6 +34,7 @@ const ColumnFilterPopover: React.FC<ColumnFilterPopoverProps> = ({
   isActive,
   onFilterChange,
 }) => {
+  useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [tempSelected, setTempSelected] = useState<Set<string>>(
@@ -116,7 +119,7 @@ const ColumnFilterPopover: React.FC<ColumnFilterPopoverProps> = ({
               ? "text-primary bg-primary/10"
               : "text-muted-foreground hover:text-primary hover:bg-secondary"
           }`}
-          aria-label={`筛选 ${columnKey}`}
+          aria-label={t("筛选 {0}", { 0: columnKey })}
           onClick={(e) => e.stopPropagation()}
         >
           <Icon
@@ -131,7 +134,7 @@ const ColumnFilterPopover: React.FC<ColumnFilterPopoverProps> = ({
           <Input
             isClearable
             className="mb-2"
-            placeholder="搜索..."
+            placeholder={t("搜索...")}
             size="sm"
             startContent={
               <Icon
@@ -153,7 +156,8 @@ const ColumnFilterPopover: React.FC<ColumnFilterPopoverProps> = ({
               onValueChange={handleToggleAll}
             >
               <span className="text-xs text-muted-foreground">
-                全选 ({tempSelected.size}/{totalValues})
+                {t("全选 (")}
+                {tempSelected.size}/{totalValues})
               </span>
             </Checkbox>
           </div>
@@ -175,7 +179,7 @@ const ColumnFilterPopover: React.FC<ColumnFilterPopoverProps> = ({
                       className="text-xs truncate max-w-[140px]"
                       title={value}
                     >
-                      {value || "(空)"}
+                      {value || t("(空)")}
                     </span>
                   </Checkbox>
                 </div>
@@ -183,7 +187,7 @@ const ColumnFilterPopover: React.FC<ColumnFilterPopoverProps> = ({
             </VirtualList>
             {hiddenCount > 0 && (
               <div className="text-xs text-muted-foreground px-2 py-1">
-                还有 {hiddenCount} 项，请搜索缩小范围
+                {t("还有 {0} 项，请搜索缩小范围", { 0: hiddenCount })}
               </div>
             )}
           </div>
@@ -196,7 +200,7 @@ const ColumnFilterPopover: React.FC<ColumnFilterPopoverProps> = ({
               variant="light"
               onPress={handleReset}
             >
-              重置
+              {t("重置")}
             </Button>
             <Button
               className="text-xs h-7"
@@ -204,7 +208,7 @@ const ColumnFilterPopover: React.FC<ColumnFilterPopoverProps> = ({
               size="sm"
               onPress={handleConfirm}
             >
-              确定
+              {t("确定")}
             </Button>
           </div>
         </div>

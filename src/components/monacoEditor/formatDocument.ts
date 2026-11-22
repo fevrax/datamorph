@@ -1,3 +1,5 @@
+import { errorText } from "@/i18n/diagnostics";
+import { t } from "@/i18n";
 import * as monaco from "monaco-editor";
 import { EXTRA_FORMAT_LANGUAGES } from "@/utils/dataFormats";
 import { cancelJsonTask, runJsonTask } from "@/workers/client";
@@ -34,7 +36,7 @@ export function registerFormatProviders() {
           return [{ range: model.getFullModelRange(), text: result.content }];
         } catch (error) {
           if ((error as Error).name !== "AbortError")
-            toast.error("格式化失败", (error as Error).message);
+            toast.error(t("格式化失败"), errorText(error));
           return [];
         } finally {
           cancellation.dispose();
@@ -70,6 +72,8 @@ export async function formatEditorDocument(
   )
     return;
   if (!action?.isSupported())
-    throw new Error(`${language.toUpperCase()} 的格式化服务尚未就绪，请重试`);
+    throw new Error(
+      t("{0} 的格式化服务尚未就绪，请重试", { 0: language.toUpperCase() }),
+    );
   await action.run();
 }

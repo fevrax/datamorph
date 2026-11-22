@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { TimeZoneSelector } from "../TimeZoneSelector";
 import { resolveTimeZone } from "@/utils/timeZone";
 import { Switch } from "@/components/ui";
@@ -25,57 +27,89 @@ interface DecoderItem {
 const DECODERS: DecoderItem[] = [
   {
     id: "embeddedJson",
-    title: "字符串内 JSON 展开",
-    description: "悬浮查看字符串中的 JSON，支持复制和新标签打开",
+    get title() {
+      return t("字符串内 JSON 展开");
+    },
+    get description() {
+      return t("悬浮查看字符串中的 JSON，支持复制和新标签打开");
+    },
     icon: "braces",
     tone: "info",
   },
   {
     id: "color",
-    title: "颜色预览",
-    description: "识别 HEX、RGB、HSL 颜色并显示色块",
+    get title() {
+      return t("颜色预览");
+    },
+    get description() {
+      return t("识别 HEX、RGB、HSL 颜色并显示色块");
+    },
     icon: "palette",
     tone: "violet",
   },
   {
     id: "summary",
-    title: "折叠摘要",
-    description: "仅在折叠后显示 Object { len }、Array [ len ]",
+    get title() {
+      return t("折叠摘要");
+    },
+    get description() {
+      return t("仅在折叠后显示 Object { len }、Array [ len ]");
+    },
     icon: "list-tree",
     tone: "neutral",
   },
   {
     id: "image",
-    title: "图片预览",
-    description: "识别图片链接，按需打开预览",
+    get title() {
+      return t("图片预览");
+    },
+    get description() {
+      return t("识别图片链接，按需打开预览");
+    },
     icon: "image",
     tone: "neutral",
   },
   {
     id: "timestamp",
-    title: "时间戳解码器",
-    description: "自动识别并转换时间戳为人类可读的日期时间格式",
+    get title() {
+      return t("时间戳解码器");
+    },
+    get description() {
+      return t("自动识别并转换时间戳为人类可读的日期时间格式");
+    },
     icon: "solar:clock-circle-bold",
     tone: "info",
   },
   {
     id: "base64",
-    title: "Base64 解码器",
-    description: "自动识别并解码 Base64 编码的字符串",
+    get title() {
+      return t("Base64 解码器");
+    },
+    get description() {
+      return t("自动识别并解码 Base64 编码的字符串");
+    },
     icon: "ph:binary-fill",
     tone: "violet",
   },
   {
     id: "unicode",
-    title: "Unicode 解码器",
-    description: "自动识别并转换 Unicode 转义序列为可读字符",
+    get title() {
+      return t("Unicode 解码器");
+    },
+    get description() {
+      return t("自动识别并转换 Unicode 转义序列为可读字符");
+    },
     icon: "solar:global-bold",
     tone: "violet",
   },
   {
     id: "url",
-    title: "URL 解码器",
-    description: "自动识别并转换URL编码序列为可读字符",
+    get title() {
+      return t("URL 解码器");
+    },
+    get description() {
+      return t("自动识别并转换URL编码序列为可读字符");
+    },
     icon: "solar:link-bold",
     tone: "warning",
   },
@@ -86,6 +120,7 @@ const DECODERS: DecoderItem[] = [
  * 行为与原 settingPage.renderDecoderSettings 一致。
  */
 export function DecoderSettings() {
+  useLocale();
   const {
     timestampDecoderEnabled,
     timestampTimeZone,
@@ -114,19 +149,27 @@ export function DecoderSettings() {
         break;
       case "timestamp":
         setTimestampDecoderEnabled(value);
-        toast.success(`时间戳解码器已${value ? "启用" : "禁用"}`);
+        toast.success(
+          t("时间戳解码器已{0}", { 0: value ? t("启用") : t("禁用") }),
+        );
         break;
       case "base64":
         setBase64DecoderEnabled(value);
-        toast.success(`Base64解码器已${value ? "启用" : "禁用"}`);
+        toast.success(
+          t("Base64解码器已{0}", { 0: value ? t("启用") : t("禁用") }),
+        );
         break;
       case "unicode":
         setUnicodeDecoderEnabled(value);
-        toast.success(`Unicode解码器已${value ? "启用" : "禁用"}`);
+        toast.success(
+          t("Unicode解码器已{0}", { 0: value ? t("启用") : t("禁用") }),
+        );
         break;
       case "url":
         setUrlDecoderEnabled(value);
-        toast.success(`URL解码器已${value ? "启用" : "禁用"}`);
+        toast.success(
+          t("URL解码器已{0}", { 0: value ? t("启用") : t("禁用") }),
+        );
         break;
     }
   };
@@ -145,8 +188,8 @@ export function DecoderSettings() {
   return (
     <div className="h-full">
       <SectionHeader
-        description="管理编辑器中各种解码器的显示和行为"
-        title="解码器设置"
+        description={t("管理编辑器中各种解码器的显示和行为")}
+        title={t("解码器设置")}
       />
 
       <SectionCard divided>
@@ -171,9 +214,12 @@ export function DecoderSettings() {
         ))}
 
         <SettingRow
-          description={`当前时区：${resolveTimeZone(timestampTimeZone)}。默认跟随本地时区，修改后同步到所有时间戳提示。`}
+          description={t(
+            "当前时区：{0}。默认跟随本地时区，修改后同步到所有时间戳提示。",
+            { 0: resolveTimeZone(timestampTimeZone) },
+          )}
           icon="solar:global-bold"
-          title="时间戳时区"
+          title={t("时间戳时区")}
           tone="info"
         >
           <ControlSlot className="w-full sm:w-60 sm:shrink-0">
@@ -181,11 +227,13 @@ export function DecoderSettings() {
           </ControlSlot>
         </SettingRow>
 
-        <InfoNote title="关于解码器">
+        <InfoNote title={t("关于解码器")}>
           <p>
-            解码器可以自动识别并转换特定格式的数据，使其更易读。这些设置在所有编辑器中全局生效。
+            {t(
+              "解码器可以自动识别并转换特定格式的数据，使其更易读。这些设置在所有编辑器中全局生效。",
+            )}
           </p>
-          <p>如果程序出现卡顿等性能问题，可以尝试关闭部分解码器。</p>
+          <p>{t("如果程序出现卡顿等性能问题，可以尝试关闭部分解码器。")}</p>
         </InfoNote>
       </SectionCard>
     </div>

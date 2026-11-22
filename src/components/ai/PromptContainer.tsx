@@ -1,3 +1,6 @@
+import { errorText } from "@/i18n/diagnostics";
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { writeClipboardText } from "@/utils/clipboard";
 import React, {
   useState,
@@ -58,83 +61,88 @@ const MessageCard: React.FC<MessageCardProps> = ({
   onCopyMessage,
   onDeleteMessage,
   onRegenerateMessage,
-}) => (
-  <article
-    className={cn(
-      "ai-message",
-      isUser ? "ai-message-user" : "ai-message-assistant",
-      documentStyle && "ai-message-document",
-    )}
-  >
-    {!isUser && (
-      <div className="ai-message-label">
-        <Sparkles className="size-3.5" />
-        AI 助手
+}) => {
+  const locale = useLocale();
+  return (
+    <article
+      className={cn(
+        "ai-message",
+        isUser ? "ai-message-user" : "ai-message-assistant",
+        documentStyle && "ai-message-document",
+      )}
+    >
+      {!isUser && (
+        <div className="ai-message-label">
+          <Sparkles className="size-3.5" />
+          {t("AI 助手")}
+        </div>
+      )}
+      <div
+        className={cn("min-w-0 break-words", isUser && "whitespace-pre-wrap")}
+      >
+        {message}
       </div>
-    )}
-    <div className={cn("min-w-0 break-words", isUser && "whitespace-pre-wrap")}>
-      {message}
-    </div>
-    <div className="ai-message-actions">
-      {timestamp && (
-        <time dateTime={new Date(timestamp).toISOString()}>
-          {new Date(timestamp).toLocaleTimeString("zh-CN", {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          })}
-        </time>
-      )}
-      {!isLoading && (
-        <>
-          <Button
-            isIconOnly
-            className="size-7 min-w-7 p-0"
-            size="sm"
-            aria-label="复制消息"
-            title="复制消息"
-            variant="ghost"
-            onPress={onCopyMessage}
-          >
-            <CopyIcon />
-          </Button>
-          <Dropdown placement="bottom-end">
-            <DropdownTrigger>
-              <Button
-                isIconOnly
-                className="size-7 min-w-7 p-0"
-                size="sm"
-                aria-label="更多消息操作"
-                title="更多消息操作"
-                variant="ghost"
-              >
-                <MenuDotsIcon size={16} />
-              </Button>
-            </DropdownTrigger>
-            <DropdownMenu aria-label="消息操作">
-              <DropdownItem
-                key="delete"
-                startContent={<Icon icon="trash" width={16} />}
-                onPress={onDeleteMessage}
-              >
-                删除
-              </DropdownItem>
-              {!isUser && (
-                <DropdownItem
-                  key="regenerate"
-                  startContent={<Icon icon="refresh" width={16} />}
-                  onPress={onRegenerateMessage}
+      <div className="ai-message-actions">
+        {timestamp && (
+          <time dateTime={new Date(timestamp).toISOString()}>
+            {new Date(timestamp).toLocaleTimeString(locale, {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            })}
+          </time>
+        )}
+        {!isLoading && (
+          <>
+            <Button
+              isIconOnly
+              className="size-7 min-w-7 p-0"
+              size="sm"
+              aria-label={t("复制消息")}
+              title={t("复制消息")}
+              variant="ghost"
+              onPress={onCopyMessage}
+            >
+              <CopyIcon />
+            </Button>
+            <Dropdown placement="bottom-end">
+              <DropdownTrigger>
+                <Button
+                  isIconOnly
+                  className="size-7 min-w-7 p-0"
+                  size="sm"
+                  aria-label={t("更多消息操作")}
+                  title={t("更多消息操作")}
+                  variant="ghost"
                 >
-                  重新生成
+                  <MenuDotsIcon size={16} />
+                </Button>
+              </DropdownTrigger>
+              <DropdownMenu aria-label={t("消息操作")}>
+                <DropdownItem
+                  key="delete"
+                  startContent={<Icon icon="trash" width={16} />}
+                  onPress={onDeleteMessage}
+                >
+                  {t("删除")}
                 </DropdownItem>
-              )}
-            </DropdownMenu>
-          </Dropdown>
-        </>
-      )}
-    </div>
-  </article>
-);
+                {!isUser && (
+                  <DropdownItem
+                    key="regenerate"
+                    startContent={<Icon icon="refresh" width={16} />}
+                    onPress={onRegenerateMessage}
+                  >
+                    {t("重新生成")}
+                  </DropdownItem>
+                )}
+              </DropdownMenu>
+            </Dropdown>
+          </>
+        )}
+      </div>
+    </article>
+  );
+};
 
 interface Message {
   role: "user" | "assistant";
@@ -175,7 +183,7 @@ const PromptContainer = forwardRef<PromptContainerRef, PromptContainerProps>(
       onStopGeneration,
       initialMessages = EMPTY_MESSAGES,
       className,
-      placeholder = "继续描述你想如何处理数据…",
+      placeholder = t("继续描述你想如何处理数据…"),
       onApplyCode,
       editorContent = "",
       useDirectApi = false,
@@ -185,6 +193,7 @@ const PromptContainer = forwardRef<PromptContainerRef, PromptContainerProps>(
     },
     ref,
   ) => {
+    useLocale();
     const hasModel = useOpenAIConfigStore((state) => !!state.getCurrentModel());
     const [messages, setMessages] = useState<Message[]>(initialMessages);
     useEffect(() => {
@@ -249,7 +258,9 @@ const PromptContainer = forwardRef<PromptContainerRef, PromptContainerProps>(
         ];
 
         if (messages[1].content.length > openAiService.maxTokens) {
-          throw new Error("内容超出限制，请缩短内容或使用其他方式描述需求。");
+          throw new Error(
+            t("内容超出限制，请缩短内容或使用其他方式描述需求。"),
+          );
         }
 
         let response = "";
@@ -275,8 +286,14 @@ const PromptContainer = forwardRef<PromptContainerRef, PromptContainerProps>(
             },
             onError: (error) => {
               if (!requestSlot.current.owns(controller)) return;
-              response = `处理您的请求时发生错误: ${error.message || "未知错误"}`;
-              toast.error(`AI响应错误：${error.message || "请稍后重试"}`);
+              response = t("处理您的请求时发生错误: {0}", {
+                0: errorText(error) || t("未知错误"),
+              });
+              toast.error(
+                t("AI响应错误：{0}", {
+                  0: errorText(error) || t("请稍后重试"),
+                }),
+              );
             },
           },
           { signal: controller.signal },
@@ -286,15 +303,15 @@ const PromptContainer = forwardRef<PromptContainerRef, PromptContainerProps>(
       } catch (error: any) {
         console.error("AI请求失败:", error);
 
-        return `请求处理失败: ${error?.message || "未知错误"}`;
+        return t("请求处理失败: {0}", { 0: errorText(error) || t("未知错误") });
       }
     };
 
     // 复制消息
     const handleCopyMessage = (content: string) => {
       writeClipboardText(content)
-        .then(() => toast.success("已复制到剪贴板"))
-        .catch(() => toast.error("复制失败"));
+        .then(() => toast.success(t("已复制到剪贴板")))
+        .catch(() => toast.error(t("复制失败")));
     };
 
     // 删除消息
@@ -365,7 +382,7 @@ const PromptContainer = forwardRef<PromptContainerRef, PromptContainerProps>(
           // 调用提交处理函数获取AI响应
           response =
             (await onSubmit?.(messageContent, controller.signal)) ||
-            "抱歉，暂时无法处理您的请求。";
+            t("抱歉，暂时无法处理您的请求。");
         }
 
         if (!requestSlot.current.owns(controller)) return;
@@ -386,7 +403,10 @@ const PromptContainer = forwardRef<PromptContainerRef, PromptContainerProps>(
 
           return previous.map((message) =>
             message.requestId === requestId
-              ? { ...message, content: "处理您的请求时发生错误，请稍后再试。" }
+              ? {
+                  ...message,
+                  content: t("处理您的请求时发生错误，请稍后再试。"),
+                }
               : message,
           );
         });
@@ -444,7 +464,7 @@ const PromptContainer = forwardRef<PromptContainerRef, PromptContainerProps>(
                     role="status"
                   >
                     <span className="size-1.5 animate-pulse rounded-full bg-[var(--ai-accent)]" />
-                    正在分析数据…
+                    {t("正在分析数据…")}
                   </div>
                 ) : (
                   <MarkdownRenderer
@@ -483,30 +503,30 @@ const PromptContainer = forwardRef<PromptContainerRef, PromptContainerProps>(
                   <Orbit className="size-4" />
                 </span>
                 <h3 className="text-xl font-medium tracking-tight">
-                  你的数据，
+                  {t("你的数据，")}
                   <br />
-                  下一步做什么？
+                  {t("下一步做什么？")}
                 </h3>
                 <p className="mb-6 mt-2 text-xs leading-relaxed text-muted-foreground">
-                  描述目标，让 AI 帮你理解、修复或转换 JSON。
+                  {t("描述目标，让 AI 帮你理解、修复或转换 JSON。")}
                 </p>
                 <div className="grid gap-2">
                   {[
                     {
-                      label: "修复 JSON",
-                      detail: "检查并修复语法错误",
+                      label: t("修复 JSON"),
+                      detail: t("检查并修复语法错误"),
                       icon: WandSparkles,
                       prompt: "请修复当前 JSON 的语法错误，并解释修改内容。",
                     },
                     {
-                      label: "解释结构",
-                      detail: "快速理解字段与数据关系",
+                      label: t("解释结构"),
+                      detail: t("快速理解字段与数据关系"),
                       icon: ScanText,
                       prompt: "请解释当前 JSON 的结构和字段含义。",
                     },
                     {
-                      label: "转换字段",
-                      detail: "将字段名统一为 camelCase",
+                      label: t("转换字段"),
+                      detail: t("将字段名统一为 camelCase"),
                       icon: CaseSensitive,
                       prompt:
                         "请将当前 JSON 的所有字段名转换为 camelCase，保留原始数据值。",
@@ -547,7 +567,7 @@ const PromptContainer = forwardRef<PromptContainerRef, PromptContainerProps>(
           >
             <textarea
               ref={inputRef}
-              aria-label="AI 提示输入"
+              aria-label={t("AI 提示输入")}
               rows={3}
               placeholder={placeholder}
               value={prompt}
@@ -569,7 +589,7 @@ const PromptContainer = forwardRef<PromptContainerRef, PromptContainerProps>(
             />
             <div className="ai-composer-footer">
               <span className="ai-composer-hint">
-                Enter 发送 · Shift + Enter 换行
+                {t("Enter 发送 · Shift + Enter 换行")}
               </span>
               <div className="ai-composer-actions">
                 <AIModelPicker disabled={isLoading} />
@@ -579,8 +599,8 @@ const PromptContainer = forwardRef<PromptContainerRef, PromptContainerProps>(
                     isLoading && "ai-stop-button",
                   )}
                   isIconOnly
-                  aria-label={isLoading ? "停止生成" : "发送消息"}
-                  title={isLoading ? "停止生成" : "发送消息"}
+                  aria-label={isLoading ? t("停止生成") : t("发送消息")}
+                  title={isLoading ? t("停止生成") : t("发送消息")}
                   color={isLoading ? "danger" : "default"}
                   size="sm"
                   isDisabled={!isLoading && (!hasModel || !prompt.trim())}
@@ -596,7 +616,9 @@ const PromptContainer = forwardRef<PromptContainerRef, PromptContainerProps>(
             </div>
           </form>
           <div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
-            <span className="ml-auto">{prompt.length} 字</span>
+            <span className="ml-auto">
+              {prompt.length} {t("字")}
+            </span>
           </div>
         </div>
       </div>

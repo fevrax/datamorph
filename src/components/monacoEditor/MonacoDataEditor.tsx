@@ -1,3 +1,6 @@
+import { errorDetails, errorText, type ErrorDetails } from "@/i18n/diagnostics";
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import AIAssistantHeader from "@/components/ai/AIAssistantHeader";
 import { formatEditorDocument } from "./formatDocument";
 import { applyTextChanges } from "./textChanges";
@@ -20,6 +23,7 @@ import { useDataLanguage } from "@/hooks/useDataLanguage";
 import { useEditorIndentation } from "@/hooks/useEditorIndentation";
 import {
   documentDownloadName,
+  isDefaultDocumentName,
   supportsJsonOperations,
   supportsFormatting,
   type LanguageMode,
@@ -158,6 +162,7 @@ export default function MonacoDataEditor({
   onMount,
   ref,
 }: MonacoDataEditorProps) {
+  const locale = useLocale();
   const theme = getMonacoTheme(requestedTheme);
   useTabStore((s) =>
     documentId ? s.getTabByKey(documentId)?.revision : undefined,
@@ -231,7 +236,7 @@ export default function MonacoDataEditor({
   });
   const [query, setQuery] = useState("");
   const [queryResult, setQueryResult] = useState("");
-  const [queryError, setQueryError] = useState("");
+  const [queryError, setQueryError] = useState<ErrorDetails>();
   const [queryBusy, setQueryBusy] = useState(false);
   const [matchCount, setMatchCount] = useState<number | null>(null);
   const [side, setSide] = useState<"ai" | "query" | null>(null);
@@ -310,25 +315,29 @@ export default function MonacoDataEditor({
             }
           : null;
         setError(err);
-        monaco.editor.setModelMarkers(
-          model,
-          "datamorph",
-          err
-            ? [
-                {
-                  severity: monaco.MarkerSeverity.Error,
-                  message: err.message,
-                  startLineNumber: Math.max(1, err.line),
-                  startColumn: Math.max(1, err.column),
-                  endLineNumber: Math.max(1, err.line),
-                  endColumn: Math.max(2, err.column + 1),
-                },
-              ]
-            : [],
-        );
       })
       .catch(() => {});
   }, [modelKey]);
+  useEffect(() => {
+    const model = editor.current?.getModel();
+    if (!ready || !model) return;
+    monaco.editor.setModelMarkers(
+      model,
+      "datamorph",
+      error
+        ? [
+            {
+              severity: monaco.MarkerSeverity.Error,
+              message: errorText(error),
+              startLineNumber: Math.max(1, error.line),
+              startColumn: Math.max(1, error.column),
+              endLineNumber: Math.max(1, error.line),
+              endColumn: Math.max(2, error.column + 1),
+            },
+          ]
+        : [],
+    );
+  }, [error, locale, modelKey, ready]);
   function run(action: JsonTask, direction?: "asc" | "desc") {
     const model = editor.current?.getModel();
     if (!model) return false;
@@ -351,13 +360,14 @@ export default function MonacoDataEditor({
           model.getVersionId() !== version ||
           model.getLanguageId() !== language
         ) {
-          toast.warning("内容已变化，请重新执行");
+          toast.warning(t("内容已变化，请重新执行"));
           return;
         }
         if (result.content !== undefined) apply(result.content);
       })
       .catch((err) => {
-        if (err.name !== "AbortError") toast.error("处理失败", err.message);
+        if (err.name !== "AbortError")
+          toast.error(t("处理失败"), errorText(err));
       })
       .finally(() => setBusy(false));
     return true;
@@ -372,7 +382,7 @@ export default function MonacoDataEditor({
     void formatEditorDocument(ed)
       .catch((error) => {
         if (error.name !== "AbortError")
-          toast.error("格式化失败", error.message);
+          toast.error(t("格式化失败"), errorText(error));
       })
       .finally(() => setBusy(false));
     return true;
@@ -417,7 +427,7 @@ export default function MonacoDataEditor({
     focus: () => editor.current?.focus(),
     layout: () => editor.current?.layout(),
     copy: () => {
-      void clipboard.copy(editor.current?.getValue() || "", "已复制");
+      void clipboard.copy(editor.current?.getValue() || "", t("已复制"));
       return true;
     },
     compress: () => run("compress"),
@@ -512,18 +522,6 @@ export default function MonacoDataEditor({
         ed.onDidChangeCursorSelection(stats),
         ed.onDidScrollChange(decorate),
       );
-      subscriptions.push(
-        ed.addAction({
-          id: "datamorph-format",
-          label: "格式化数据",
-          keybindings: [
-            monaco.KeyMod.Alt | monaco.KeyMod.Shift | monaco.KeyCode.KeyF,
-          ],
-          run: () => {
-            formatRef.current();
-          },
-        }),
-      );
       stats();
       validate();
       decorate();
@@ -558,6 +556,20 @@ export default function MonacoDataEditor({
       editor.current = null;
     };
   }, [modelKey]);
+  useEffect(() => {
+    if (!ready || !editor.current) return;
+    const action = editor.current.addAction({
+      id: "datamorph-format",
+      label: t("格式化数据"),
+      keybindings: [
+        monaco.KeyMod.Alt | monaco.KeyMod.Shift | monaco.KeyCode.KeyF,
+      ],
+      run: () => {
+        formatRef.current();
+      },
+    });
+    return () => action.dispose();
+  }, [modelKey, ready, locale]);
   useEffect(() => {
     if (ready && modelText.current !== value) apply(value);
   }, [value, ready]);
@@ -612,7 +624,7 @@ export default function MonacoDataEditor({
   useEffect(() => {
     let active = true;
     const scope = modelKey + ":query";
-    setQueryError("");
+    setQueryError(undefined);
     setQueryResult("");
     setMatchCount(null);
     if (!query.trim() || !showJsonPathFilter || !jsonSupported) {
@@ -644,7 +656,7 @@ export default function MonacoDataEditor({
         .catch((err) => {
           if (!active) return;
           setQueryBusy(false);
-          if (err.name !== "AbortError") setQueryError(err.message);
+          if (err.name !== "AbortError") setQueryError(errorDetails(err));
         });
     }, 400);
     return () => {
@@ -685,9 +697,15 @@ export default function MonacoDataEditor({
     >
       {side === "ai" ? (
         <AIAssistantHeader
-          fileName={tabTitle || "当前文档"}
+          fileName={
+            isDefaultDocumentName(tabTitle) && !filename
+              ? t("未命名")
+              : tabTitle || t("当前文档")
+          }
           contextLabel={
-            aiContext.selection ? "上下文 · 选中内容" : "上下文 · 完整文件"
+            aiContext.selection
+              ? t("上下文 · 选中内容")
+              : t("上下文 · 完整文件")
           }
           onClose={closeAssistant}
         />
@@ -701,10 +719,10 @@ export default function MonacoDataEditor({
         >
           <span className="flex items-center gap-2 text-xs font-medium">
             <Filter className="size-4 text-primary" />
-            JSONPath 结果
+            {t("JSONPath 结果")}
             {matchCount !== null && (
               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
-                {matchCount} 项匹配
+                {matchCount} {t("项匹配")}
               </span>
             )}
           </span>
@@ -713,7 +731,7 @@ export default function MonacoDataEditor({
               size="sm"
               isIconOnly
               variant="ghost"
-              aria-label="关闭辅助面板"
+              aria-label={t("关闭辅助面板")}
               onPress={closeAssistant}
             >
               <X />
@@ -756,10 +774,10 @@ export default function MonacoDataEditor({
               size="sm"
               variant="ghost"
               isDisabled={matchCount === null || queryBusy}
-              onPress={() => void clipboard.copy(queryResult, "已复制结果")}
+              onPress={() => void clipboard.copy(queryResult, t("已复制结果"))}
             >
               <Copy />
-              复制
+              {t("复制")}
             </Button>
             <Button
               size="sm"
@@ -772,7 +790,7 @@ export default function MonacoDataEditor({
               }
             >
               <ArrowRight />
-              新标签
+              {t("新标签")}
             </Button>
             <Button
               size="sm"
@@ -785,7 +803,7 @@ export default function MonacoDataEditor({
                 );
               }}
             >
-              替换原文
+              {t("替换原文")}
             </Button>
           </div>
           <div className="border-b bg-muted/20 px-3 py-2 font-mono text-[11px] text-muted-foreground break-all">
@@ -793,7 +811,7 @@ export default function MonacoDataEditor({
           </div>
           {!query.trim() ? (
             <div className="flex flex-1 items-center justify-center p-5 text-center text-xs text-muted-foreground">
-              输入 JSONPath 表达式，匹配结果会在这里实时显示。
+              {t("输入 JSONPath 表达式，匹配结果会在这里实时显示。")}
             </div>
           ) : queryBusy ? (
             <div
@@ -801,23 +819,23 @@ export default function MonacoDataEditor({
               className="flex items-center gap-2 p-4 text-xs text-muted-foreground"
             >
               <LoaderCircle className="size-4 animate-spin" />
-              正在查询…
+              {t("正在查询…")}
             </div>
           ) : queryError ? (
             <div className="p-4 text-xs text-destructive">
-              请修正表达式或源数据后重试。
+              {t("请修正表达式或源数据后重试。")}
             </div>
           ) : (
             <>
               {matchCount === 0 && (
                 <div className="flex items-start gap-2 border-b bg-muted/30 p-3 text-xs text-muted-foreground">
                   <Search className="size-4 shrink-0" />
-                  <span>未找到匹配项，请检查字段名称或筛选条件。</span>
+                  <span>{t("未找到匹配项，请检查字段名称或筛选条件。")}</span>
                 </div>
               )}
               <div className="min-h-0 flex-1">
                 <ReadOnlyMonacoEditor
-                  ariaLabel="JSONPath 查询结果"
+                  ariaLabel={t("JSONPath 查询结果")}
                   value={queryResult}
                   theme={theme}
                 />
@@ -836,13 +854,13 @@ export default function MonacoDataEditor({
     >
       {showBusy && (
         <div className="flex items-center justify-between border-b bg-accent px-3 py-1 text-xs">
-          <span>正在后台处理…</span>
+          <span>{t("正在后台处理…")}</span>
           <Button
             size="sm"
             variant="ghost"
             onPress={() => cancelJsonTask(modelKey + ":action")}
           >
-            取消
+            {t("取消")}
           </Button>
         </div>
       )}
@@ -856,9 +874,9 @@ export default function MonacoDataEditor({
           >
             {inlineQuery && (
               <div className="tool-panel-header">
-                <h2>源数据 · JSON</h2>
+                <h2>{t("源数据 · JSON")}</h2>
                 <Button size="sm" variant="ghost" onPress={() => run("format")}>
-                  格式化
+                  {t("格式化")}
                 </Button>
               </div>
             )}
@@ -916,7 +934,7 @@ export default function MonacoDataEditor({
           onOpenChange={(open) => {
             if (!open) closeAssistant();
           }}
-          title={side === "ai" ? "AI 助手" : "查询结果"}
+          title={side === "ai" ? t("AI 助手") : t("查询结果")}
         >
           {assistantContent}
         </Sheet>
@@ -928,9 +946,9 @@ export default function MonacoDataEditor({
               <Filter className="size-3.5" />
             </span>
             <input
-              aria-label="JSONPath 表达式"
+              aria-label={t("JSONPath 表达式")}
               aria-invalid={!!queryError}
-              placeholder="输入 JSONPath，例如 $.users[*].name"
+              placeholder={t("输入 JSONPath，例如 $.users[*].name")}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={(event) => {
@@ -941,17 +959,17 @@ export default function MonacoDataEditor({
             />
             {queryBusy ? (
               <LoaderCircle
-                aria-label="正在查询"
+                aria-label={t("正在查询")}
                 className="size-3.5 shrink-0 animate-spin text-muted-foreground"
               />
             ) : queryError ? (
               <AlertCircle
-                aria-label="查询失败"
+                aria-label={t("查询失败")}
                 className="size-3.5 shrink-0 text-destructive"
               />
             ) : matchCount !== null ? (
               <span className="shrink-0 text-[10px] text-muted-foreground">
-                {matchCount} 项
+                {matchCount} {t("项")}
               </span>
             ) : null}
             <JsonPathHelp onSelect={setQuery} />
@@ -960,7 +978,7 @@ export default function MonacoDataEditor({
                 size="sm"
                 isIconOnly
                 variant="ghost"
-                aria-label="清空查询"
+                aria-label={t("清空查询")}
                 onPress={() => setQuery("")}
               >
                 <X />
@@ -976,7 +994,9 @@ export default function MonacoDataEditor({
                 className="editor-diagnostic-icon"
                 aria-hidden="true"
               />
-              <span className="min-w-0 break-words">{queryError}</span>
+              <span className="min-w-0 break-words">
+                {errorText(queryError)}
+              </span>
             </div>
           )}
         </div>
@@ -985,23 +1005,32 @@ export default function MonacoDataEditor({
         <div
           className="editor-diagnostic"
           role="status"
-          aria-label="JSON 语法错误"
+          aria-label={t("JSON 语法错误")}
         >
           <AlertCircle className="editor-diagnostic-icon" aria-hidden="true" />
           <button
             type="button"
             className="editor-diagnostic-message"
-            title={`第 ${error.line} 行，第 ${error.column} 列 · ${error.message}，点击定位错误`}
-            aria-label={`定位错误：第 ${error.line} 行，第 ${error.column} 列`}
+            title={t("第 {0} 行，第 {1} 列 · {2}，点击定位错误", {
+              0: error.line,
+              1: error.column,
+              2: errorText(error),
+            })}
+            aria-label={t("定位错误：第 {0} 行，第 {1} 列", {
+              0: error.line,
+              1: error.column,
+            })}
             onClick={goToError}
           >
-            <span className="editor-diagnostic-title">JSON 格式有误</span>
-            <span className="editor-diagnostic-location">
-              第 {error.line} 行 · 第 {error.column} 列
+            <span className="editor-diagnostic-title">
+              {t("JSON 格式有误")}
             </span>
-            {!/^JSON\s*解析错误$/.test(error.message) && (
+            <span className="editor-diagnostic-location">
+              {t("第 {0} 行 · 第 {1} 列", { 0: error.line, 1: error.column })}
+            </span>
+            {error.diagnostic?.key !== "JSON解析错误" && (
               <span className="editor-diagnostic-description">
-                {error.message}
+                {errorText(error)}
               </span>
             )}
           </button>
@@ -1012,7 +1041,7 @@ export default function MonacoDataEditor({
               className="editor-diagnostic-details"
               onPress={() => setErrorOpen(true)}
             >
-              详情
+              {t("详情")}
             </Button>
             <Button
               size="sm"
@@ -1021,19 +1050,20 @@ export default function MonacoDataEditor({
               onPress={() => run("repair")}
             >
               <WandSparkles aria-hidden="true" />
-              修复
+              {t("修复")}
             </Button>
           </div>
         </div>
       )}
       {statusBarTarget === undefined ? (
         <div className="editor-local-status">
+          <span>{t("行 {0}，列 {1}", { 0: stats.line, 1: stats.column })}</span>
           <span>
-            行 {stats.line}，列 {stats.column}
-          </span>
-          <span>
-            {stats.chars.toLocaleString()} 字符 · {stats.lines.toLocaleString()}{" "}
-            行{stats.selected ? ` · ${stats.selected} 选中` : ""}
+            {t("{0} 字符 · {1} 行", {
+              0: stats.chars.toLocaleString(locale),
+              1: stats.lines.toLocaleString(locale),
+            })}
+            {stats.selected ? t(" · {0} 选中", { 0: stats.selected }) : ""}
           </span>
           {isMenu && languageBarTarget === undefined && (
             <LanguageSelector
@@ -1047,10 +1077,13 @@ export default function MonacoDataEditor({
         createPortal(
           <span
             className="editor-cursor-status"
-            title={`${stats.chars.toLocaleString()} 字符 · ${stats.lines.toLocaleString()} 行`}
+            title={t("{0} 字符 · {1} 行", {
+              0: stats.chars.toLocaleString(locale),
+              1: stats.lines.toLocaleString(locale),
+            })}
           >
-            行 {stats.line}，列 {stats.column}
-            {stats.selected ? ` · ${stats.selected} 选中` : ""}
+            {t("行 {0}，列 {1}", { 0: stats.line, 1: stats.column })}
+            {stats.selected ? t(" · {0} 选中", { 0: stats.selected }) : ""}
           </span>,
           statusBarTarget,
         )
@@ -1104,7 +1137,7 @@ export default function MonacoDataEditor({
               );
               setPromptOpen(false);
             } catch (err) {
-              toast.error("字段转换失败", String(err));
+              toast.error(t("字段转换失败"), String(err));
             }
             return;
           }
@@ -1134,7 +1167,7 @@ export default function MonacoDataEditor({
         size="3xl"
       >
         <ModalContent>
-          <ModalHeader>预览替换内容</ModalHeader>
+          <ModalHeader>{t("预览替换内容")}</ModalHeader>
           <ModalBody>
             <DiffPreview
               original={replacement === null ? "" : modelText.current}
@@ -1142,12 +1175,12 @@ export default function MonacoDataEditor({
             />
             {aiContext.version !== replaceVersion && side === "ai" && (
               <p className="mt-3 text-xs text-warning">
-                文件在生成期间已变化，请核对后应用。
+                {t("文件在生成期间已变化，请核对后应用。")}
               </p>
             )}
           </ModalBody>
           <ModalFooter>
-            <Button onPress={() => setReplacement(null)}>取消</Button>
+            <Button onPress={() => setReplacement(null)}>{t("取消")}</Button>
             <Button
               color="primary"
               onPress={() => {
@@ -1157,14 +1190,14 @@ export default function MonacoDataEditor({
                   setReplaceVersion(
                     editor.current?.getModel()?.getVersionId() || 0,
                   );
-                  toast.warning("内容已变化，请重新核对预览");
+                  toast.warning(t("内容已变化，请重新核对预览"));
                   return;
                 }
                 apply(replacement || "");
                 setReplacement(null);
               }}
             >
-              应用替换，可撤销
+              {t("应用替换，可撤销")}
             </Button>
           </ModalFooter>
         </ModalContent>

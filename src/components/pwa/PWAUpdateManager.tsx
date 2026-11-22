@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Spinner } from "@/components/ui";
 import { RefreshCw, WifiOff, X } from "lucide-react";
@@ -14,6 +16,7 @@ const persistAppState = () =>
   Promise.all([flushTabStore(), flushSettingsStore()]);
 
 export const PWAUpdateManager: React.FC = () => {
+  useLocale();
   const [registration, setRegistration] = useState<ServiceWorkerRegistration>();
   const [isOffline, setIsOffline] = useState(() => !navigator.onLine);
   const [isSnoozed, setIsSnoozed] = useState(false);
@@ -50,7 +53,7 @@ export const PWAUpdateManager: React.FC = () => {
       await updateServiceWorker();
     } catch (error) {
       console.error("更新失败:", error);
-      toast.error("更新失败", "数据已保留，请稍后重试");
+      toast.error(t("更新失败"), t("数据已保留，请稍后重试"));
       setIsUpdating(false);
     }
   }, [updateServiceWorker]);
@@ -80,7 +83,7 @@ export const PWAUpdateManager: React.FC = () => {
   useEffect(() => {
     if (!offlineReady) return;
 
-    toast.success("离线功能已就绪", "断网后仍可继续使用已缓存的工具");
+    toast.success(t("离线功能已就绪"), t("断网后仍可继续使用已缓存的工具"));
     setOfflineReady(false);
   }, [offlineReady, setOfflineReady]);
 
@@ -137,9 +140,9 @@ export const PWAUpdateManager: React.FC = () => {
             <WifiOff size={18} />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold">网络连接已断开</p>
+            <p className="text-sm font-semibold">{t("网络连接已断开")}</p>
             <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-              已缓存的本地工具仍可使用，联网功能暂不可用。
+              {t("已缓存的本地工具仍可使用，联网功能暂不可用。")}
             </p>
           </div>
         </div>
@@ -156,10 +159,10 @@ export const PWAUpdateManager: React.FC = () => {
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-2">
-                <p className="text-sm font-semibold">新版本已准备好</p>
+                <p className="text-sm font-semibold">{t("新版本已准备好")}</p>
                 <Button
                   isIconOnly
-                  aria-label="30 分钟后提醒"
+                  aria-label={t("30 分钟后提醒")}
                   className="-mr-1 -mt-1 h-7 min-w-7 text-muted-foreground"
                   isDisabled={isUpdating}
                   size="sm"
@@ -170,7 +173,7 @@ export const PWAUpdateManager: React.FC = () => {
                 </Button>
               </div>
               <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                更新前会保存当前数据，随后自动重新载入。
+                {t("更新前会保存当前数据，随后自动重新载入。")}
               </p>
               <div className="mt-3 flex justify-end">
                 <Button
@@ -182,7 +185,7 @@ export const PWAUpdateManager: React.FC = () => {
                   }
                   onPress={handleUpdate}
                 >
-                  {isUpdating ? "正在更新" : "立即更新"}
+                  {isUpdating ? t("正在更新") : t("立即更新")}
                 </Button>
               </div>
             </div>

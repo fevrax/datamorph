@@ -1,3 +1,6 @@
+import { errorText } from "@/i18n/diagnostics";
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import type { TestResult } from "../ai/TestConnection";
 
 import { useEffect, useState } from "react";
@@ -25,6 +28,7 @@ import { isUtoolsAvailable } from "@/utils/env";
  * 模型由各线路 API 提供，不维护本地手动模型列表。
  */
 export function AISettings() {
+  useLocale();
   const {
     routeType,
     ssooaiRoute,
@@ -61,7 +65,9 @@ export function AISettings() {
     if (!configuringRoute) return;
     const timer = setTimeout(() => {
       void fetchModels(configuringRoute).catch((error: unknown) => {
-        toast.error(error instanceof Error ? error.message : "获取模型失败");
+        toast.error(
+          error instanceof Error ? errorText(error) : t("获取模型失败"),
+        );
       });
     }, 400);
     return () => clearTimeout(timer);
@@ -76,7 +82,9 @@ export function AISettings() {
 
   const refreshModels = (route: AIRouteType) => {
     void fetchModels(route).catch((error: unknown) => {
-      toast.error(error instanceof Error ? error.message : "获取模型失败");
+      toast.error(
+        error instanceof Error ? errorText(error) : t("获取模型失败"),
+      );
     });
   };
 
@@ -153,7 +161,7 @@ export function AISettings() {
       } else if (testModel) {
         modelToTest = testModel;
       } else {
-        throw new Error("请选择要测试的模型");
+        throw new Error(t("请选择要测试的模型"));
       }
 
       testService.updateConfig({ routeType: type, model: modelToTest });
@@ -163,14 +171,15 @@ export function AISettings() {
       });
 
       if (response?.choices?.[0]?.message) {
-        setTestResult({ success: true, message: "连接成功，线路畅通！" });
+        setTestResult({ success: true, message: t("连接成功，线路畅通！") });
       } else {
-        throw new Error("API 返回结果异常");
+        throw new Error(t("API 返回结果异常"));
       }
     } catch (error) {
       setTestResult({
         success: false,
-        message: error instanceof Error ? error.message : "未知错误，连接失败",
+        message:
+          error instanceof Error ? errorText(error) : t("未知错误，连接失败"),
       });
     } finally {
       setTestingRoute(null);
@@ -179,18 +188,22 @@ export function AISettings() {
 
   return (
     <div className="h-full">
-      <SectionHeader description="管理 AI 线路与模型配置" title="AI 设置" />
+      <SectionHeader
+        description={t("管理 AI 线路与模型配置")}
+        title={t("AI 设置")}
+      />
 
-      <GroupLabel>AI 线路</GroupLabel>
+      <GroupLabel>{t("AI 线路")}</GroupLabel>
       <p className="mb-3 px-4 text-[13px] text-muted-foreground">
-        启用或禁用不同的 AI
-        线路，点击「配置」按钮设置线路参数。站点线路需要由站点管理员启用。
+        {t(
+          "启用或禁用不同的 AI\n        线路，点击「配置」按钮设置线路参数。站点线路需要由站点管理员启用。",
+        )}
       </p>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <RouteCard
           isSelected
           showConfigure
-          description="使用站点提供的 AI 服务；不可用时可配置私有API"
+          description={t("使用站点提供的 AI 服务；不可用时可配置私有API")}
           routeType="default"
           onConfigure={() => handleConfigureRoute("default")}
           onToggle={() => {}}
@@ -198,7 +211,7 @@ export function AISettings() {
         <RouteCard
           available
           showConfigure
-          description="高性能服务，支持多种高级模型"
+          description={t("高性能服务，支持多种高级模型")}
           isSelected={routeEnabled.ssooai}
           routeType="ssooai"
           onConfigure={() => handleConfigureRoute("ssooai")}
@@ -206,7 +219,7 @@ export function AISettings() {
         />
         <RouteCard
           available={isUtoolsAvailable}
-          description="uTools 官方的 AI 智能助手"
+          description={t("uTools 官方的 AI 智能助手")}
           isSelected={routeEnabled.utools}
           routeType="utools"
           onToggle={(enabled) => updateRouteEnabled("utools", enabled)}
@@ -214,7 +227,7 @@ export function AISettings() {
         <RouteCard
           available
           showConfigure
-          description="自定义 API 连接，支持各类模型"
+          description={t("自定义 API 连接，支持各类模型")}
           isSelected={routeEnabled.custom}
           routeType="custom"
           onConfigure={() => handleConfigureRoute("custom")}
@@ -223,7 +236,7 @@ export function AISettings() {
       </div>
 
       {/* 推荐横幅 */}
-      <InfoNote className="mx-0 mt-5 sm:mx-0" title="推荐使用 SSOOAI API">
+      <InfoNote className="mx-0 mt-5 sm:mx-0" title={t("推荐使用 SSOOAI API")}>
         <p>
           <ExternalLink
             className="font-medium text-primary hover:underline"
@@ -231,13 +244,14 @@ export function AISettings() {
           >
             SSOOAI
           </ExternalLink>{" "}
-          提供稳定、高效且价格实惠的 API 服务，支持 ChatGPT、DeepSeek、Claude 4
-          等先进模型。新用户可享受充值优惠。
+          {t(
+            "提供稳定、高效且价格实惠的 API 服务，支持 ChatGPT、DeepSeek、Claude 4\n          等先进模型。新用户可享受充值优惠。",
+          )}
         </p>
       </InfoNote>
 
       {/* 线路配置面板 */}
-      {configuringRoute ? <GroupLabel>线路配置</GroupLabel> : null}
+      {configuringRoute ? <GroupLabel>{t("线路配置")}</GroupLabel> : null}
       {configuringRoute ? (
         <SectionCard className="p-4 sm:p-5">
           <RouteConfigPanel

@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import React, {
   useEffect,
   useState,
@@ -92,6 +94,7 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
   onGlobalFilterChange,
   tableMode = "object",
 }) => {
+  useLocale();
   const [isViewDropdownOpen, setViewDropdownOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState<IconStatus>(IconStatus.Default);
   const [clearStatus, setClearStatus] = useState<IconStatus>(
@@ -162,10 +165,10 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
             key: "copy",
             isStatusButton: true,
             icon: "si:copy-line",
-            text: "复制",
-            tooltip: "复制内容到剪贴板",
+            text: t("复制"),
+            tooltip: t("复制内容到剪贴板"),
             status: copyStatus,
-            successText: "已复制",
+            successText: t("已复制"),
             priority: 10,
             width: 90,
             onClick: () => {
@@ -183,8 +186,8 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
           {
             key: "view",
             icon: "solar:eye-outline",
-            text: "视图",
-            tooltip: "设置视图选项",
+            text: t("视图"),
+            tooltip: t("设置视图选项"),
             hasDropdown: true,
             priority: 20,
             width: 90,
@@ -193,30 +196,30 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
               {
                 key: "hideEmpty",
                 icon: "solar:eye-closed-outline",
-                text: "隐藏空值",
+                text: t("隐藏空值"),
                 onClick: () => {
                   onCustomView("hideEmpty");
-                  toast.success("已隐藏空值");
+                  toast.success(t("已隐藏空值"));
                   setViewDropdownOpen(false);
                 },
               },
               {
                 key: "hideNull",
                 icon: "solar:eye-closed-outline",
-                text: "隐藏null值",
+                text: t("隐藏null值"),
                 onClick: () => {
                   onCustomView("hideNull");
-                  toast.success("已隐藏null值");
+                  toast.success(t("已隐藏null值"));
                   setViewDropdownOpen(false);
                 },
               },
               {
                 key: "showAll",
                 icon: "solar:eye-outline",
-                text: "显示所有值",
+                text: t("显示所有值"),
                 onClick: () => {
                   onCustomView("showAll");
-                  toast.success("显示所有值");
+                  toast.success(t("显示所有值"));
                   setViewDropdownOpen(false);
                 },
               },
@@ -232,8 +235,8 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
         {
           key: "expand",
           icon: "tabler:fold-down",
-          text: "展开",
-          tooltip: "展开所有节点",
+          text: t("展开"),
+          tooltip: t("展开所有节点"),
           priority: 20,
           width: 90,
           onClick: onExpand,
@@ -241,8 +244,8 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
         {
           key: "collapse",
           icon: "tabler:fold-up",
-          text: "折叠",
-          tooltip: "折叠所有节点",
+          text: t("折叠"),
+          tooltip: t("折叠所有节点"),
           priority: 30,
           width: 90,
           onClick: onCollapse,
@@ -259,10 +262,10 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
             key: "clear",
             isStatusButton: true,
             icon: "mynaui:trash",
-            text: "清空",
-            tooltip: "清空内容",
+            text: t("清空"),
+            tooltip: t("清空内容"),
             status: clearStatus,
-            successText: "已清空",
+            successText: t("已清空"),
             priority: 40,
             width: 90,
             onClick: () => {
@@ -284,8 +287,8 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
           {
             key: "filter",
             icon: isFilterActive ? "mdi:filter" : "mdi:filter-outline",
-            text: "搜索",
-            tooltip: isFilterActive ? "关闭搜索" : "开启搜索",
+            text: t("搜索"),
+            tooltip: isFilterActive ? t("关闭搜索") : t("开启搜索"),
             iconColor: isFilterActive ? "text-primary" : undefined,
             priority: 50,
             width: 90,
@@ -301,8 +304,8 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
         buttons: (["csv", "xlsx"] as const).map((format) => ({
           key: `export-${format}`,
           icon: "solar:download-linear",
-          text: format === "csv" ? "导出 CSV" : "导出 Excel",
-          tooltip: "导出选中节点，未选择时导出全部数据",
+          text: format === "csv" ? t("导出 CSV") : t("导出 Excel"),
+          tooltip: t("导出选中节点，未选择时导出全部数据"),
           priority: 60,
           width: 110,
           onClick: () => onExport(format),
@@ -551,7 +554,7 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
         radius="sm"
         onOpenChange={setMoreDropdownOpen}
       >
-        <Tooltip content="更多操作" delay={300}>
+        <Tooltip content={t("更多操作")} delay={300}>
           <DropdownTrigger
             onMouseEnter={showMoreDropdown}
             onMouseLeave={unShowMoreDropdown}
@@ -561,12 +564,12 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
               startContent={<Icon icon="mingcute:more-2-fill" width={20} />}
               variant="light"
             >
-              更多
+              {t("更多")}
             </Button>
           </DropdownTrigger>
         </Tooltip>
         <DropdownMenu
-          aria-label="更多操作"
+          aria-label={t("更多操作")}
           onMouseEnter={showMoreDropdown}
           onMouseLeave={unShowMoreDropdown}
         >
@@ -635,7 +638,7 @@ const JsonTableOperationBar: React.FC<JsonTableOperationBarProps> = ({
           <Input
             isClearable
             className="w-40 ml-1"
-            placeholder="搜索表格内容..."
+            placeholder={t("搜索表格内容...")}
             size="sm"
             startContent={
               <Icon

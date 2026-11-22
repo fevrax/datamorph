@@ -1,3 +1,4 @@
+import { messageError } from "@/i18n/diagnostics";
 import { renumberProtoFields } from "../utils/protoFieldNumbers";
 
 export interface ProtoTaskInput {
@@ -7,6 +8,6 @@ export interface ProtoTaskInput {
 }
 export function executeProtoTask(input: ProtoTaskInput): { content: string } {
   if (input.language !== "proto")
-    throw new Error("重新排序编号仅支持 Protobuf");
+    throw messageError("重新排序编号仅支持 Protobuf");
   return { content: renumberProtoFields(input.content) };
 }

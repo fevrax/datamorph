@@ -9,6 +9,7 @@
 
 ## ✨ 特性
 
+- 支持简体中文与英文界面。首次打开时按浏览器首选语言显示，可在「设置 → 通用 → 界面语言」即时切换，刷新后保留。界面语言不影响数据转换或 AI 提示词。
 - 自动识别并高亮 JSON、JSONC、JSON5、YAML、TOML、XML、CSV、TSV、INI、NDJSON、HTML、CSS、SCSS、LESS、SQL、JavaScript、TypeScript、Markdown、Protobuf（含 `.yml`、`.jsonl`、`.proto`）。无法识别的非空内容回退为普通文本；也可手动选择普通文本。导入文件或明确命名的扩展名优先（如 `.txt`）。
 - 未命名的空白文档默认使用 JSON，格式切换保留正文、撤销记录及光标位置。
 - 支持多格式识别、高亮、编辑和文本对比。格式化支持 JSON/JSON5、JSONC、YAML、HTML、CSS/SCSS/LESS、SQL（标准 SQL）、JavaScript/TypeScript、Markdown 和 Protobuf，可从工具栏、快捷键及对比视图使用并撤销；校验、树形、表格及 JSONPath 仍限 JSON/JSON5。TOML、XML、CSV、TSV、INI、NDJSON 暂不提供编辑器格式化；已有格式转换工具支持 JSON、JSON5、YAML、TOML、XML。

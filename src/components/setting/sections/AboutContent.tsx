@@ -1,3 +1,11 @@
+import { t } from "@/i18n";
+import {
+  errorDetails,
+  errorText,
+  messageError,
+  type ErrorDetails,
+} from "@/i18n/diagnostics";
+import { useLocale } from "@/i18n/useLocale";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui";
 import { Icon } from "@/components/ui/icon";
@@ -17,10 +25,7 @@ import {
   type LatestReleaseInfo,
 } from "@/services/releaseChecker";
 
-const APP_VERSION = APP_BUILD_INFO.version
-  ? `v${APP_BUILD_INFO.version}`
-  : "开发构建";
-const dateFormat = new Intl.DateTimeFormat("zh-CN", {
+const dateOptions: Intl.DateTimeFormatOptions = {
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
@@ -29,34 +34,55 @@ const dateFormat = new Intl.DateTimeFormat("zh-CN", {
   second: "2-digit",
   hourCycle: "h23",
   timeZoneName: "short",
-});
+};
 
 type CheckState =
   | { status: "idle" | "checking" }
   | { status: "success"; release: LatestReleaseInfo }
-  | { status: "error"; message: string };
+  | { status: "error"; error: ErrorDetails };
 
 const FEATURES = [
-  { label: "多格式识别与语法高亮", icon: "solar:check-circle-bold" },
-  { label: "智能 AI 辅助修复", icon: "solar:check-circle-bold" },
-  { label: "数据格式转换", icon: "solar:check-circle-bold" },
+  {
+    get label() {
+      return t("多格式识别与语法高亮");
+    },
+    icon: "solar:check-circle-bold",
+  },
+  {
+    get label() {
+      return t("智能 AI 辅助修复");
+    },
+    icon: "solar:check-circle-bold",
+  },
+  {
+    get label() {
+      return t("数据格式转换");
+    },
+    icon: "solar:check-circle-bold",
+  },
 ];
 
 const LINKS = [
   {
     href: REPOSITORY_URL,
     icon: "mdi:github",
-    label: "GitHub 仓库",
+    get label() {
+      return t("GitHub 仓库");
+    },
   },
   {
     href: `${REPOSITORY_URL}/issues`,
     icon: "solar:chat-square-code-bold",
-    label: "问题反馈",
+    get label() {
+      return t("问题反馈");
+    },
   },
   {
     href: REPOSITORY_URL,
     icon: "solar:document-bold",
-    label: "使用文档",
+    get label() {
+      return t("使用文档");
+    },
   },
 ];
 
@@ -65,6 +91,11 @@ const LINKS = [
  * 放宽宽度限制：根容器 max-w-5xl，内容用 grid 充分利用横向空间。
  */
 export function AboutContent() {
+  const locale = useLocale();
+  const dateFormat = new Intl.DateTimeFormat(locale, dateOptions);
+  const appVersion = APP_BUILD_INFO.version
+    ? `v${APP_BUILD_INFO.version}`
+    : t("开发构建");
   const [checkState, setCheckState] = useState<CheckState>({ status: "idle" });
   const activeRequest = useRef<AbortController | null>(null);
 
@@ -85,8 +116,11 @@ export function AboutContent() {
       if (!controller.signal.aborted) {
         setCheckState({
           status: "error",
-          message:
-            error instanceof Error ? error.message : "检查更新失败，请重试",
+          error: errorDetails(
+            error instanceof Error
+              ? error
+              : messageError("检查更新失败，请重试"),
+          ),
         });
       }
     } finally {
@@ -99,18 +133,18 @@ export function AboutContent() {
     : null;
   const resultTitle = latest
     ? {
-        development: `GitHub 最新正式版 v${latest.version}`,
-        newer: `发现新版本 v${latest.version}`,
-        current: "已是最新正式版",
-        ahead: "当前版本高于最新正式版",
+        development: t("GitHub 最新正式版 v{0}", { 0: latest.version }),
+        newer: t("发现新版本 v{0}", { 0: latest.version }),
+        current: t("已是最新正式版"),
+        ahead: t("当前版本高于最新正式版"),
       }[comparison!]
     : null;
 
   return (
     <div className="h-full">
       <SectionHeader
-        description="了解更多关于应用的信息"
-        title="关于 Datamorph"
+        description={t("了解更多关于应用的信息")}
+        title={t("关于 Datamorph")}
       />
 
       {/* 品牌信息 */}
@@ -125,21 +159,21 @@ export function AboutContent() {
                 Datamorph
               </h3>
               <p className="text-[12px] text-muted-foreground">
-                一源万构，形随需变。面向开发者的数据处理工作台。
+                {t("一源万构，形随需变。面向开发者的数据处理工作台。")}
               </p>
             </div>
           </div>
           <span className="w-fit rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground">
-            {APP_VERSION}
+            {appVersion}
           </span>
         </div>
       </SectionCard>
 
-      <GroupLabel>版本信息</GroupLabel>
+      <GroupLabel>{t("版本信息")}</GroupLabel>
       <SectionCard>
         <dl className="grid gap-4 p-4 sm:grid-cols-3">
           <div className="min-w-0">
-            <dt className="text-xs text-muted-foreground">当前版本</dt>
+            <dt className="text-xs text-muted-foreground">{t("当前版本")}</dt>
             <dd className="mt-1 text-[13px] font-medium">
               {APP_BUILD_INFO.version ? (
                 <ExternalLink
@@ -147,15 +181,15 @@ export function AboutContent() {
                   className="text-primary hover:underline"
                   href={releaseUrl(APP_BUILD_INFO.version)}
                 >
-                  {APP_VERSION}
+                  {appVersion}
                 </ExternalLink>
               ) : (
-                APP_VERSION
+                appVersion
               )}
             </dd>
           </div>
           <div className="min-w-0">
-            <dt className="text-xs text-muted-foreground">提交</dt>
+            <dt className="text-xs text-muted-foreground">{t("提交")}</dt>
             <dd className="mt-1 text-[13px] font-medium">
               {APP_BUILD_INFO.commitSha ? (
                 <ExternalLink
@@ -167,19 +201,19 @@ export function AboutContent() {
                   {APP_BUILD_INFO.commitSha.slice(0, 7)}
                 </ExternalLink>
               ) : (
-                "未知"
+                t("未知")
               )}
             </dd>
           </div>
           <div className="min-w-0">
-            <dt className="text-xs text-muted-foreground">构建时间</dt>
+            <dt className="text-xs text-muted-foreground">{t("构建时间")}</dt>
             <dd className="mt-1 text-[13px] font-medium">
               {APP_BUILD_INFO.builtAt ? (
                 <time dateTime={APP_BUILD_INFO.builtAt}>
                   {dateFormat.format(new Date(APP_BUILD_INFO.builtAt))}
                 </time>
               ) : (
-                "开发服务器未记录"
+                t("开发服务器未记录")
               )}
             </dd>
           </div>
@@ -189,20 +223,20 @@ export function AboutContent() {
             <div aria-live="polite" role="status">
               <p className="text-[13px] font-medium">
                 {checkState.status === "error"
-                  ? checkState.message
+                  ? errorText(checkState.error)
                   : checkState.status === "checking"
-                    ? "正在检查 GitHub 最新正式发布…"
-                    : (resultTitle ?? "手动检查 GitHub 最新正式发布")}
+                    ? t("正在检查 GitHub 最新正式发布…")
+                    : (resultTitle ?? t("手动检查 GitHub 最新正式发布"))}
               </p>
               {latest ? (
                 <div className="mt-1 space-y-1 text-xs text-muted-foreground">
                   <p>
                     {comparison === "development"
-                      ? "当前为开发构建，无法与正式版本比较。"
-                      : `GitHub 最新正式版 v${latest.version}`}
+                      ? t("当前为开发构建，无法与正式版本比较。")
+                      : t("GitHub 最新正式版 v{0}", { 0: latest.version })}
                   </p>
                   <p>
-                    上次检查：
+                    {t("上次检查：")}
                     <time dateTime={new Date(latest.checkedAt).toISOString()}>
                       {dateFormat.format(latest.checkedAt)}
                     </time>
@@ -215,7 +249,7 @@ export function AboutContent() {
               className="mt-2 inline-flex text-xs text-primary hover:underline"
               href={latest ? releaseUrl(latest.version) : RELEASES_URL}
             >
-              {latest ? "查看更新日志" : "查看全部发布"}
+              {latest ? t("查看更新日志") : t("查看全部发布")}
             </ExternalLink>
           </div>
           <Button
@@ -225,10 +259,10 @@ export function AboutContent() {
             onPress={() => void checkForUpdates()}
           >
             {checkState.status === "checking"
-              ? "检查中…"
+              ? t("检查中…")
               : checkState.status === "error"
-                ? "重新检查"
-                : "检查更新"}
+                ? t("重新检查")
+                : t("检查更新")}
           </Button>
         </div>
       </SectionCard>
@@ -236,7 +270,7 @@ export function AboutContent() {
       {/* 双列：功能特点 + 技术支持 */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div>
-          <GroupLabel>功能特点</GroupLabel>
+          <GroupLabel>{t("功能特点")}</GroupLabel>
           <SectionCard divided>
             {FEATURES.map((f) => (
               <div
@@ -255,7 +289,7 @@ export function AboutContent() {
         </div>
 
         <div>
-          <GroupLabel>技术支持</GroupLabel>
+          <GroupLabel>{t("技术支持")}</GroupLabel>
           <SectionCard divided>
             {LINKS.map((l) => (
               <ExternalLink
@@ -284,8 +318,8 @@ export function AboutContent() {
       </div>
 
       <p className="mt-6 text-center text-[12px] text-muted-foreground">
-        © {new Date().getFullYear()} Datamorph · 基于 React、TypeScript 和
-        shadcn/ui 构建
+        © {new Date().getFullYear()}{" "}
+        {t("Datamorph · 基于 React、TypeScript 和\n        shadcn/ui 构建")}
       </p>
     </div>
   );

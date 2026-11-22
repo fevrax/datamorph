@@ -1,3 +1,6 @@
+import { errorText } from "@/i18n/diagnostics";
+import { t, type StaticMessage } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useToolAI } from "@/components/workspace/useToolAI";
 import { useBackgroundTask } from "@/components/workspace/useBackgroundTask";
@@ -39,7 +42,9 @@ const DATA_FORMATS = [
 const quickPrompts: QuickPrompt[] = [
   {
     id: "convert_json_to_csv",
-    label: "JSON转CSV",
+    get label() {
+      return t("JSON转CSV");
+    },
     icon: "material-symbols:csv-outline",
     prompt: "请将这个JSON数据转换为CSV格式，保持结构和数据不变",
     color: "primary",
@@ -49,6 +54,7 @@ const quickPrompts: QuickPrompt[] = [
 const useToolState = createToolStateHook("dataFormatConverter");
 
 export default function DataFormatConverterPage() {
+  useLocale();
   const { resolvedTheme: theme } = useTheme();
 
   // 编辑器引用
@@ -60,7 +66,7 @@ export default function DataFormatConverterPage() {
   const [outputValue, setOutputValue] = useToolState("outputValue", "");
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isAiProcessing, setIsAiProcessing] = useState<boolean>(false);
-  const [processingStep, setProcessingStep] = useState<string>("");
+  const [processingStep, setProcessingStep] = useState<StaticMessage | "">("");
   const [isAiModalOpen, setIsAiModalOpen] = useState<boolean>(false);
   const [prompt, setPrompt] = useState<string>("");
 
@@ -94,7 +100,7 @@ export default function DataFormatConverterPage() {
     setOutputValue("");
     outputEditorRef.current?.updateValue("");
     inputEditorRef.current?.updateValue("");
-    toast.success("内容已清空");
+    toast.success(t("内容已清空"));
   };
 
   // 交换输入和输出格式
@@ -111,7 +117,7 @@ export default function DataFormatConverterPage() {
   // 数据格式转换函数
   const convertDataFormat = async () => {
     if (!inputValue) {
-      toast.warning("请先输入内容");
+      toast.warning(t("请先输入内容"));
 
       return;
     }
@@ -134,12 +140,12 @@ export default function DataFormatConverterPage() {
       setOutputValue(result);
       outputEditorRef.current?.updateValue(result);
 
-      toast.success("转换成功");
+      toast.success(t("转换成功"));
       setProcessingStep("转换完成");
     } catch (error) {
       if ((error as Error).name === "AbortError") return;
       console.error("转换错误:", error);
-      toast.error(`转换失败: ${(error as Error).message}`);
+      toast.error(t("转换失败: {0}", { 0: errorText(error) }));
       setProcessingStep("");
     } finally {
       setIsProcessing(false);
@@ -149,33 +155,33 @@ export default function DataFormatConverterPage() {
   // 复制输出内容
   const copyOutput = () => {
     if (!outputValue) {
-      toast.warning("暂无内容可复制");
+      toast.warning(t("暂无内容可复制"));
 
       return;
     }
 
     if (navigator.clipboard || (window as any).utools) {
       writeClipboardText(outputValue)
-        .then(() => toast.success("已复制到剪贴板"))
-        .catch(() => toast.error("复制失败"));
+        .then(() => toast.success(t("已复制到剪贴板")))
+        .catch(() => toast.error(t("复制失败")));
     } else {
-      toast.error("复制失败");
+      toast.error(t("复制失败"));
     }
   };
 
   // 复制输入内容
   const copyInput = () => {
     if (!inputValue) {
-      toast.warning("暂无内容可复制");
+      toast.warning(t("暂无内容可复制"));
 
       return;
     }
     if (navigator.clipboard || (window as any).utools) {
       writeClipboardText(inputValue)
-        .then(() => toast.success("已复制到剪贴板"))
-        .catch(() => toast.error("复制失败"));
+        .then(() => toast.success(t("已复制到剪贴板")))
+        .catch(() => toast.error(t("复制失败")));
     } else {
-      toast.error("复制失败");
+      toast.error(t("复制失败"));
     }
   };
 
@@ -185,7 +191,7 @@ export default function DataFormatConverterPage() {
     const format = side === "input" ? inputFormat : outputFormat;
 
     if (!value) {
-      toast.warning("暂无内容可格式化");
+      toast.warning(t("暂无内容可格式化"));
 
       return;
     }
@@ -208,9 +214,9 @@ export default function DataFormatConverterPage() {
         setOutputValue(formatted);
         outputEditorRef.current?.updateValue(formatted);
       }
-      toast.success("格式化成功");
+      toast.success(t("格式化成功"));
     } catch (error) {
-      toast.error(`格式化失败: ${(error as Error).message}`);
+      toast.error(t("格式化失败: {0}", { 0: errorText(error) }));
     }
   };
   const formatInput = () => formatContent("input");
@@ -219,13 +225,13 @@ export default function DataFormatConverterPage() {
   // AI 转换处理函数
   const handleAiConvert = async () => {
     if (!inputValue) {
-      toast.warning("请先输入内容");
+      toast.warning(t("请先输入内容"));
 
       return;
     }
 
     if (!prompt) {
-      toast.warning("请输入转换需求");
+      toast.warning(t("请输入转换需求"));
 
       return;
     }
@@ -239,7 +245,7 @@ export default function DataFormatConverterPage() {
       const promptText = `${prompt}\n以下是${DATA_FORMATS.find((f) => f.value === inputFormat)?.label || inputFormat}内容：\n\`\`\`${inputFormat}\n${inputValue}\n\`\`\`\n请仅返回转换后的代码并使用\`\`\`语言标记\`\`\`包裹，不要包含任何解释或其他内容。`;
 
       if (promptText.length > openAIService.maxTokens) {
-        toast.error("内容超出限制，请缩短内容或使用其他方式描述需求。");
+        toast.error(t("内容超出限制，请缩短内容或使用其他方式描述需求。"));
         setProcessingStep("");
         setIsAiProcessing(false);
 
@@ -324,27 +330,29 @@ export default function DataFormatConverterPage() {
                 : outputFormat,
             );
             setOutputValue(cleanedResult);
-            toast.success("转换成功");
+            toast.success(t("转换成功"));
             setProcessingStep("转换完成");
           } catch (formatError) {
             console.error("格式更新错误:", formatError);
             // 即使格式设置失败，也展示内容
             outputEditorRef.current?.updateValue(cleanedResult);
             setOutputValue(cleanedResult);
-            toast.success("内容已生成，但格式设置失败");
+            toast.success(t("内容已生成，但格式设置失败"));
             setProcessingStep("转换部分完成");
           }
         },
         onError: (error) => {
           console.error("AI转换错误:", error);
-          toast.error(`转换失败: ${error.message || "未知错误"}`);
+          toast.error(
+            t("转换失败: {0}", { 0: errorText(error) || t("未知错误") }),
+          );
           setProcessingStep("");
         },
       });
     } catch (error) {
       console.error("AI转换错误:", error);
       toast.error(
-        `转换失败: ${(error as Error).message || "未知错误，请重试"}`,
+        t("转换失败: {0}", { 0: errorText(error) || t("未知错误，请重试") }),
       );
       setProcessingStep("转换失败");
     } finally {
@@ -358,16 +366,16 @@ export default function DataFormatConverterPage() {
   return (
     <ToolboxPageTemplate
       toolIcon="token-branded:swap"
-      toolName="数据格式转换"
-      description="选择输入与输出格式，在中央完成转换。"
+      toolName={t("数据格式转换")}
+      description={t("选择输入与输出格式，在中央完成转换。")}
     >
       <div className="tool-editor-workspace">
         <AIPromptOverlay
           isOpen={isAiModalOpen}
-          placeholderText="描述需要转换的格式或结构…"
+          placeholderText={t("描述需要转换的格式或结构…")}
           prompt={prompt}
           quickPrompts={quickPrompts}
-          tipText="支持自定义数据结构和代码生成需求"
+          tipText={t("支持自定义数据结构和代码生成需求")}
           onClose={() => setIsAiModalOpen(false)}
           onPromptChange={setPrompt}
           onQuickPromptClick={handleQuickPromptClick}
@@ -375,16 +383,16 @@ export default function DataFormatConverterPage() {
         />
         <div className="tool-conversion-layout">
           <ToolPanel
-            title={`输入 · ${inputFormat.toUpperCase()}`}
+            title={t("输入 · {0}", { 0: inputFormat.toUpperCase() })}
             actions={
               <>
                 <Button size="sm" variant="ghost" onPress={formatInput}>
-                  格式化
+                  {t("格式化")}
                 </Button>
                 <Button
                   size="sm"
                   variant="ghost"
-                  aria-label="复制输入"
+                  aria-label={t("复制输入")}
                   onPress={copyInput}
                 >
                   <Copy />
@@ -401,11 +409,14 @@ export default function DataFormatConverterPage() {
               onUpdateValue={(value) => setInputValue(value || "")}
             />
           </ToolPanel>
-          <aside className="tool-conversion-controls" aria-label="格式转换设置">
+          <aside
+            className="tool-conversion-controls"
+            aria-label={t("格式转换设置")}
+          >
             <div>
-              <span className="tool-field-label">输入格式</span>
+              <span className="tool-field-label">{t("输入格式")}</span>
               <Select
-                aria-label="输入格式"
+                aria-label={t("输入格式")}
                 selectedKeys={[inputFormat]}
                 size="sm"
                 onChange={(event) => {
@@ -423,9 +434,9 @@ export default function DataFormatConverterPage() {
               aria-hidden="true"
             />
             <div>
-              <span className="tool-field-label">输出格式</span>
+              <span className="tool-field-label">{t("输出格式")}</span>
               <Select
-                aria-label="输出格式"
+                aria-label={t("输出格式")}
                 selectedKeys={[outputFormat]}
                 size="sm"
                 onChange={(event) => {
@@ -444,7 +455,8 @@ export default function DataFormatConverterPage() {
               isDisabled={busy || !inputValue}
               onPress={convertDataFormat}
             >
-              {isProcessing ? <Spinner size="sm" /> : <ArrowRight />}转换格式
+              {isProcessing ? <Spinner size="sm" /> : <ArrowRight />}
+              {t("转换格式")}
             </Button>
             <Button
               variant="outline"
@@ -453,7 +465,7 @@ export default function DataFormatConverterPage() {
               onPress={handleSwapFormats}
             >
               <ArrowLeftRight />
-              交换格式
+              {t("交换格式")}
             </Button>
             <Button
               variant="outline"
@@ -461,7 +473,8 @@ export default function DataFormatConverterPage() {
               isDisabled={busy}
               onPress={() => setIsAiModalOpen(true)}
             >
-              {isAiProcessing ? <Spinner size="sm" /> : <WandSparkles />}AI 转换
+              {isAiProcessing ? <Spinner size="sm" /> : <WandSparkles />}
+              {t("AI 转换")}
             </Button>
             <Button
               variant="ghost"
@@ -470,27 +483,27 @@ export default function DataFormatConverterPage() {
               onPress={handleReset}
             >
               <RotateCcw />
-              重置
+              {t("重置")}
             </Button>
             <span
               role="status"
               aria-live="polite"
               className="tool-workspace-status"
             >
-              {processingStep}
+              {processingStep && t(processingStep)}
             </span>
           </aside>
           <ToolPanel
-            title={`输出 · ${outputFormat.toUpperCase()}`}
+            title={t("输出 · {0}", { 0: outputFormat.toUpperCase() })}
             actions={
               <>
                 <Button size="sm" variant="ghost" onPress={formatOutput}>
-                  格式化
+                  {t("格式化")}
                 </Button>
                 <Button
                   size="sm"
                   variant="ghost"
-                  aria-label="复制输出"
+                  aria-label={t("复制输出")}
                   onPress={copyOutput}
                 >
                   <Copy />

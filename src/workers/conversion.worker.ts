@@ -1,4 +1,5 @@
 import { executeConversion, type ConversionInput } from "./conversion";
+import { errorDetails } from "@/i18n/diagnostics";
 self.onmessage = async (
   event: MessageEvent<{ id: number; input: ConversionInput }>,
 ) => {
@@ -8,7 +9,7 @@ self.onmessage = async (
   } catch (error) {
     self.postMessage({
       id,
-      error: error instanceof Error ? error.message : String(error),
+      error: errorDetails(error),
       details:
         error instanceof Error
           ? Object.assign({ name: error.name }, error)

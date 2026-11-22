@@ -1,3 +1,6 @@
+import { errorText } from "@/i18n/diagnostics";
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { encodeJwtLossless, decodeJwtLossless } from "@/utils/jwtLossless";
 import { writeClipboardText } from "@/utils/clipboard";
 import { createToolStateHook } from "@/components/workspace/ToolContext";
@@ -52,7 +55,7 @@ const encodeJwt = async (
 
     // 检查payload是否有效
     if (!payload || typeof payload !== "object") {
-      throw new Error("无效的payload格式");
+      throw new Error(t("无效的payload格式"));
     }
 
     const token = encodeJwtLossless(updatedHeader, payload, secret, algorithm);
@@ -72,7 +75,7 @@ const decodeJwt = (token: string) => {
         header: null,
         payload: null,
         isValid: false,
-        error: "空JWT令牌",
+        error: t("空JWT令牌"),
       };
     }
 
@@ -84,7 +87,7 @@ const decodeJwt = (token: string) => {
         header: null,
         payload: null,
         isValid: false,
-        error: "无效的JWT格式，应包含三个部分",
+        error: t("无效的JWT格式，应包含三个部分"),
       };
     }
 
@@ -95,7 +98,7 @@ const decodeJwt = (token: string) => {
         header: null,
         payload: null,
         isValid: false,
-        error: "JWT解析失败",
+        error: t("JWT解析失败"),
       };
     }
 
@@ -112,7 +115,7 @@ const decodeJwt = (token: string) => {
       header: null,
       payload: null,
       isValid: false,
-      error: "JWT解析失败",
+      error: t("JWT解析失败"),
     };
   }
 };
@@ -123,14 +126,14 @@ const verifyJwtSignature = async (token: string, secret: string) => {
     const parts = token.split(".");
 
     if (parts.length !== 3) {
-      return { isValid: false, message: "无效的JWT格式，应包含三个部分" };
+      return { isValid: false, message: t("无效的JWT格式，应包含三个部分") };
     }
 
     // 解码以获取头部信息和算法
     const decoded = jwt.decode(token, { complete: true });
 
     if (!decoded || !decoded.header) {
-      return { isValid: false, message: "无效的JWT格式" };
+      return { isValid: false, message: t("无效的JWT格式") };
     }
 
     const algorithm = decoded.header.alg;
@@ -154,7 +157,10 @@ const verifyJwtSignature = async (token: string, secret: string) => {
     if (!supportedAlgs.includes(algorithm)) {
       return {
         isValid: false,
-        message: `不支持的算法: ${algorithm}，支持的算法: ${supportedAlgs.join(", ")}`,
+        message: t("不支持的算法: {0}，支持的算法: {1}", {
+          0: algorithm,
+          1: supportedAlgs.join(", "),
+        }),
       };
     }
 
@@ -174,7 +180,7 @@ const verifyJwtSignature = async (token: string, secret: string) => {
     if (isAsymmetricAlg && !secret.includes("-----BEGIN")) {
       return {
         isValid: false,
-        message: "非对称算法验证需要有效的密钥格式，如 PEM 格式",
+        message: t("非对称算法验证需要有效的密钥格式，如 PEM 格式"),
       };
     }
 
@@ -189,32 +195,35 @@ const verifyJwtSignature = async (token: string, secret: string) => {
       const now = Math.floor(Date.now() / 1000);
 
       if (payload.exp && now > payload.exp) {
-        return { isValid: false, message: "JWT已过期", algorithm };
+        return { isValid: false, message: t("JWT已过期"), algorithm };
       }
 
       if (payload.nbf && now < payload.nbf) {
-        return { isValid: false, message: "JWT尚未生效", algorithm };
+        return { isValid: false, message: t("JWT尚未生效"), algorithm };
       }
 
       return {
         isValid: true,
-        message: `JWT签名有效${payload?.exp ? "、时间有效" : ""}. 算法是: ${algorithm}`,
+        message: t("JWT签名有效{0}. 算法是: {1}", {
+          0: payload?.exp ? t("、时间有效") : "",
+          1: algorithm,
+        }),
         algorithm,
       };
     } catch (err) {
       // 根据错误消息判断错误类型，而不是使用instanceof
-      const errorMessage = (err as Error).message || "";
+      const errorMessage = errorText(err) || "";
 
       if (errorMessage.includes("invalid signature")) {
-        return { isValid: false, message: "JWT签名验证失败", algorithm };
+        return { isValid: false, message: t("JWT签名验证失败"), algorithm };
       } else if (errorMessage.includes("jwt expired")) {
-        return { isValid: false, message: "JWT已过期", algorithm };
+        return { isValid: false, message: t("JWT已过期"), algorithm };
       } else if (errorMessage.includes("not active")) {
-        return { isValid: false, message: "JWT尚未生效", algorithm };
+        return { isValid: false, message: t("JWT尚未生效"), algorithm };
       } else {
         return {
           isValid: false,
-          message: `验证失败: ${errorMessage}`,
+          message: t("验证失败: {0}", { 0: errorMessage }),
           algorithm,
         };
       }
@@ -222,13 +231,17 @@ const verifyJwtSignature = async (token: string, secret: string) => {
   } catch (error) {
     console.error("验证错误:", error);
 
-    return { isValid: false, message: `验证失败: ${(error as Error).message}` };
+    return {
+      isValid: false,
+      message: t("验证失败: {0}", { 0: errorText(error) }),
+    };
   }
 };
 
 const useToolState = createToolStateHook("jwtParse");
 
 export default function JwtParsePage() {
+  useLocale();
   const { resolvedTheme: theme } = useTheme();
 
   // 编辑器引用
@@ -273,7 +286,7 @@ export default function JwtParsePage() {
   const parseJwt = () => {
     if (!jwtToken) {
       setIsTokenValid(false);
-      setValidationMessage("请输入 JWT 令牌");
+      setValidationMessage(t("请输入 JWT 令牌"));
 
       return;
     }
@@ -285,7 +298,7 @@ export default function JwtParsePage() {
 
       if (!isValid || !header || !payload) {
         setIsTokenValid(false);
-        setValidationMessage(error || "无效的 JWT 格式");
+        setValidationMessage(error || t("无效的 JWT 格式"));
         setIsProcessing(false);
 
         return;
@@ -304,18 +317,18 @@ export default function JwtParsePage() {
       // 设置为警告状态
       setIsTokenValid(null);
       setValidationMessage(
-        "JWT 格式有效，这似乎是一个正确签名的JWT，需进一步校验。",
+        t("JWT 格式有效，这似乎是一个正确签名的JWT，需进一步校验。"),
       );
     } catch (error) {
       // 安全地获取错误消息
       const errorMsg =
         error && typeof error === "object" && "message" in error
-          ? String(error.message)
-          : "未知错误";
+          ? errorText(error)
+          : t("未知错误");
 
       console.error("解析错误:", error);
       setIsTokenValid(false);
-      setValidationMessage(`解析失败: ${errorMsg}`);
+      setValidationMessage(t("解析失败: {0}", { 0: errorMsg }));
     } finally {
       setIsProcessing(false);
     }
@@ -325,14 +338,14 @@ export default function JwtParsePage() {
   const verifyJwt = async () => {
     if (!jwtToken) {
       setIsTokenValid(false);
-      setValidationMessage("请输入 JWT 令牌");
+      setValidationMessage(t("请输入 JWT 令牌"));
 
       return;
     }
 
     if (!secret) {
       setIsTokenValid(false);
-      setValidationMessage("请输入密钥");
+      setValidationMessage(t("请输入密钥"));
 
       return;
     }
@@ -345,7 +358,7 @@ export default function JwtParsePage() {
 
       if (parts.length !== 3) {
         setIsTokenValid(false);
-        setValidationMessage("无效的JWT格式，应包含三个部分");
+        setValidationMessage(t("无效的JWT格式，应包含三个部分"));
 
         return;
       }
@@ -355,7 +368,7 @@ export default function JwtParsePage() {
 
       if (!decoded || !decoded.header || !decoded.header.alg) {
         setIsTokenValid(false);
-        setValidationMessage("无法解析JWT头部");
+        setValidationMessage(t("无法解析JWT头部"));
 
         return;
       }
@@ -368,12 +381,12 @@ export default function JwtParsePage() {
       // 安全地获取错误消息
       const errorMsg =
         error && typeof error === "object" && "message" in error
-          ? String(error.message)
-          : "未知错误";
+          ? errorText(error)
+          : t("未知错误");
 
       console.error("验证错误:", error);
       setIsTokenValid(false);
-      setValidationMessage(`验证失败: ${errorMsg}`);
+      setValidationMessage(t("验证失败: {0}", { 0: errorMsg }));
     } finally {
       setIsProcessing(false);
     }
@@ -383,7 +396,7 @@ export default function JwtParsePage() {
   const encodeJwtToken = async () => {
     if (!secret) {
       setIsTokenValid(false);
-      setValidationMessage("请输入密钥");
+      setValidationMessage(t("请输入密钥"));
 
       return;
     }
@@ -416,11 +429,11 @@ export default function JwtParsePage() {
       } catch (e) {
         const errorMsg =
           e && typeof e === "object" && "message" in e
-            ? String(e.message)
-            : "未知错误";
+            ? errorText(e)
+            : t("未知错误");
 
         setIsTokenValid(false);
-        setValidationMessage(`无效的 JSON 格式: ${errorMsg}`);
+        setValidationMessage(t("无效的 JSON 格式: {0}", { 0: errorMsg }));
         setIsProcessing(false);
 
         return;
@@ -447,7 +460,7 @@ export default function JwtParsePage() {
         // 简单检查私钥格式，对于非对称算法，密钥通常是PEM格式
         if (!secret.includes("-----BEGIN") || !secret.includes("KEY-----")) {
           setIsTokenValid(false);
-          setValidationMessage("非对称算法需要有效的私钥格式，如 PEM 格式");
+          setValidationMessage(t("非对称算法需要有效的私钥格式，如 PEM 格式"));
           setIsProcessing(false);
 
           return;
@@ -469,7 +482,7 @@ export default function JwtParsePage() {
 
         // 自动解析新生成的 token
         setIsTokenValid(true);
-        setValidationMessage("JWT 生成成功");
+        setValidationMessage(t("JWT 生成成功"));
 
         // 自动解析
         const { header: parsedHeader, payload: parsedPayload } =
@@ -490,29 +503,29 @@ export default function JwtParsePage() {
         // 安全地获取错误消息
         const errMsg =
           err && typeof err === "object" && "message" in err
-            ? String(err.message)
-            : "未知错误";
+            ? errorText(err)
+            : t("未知错误");
 
         if (isAsymmetricAlg && errMsg.includes("key")) {
           setIsTokenValid(false);
           setValidationMessage(
-            `编码失败: 非对称算法需要有效的私钥格式，如 PEM 格式`,
+            t("编码失败: 非对称算法需要有效的私钥格式，如 PEM 格式"),
           );
         } else {
           setIsTokenValid(false);
-          setValidationMessage(`编码失败: ${errMsg}`);
+          setValidationMessage(t("编码失败: {0}", { 0: errMsg }));
         }
       }
     } catch (error) {
       // 安全地获取错误消息
       const errorMsg =
         error && typeof error === "object" && "message" in error
-          ? String(error.message)
-          : "未知错误";
+          ? errorText(error)
+          : t("未知错误");
 
       console.error("编码错误:", error);
       setIsTokenValid(false);
-      setValidationMessage(`编码失败: ${errorMsg}`);
+      setValidationMessage(t("编码失败: {0}", { 0: errorMsg }));
     } finally {
       setIsProcessing(false);
     }
@@ -550,14 +563,14 @@ export default function JwtParsePage() {
     encodePayloadEditorRef.current?.updateValue(defaultPayload);
 
     setIsTokenValid(true);
-    setValidationMessage("内容已清空");
+    setValidationMessage(t("内容已清空"));
   };
 
   // 复制 JWT
   const copyJwt = () => {
     if (!jwtToken) {
       setIsTokenValid(false);
-      setValidationMessage("暂无内容可复制");
+      setValidationMessage(t("暂无内容可复制"));
 
       return;
     }
@@ -566,15 +579,15 @@ export default function JwtParsePage() {
       writeClipboardText(jwtToken)
         .then(() => {
           setIsTokenValid(true);
-          setValidationMessage("已复制到剪贴板");
+          setValidationMessage(t("已复制到剪贴板"));
         })
         .catch(() => {
           setIsTokenValid(false);
-          setValidationMessage("复制失败");
+          setValidationMessage(t("复制失败"));
         });
     } else {
       setIsTokenValid(false);
-      setValidationMessage("复制失败");
+      setValidationMessage(t("复制失败"));
     }
   };
 
@@ -630,45 +643,45 @@ export default function JwtParsePage() {
         }
 
         setIsTokenValid(true);
-        setValidationMessage("已生成新的示例 JWT");
+        setValidationMessage(t("已生成新的示例 JWT"));
       })
       .catch((error) => {
         console.error("生成示例JWT失败:", error);
         setIsTokenValid(false);
-        setValidationMessage("生成示例JWT失败");
+        setValidationMessage(t("生成示例JWT失败"));
       });
   };
 
   // JWT提示信息
   const jwtHelpInfo =
-    "JWT（JSON Web Token）结构说明：\n\n" +
-    "1. 头部(Header)：包含token类型和算法\n" +
-    "2. 载荷(Payload)：包含声明信息\n" +
-    "3. 签名(Signature)：验证发送者身份和消息完整性\n\n" +
-    "JWT格式：xxxxx.yyyyy.zzzzz（点号分隔的三部分）";
+    t("JWT（JSON Web Token）结构说明：") +
+    t("1. 头部(Header)：包含token类型和算法") +
+    t("2. 载荷(Payload)：包含声明信息") +
+    t("3. 签名(Signature)：验证发送者身份和消息完整性") +
+    t("JWT格式：xxxxx.yyyyy.zzzzz（点号分隔的三部分）");
 
   const headerHelpInfo =
-    "头部(Header)字段说明：\n\n" +
-    "alg：签名算法（如HS256, RS256等）\n" +
-    "typ：令牌类型，通常为JWT\n" +
-    "kid：密钥ID（可选）\n" +
-    "jku：密钥集URL（可选）\n" +
-    "x5u：X.509证书URL（可选）";
+    t("头部(Header)字段说明：") +
+    t("alg：签名算法（如HS256, RS256等）") +
+    t("typ：令牌类型，通常为JWT") +
+    t("kid：密钥ID（可选）") +
+    t("jku：密钥集URL（可选）") +
+    t("x5u：X.509证书URL（可选）");
 
   const payloadHelpInfo =
-    "载荷(Payload)常用字段：\n\n" +
-    "iss：签发者\n" +
-    "sub：主题/用户ID\n" +
-    "aud：接收方\n" +
-    "exp：过期时间（UNIX时间戳）\n" +
-    "nbf：生效时间（Not Before）\n" +
-    "iat：签发时间（Issued At）\n" +
-    "jti：JWT唯一标识符";
+    t("载荷(Payload)常用字段：") +
+    t("iss：签发者") +
+    t("sub：主题/用户ID") +
+    t("aud：接收方") +
+    t("exp：过期时间（UNIX时间戳）") +
+    t("nbf：生效时间（Not Before）") +
+    t("iat：签发时间（Issued At）") +
+    t("jti：JWT唯一标识符");
 
   const copySection = (value: string) => {
     void writeClipboardText(value)
-      .then(() => toast.success("已复制到剪贴板"))
-      .catch(() => toast.error("复制失败"));
+      .then(() => toast.success(t("已复制到剪贴板")))
+      .catch(() => toast.error(t("复制失败")));
   };
   const help = (label: string, content: string) => (
     <Tooltip content={content} className="max-w-xs whitespace-pre-line">
@@ -681,8 +694,8 @@ export default function JwtParsePage() {
   return (
     <ToolboxPageTemplate
       toolIcon="solar:document-lock-linear"
-      toolName="JWT 解析与验证"
-      description="左侧查看令牌与载荷，右侧检查头部和签名。"
+      toolName={t("JWT 解析与验证")}
+      description={t("左侧查看令牌与载荷，右侧检查头部和签名。")}
       actions={
         <>
           <Button
@@ -691,7 +704,8 @@ export default function JwtParsePage() {
             isDisabled={isProcessing || !jwtToken}
             onPress={parseJwt}
           >
-            {isProcessing ? <Spinner size="sm" /> : <KeyRound />}解码 JWT
+            {isProcessing ? <Spinner size="sm" /> : <KeyRound />}
+            {t("解码 JWT")}
           </Button>
           <Button
             variant="outline"
@@ -699,7 +713,7 @@ export default function JwtParsePage() {
             isDisabled={isProcessing}
             onPress={generateSampleJwt}
           >
-            载入示例
+            {t("载入示例")}
           </Button>
           <Button
             variant="ghost"
@@ -708,24 +722,24 @@ export default function JwtParsePage() {
             onPress={handleReset}
           >
             <RotateCcw />
-            重置内容
+            {t("重置内容")}
           </Button>
         </>
       }
-      statusIndicator="解析成功不代表签名有效"
+      statusIndicator={t("解析成功不代表签名有效")}
     >
       <div className="tool-jwt-layout">
         <div className="tool-jwt-main">
           <ToolPanel
-            title="JWT 令牌"
+            title={t("JWT 令牌")}
             actions={
               <>
-                {help("JWT 帮助", jwtHelpInfo)}
+                {help(t("JWT 帮助"), jwtHelpInfo)}
                 <Button
                   size="sm"
                   variant="ghost"
                   isIconOnly
-                  aria-label="复制 JWT"
+                  aria-label={t("复制 JWT")}
                   isDisabled={!jwtToken}
                   onPress={copyJwt}
                 >
@@ -748,15 +762,15 @@ export default function JwtParsePage() {
             />
           </ToolPanel>
           <ToolPanel
-            title="Payload · 载荷"
+            title={t("Payload · 载荷")}
             actions={
               <>
-                {help("Payload 帮助", payloadHelpInfo)}
+                {help(t("Payload 帮助"), payloadHelpInfo)}
                 <Button
                   size="sm"
                   variant="ghost"
                   isIconOnly
-                  aria-label="复制 Payload"
+                  aria-label={t("复制 Payload")}
                   onPress={() => copySection(payloadJson || encodePayloadJson)}
                 >
                   <Copy />
@@ -777,18 +791,18 @@ export default function JwtParsePage() {
             />
           </ToolPanel>
         </div>
-        <aside className="tool-jwt-inspector" aria-label="JWT 检查器">
+        <aside className="tool-jwt-inspector" aria-label={t("JWT 检查器")}>
           <ToolPanel
-            title="Header · 头部"
+            title={t("Header · 头部")}
             className="tool-jwt-header"
             actions={
               <>
-                {help("Header 帮助", headerHelpInfo)}
+                {help(t("Header 帮助"), headerHelpInfo)}
                 <Button
                   size="sm"
                   variant="ghost"
                   isIconOnly
-                  aria-label="复制 Header"
+                  aria-label={t("复制 Header")}
                   onPress={() => copySection(headerJson || encodeHeaderJson)}
                 >
                   <Copy />
@@ -808,18 +822,18 @@ export default function JwtParsePage() {
               }}
             />
           </ToolPanel>
-          <ToolPanel title="签名检查与生成" className="tool-jwt-signature">
+          <ToolPanel title={t("签名检查与生成")} className="tool-jwt-signature">
             <div className="tool-jwt-fields">
               <div
                 role="status"
                 aria-live="polite"
                 className={`rounded-md border px-3 py-2 text-xs whitespace-pre-line break-words ${isTokenValid === true ? "border-success/30 bg-success/5 text-success" : isTokenValid === false ? "border-destructive/30 bg-destructive/5 text-destructive" : "border-border bg-muted/40 text-muted-foreground"}`}
               >
-                {validationMessage || "尚未验证签名"}
+                {validationMessage || t("尚未验证签名")}
               </div>
               <Select
-                aria-label="签名算法"
-                label="生成算法"
+                aria-label={t("签名算法")}
+                label={t("生成算法")}
                 selectedKeys={[selectedAlgorithm]}
                 size="sm"
                 onChange={(event) => {
@@ -832,7 +846,7 @@ export default function JwtParsePage() {
                     setHeaderJson(value);
                     headerEditorRef.current?.updateValue(value);
                   } catch {
-                    toast.warning("头部 JSON 无效，请修正后再生成");
+                    toast.warning(t("头部 JSON 无效，请修正后再生成"));
                   }
                 }}
               >
@@ -854,9 +868,9 @@ export default function JwtParsePage() {
                 ))}
               </Select>
               <Input
-                aria-label="密钥"
-                label="密钥"
-                placeholder="输入签名密钥或验证公钥"
+                aria-label={t("密钥")}
+                label={t("密钥")}
+                placeholder={t("输入签名密钥或验证公钥")}
                 value={secret}
                 onChange={(event) => {
                   setSecret(event.target.value);
@@ -865,7 +879,9 @@ export default function JwtParsePage() {
                 }}
               />
               <p className="text-xs text-muted-foreground">
-                验证使用令牌中的算法。非对称算法生成需要私钥，验证需要公钥。
+                {t(
+                  "验证使用令牌中的算法。非对称算法生成需要私钥，验证需要公钥。",
+                )}
               </p>
               <Button
                 color="primary"
@@ -874,7 +890,7 @@ export default function JwtParsePage() {
                 onPress={verifyJwt}
               >
                 <ShieldCheck />
-                验证签名
+                {t("验证签名")}
               </Button>
               <Button
                 variant="outline"
@@ -882,7 +898,7 @@ export default function JwtParsePage() {
                 isDisabled={isProcessing || !secret}
                 onPress={encodeJwtToken}
               >
-                生成 JWT
+                {t("生成 JWT")}
               </Button>
             </div>
           </ToolPanel>

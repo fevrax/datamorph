@@ -1,3 +1,6 @@
+import { errorText } from "@/i18n/diagnostics";
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import AIAssistantHeader from "@/components/ai/AIAssistantHeader";
 import { Sheet } from "@/components/ui/sheet";
 import { DiffPreview } from "@/components/workspace/DiffPreview";
@@ -122,8 +125,8 @@ export default function MonacoDiffEditor({
   modifiedValue,
   modifiedReadOnly = false,
   useInlineViewWhenSpaceIsLimited = true,
-  originalAriaLabel = "对比原文",
-  modifiedAriaLabel = "对比结果",
+  originalAriaLabel = t("对比原文"),
+  modifiedAriaLabel = t("对比结果"),
   language,
   languageMode,
   filename,
@@ -144,6 +147,7 @@ export default function MonacoDiffEditor({
   onMount,
   ref,
 }: MonacoDiffEditorProps) {
+  useLocale();
   const theme = getMonacoTheme(requestedTheme);
   const context = useContext(ToolContext);
   const owner = context || tabKey;
@@ -298,7 +302,7 @@ export default function MonacoDiffEditor({
           model.getVersionId() !== version ||
           model.getLanguageId() !== language
         ) {
-          toast.warning("内容已变化，请重新执行");
+          toast.warning(t("内容已变化，请重新执行"));
           return;
         }
         if (result.content !== undefined)
@@ -306,7 +310,8 @@ export default function MonacoDiffEditor({
       }),
     )
       .catch((error) => {
-        if (error.name !== "AbortError") toast.error("处理失败", error.message);
+        if (error.name !== "AbortError")
+          toast.error(t("处理失败"), errorText(error));
       })
       .finally(() => setBusy(false));
     return true;
@@ -325,7 +330,7 @@ export default function MonacoDiffEditor({
         editors(side)
           .map((ed) => ed.getValue())
           .join("\n\n"),
-        "已复制",
+        t("已复制"),
       );
       return true;
     },
@@ -489,8 +494,8 @@ export default function MonacoDiffEditor({
   const assistantContent = assistant && (
     <div className="ai-surface ai-dock flex h-full min-h-0 flex-col">
       <AIAssistantHeader
-        fileName={tabTitle || "对比快照"}
-        contextLabel="上下文 · 对比快照"
+        fileName={tabTitle || t("对比快照")}
+        contextLabel={t("上下文 · 对比快照")}
         onClose={() => setAssistant(false)}
       />
       <div className="min-h-0 flex-1">
@@ -537,7 +542,7 @@ export default function MonacoDiffEditor({
     >
       {showBusy && (
         <div className="flex items-center justify-between border-b bg-accent px-3 py-1 text-xs">
-          正在后台处理…
+          {t("正在后台处理…")}
           <Button
             size="sm"
             variant="ghost"
@@ -545,7 +550,7 @@ export default function MonacoDiffEditor({
               editors().forEach((ed) => cancelJsonTask(key + ":" + ed.getId()))
             }
           >
-            取消
+            {t("取消")}
           </Button>
         </div>
       )}
@@ -629,7 +634,11 @@ export default function MonacoDiffEditor({
           indentationBarTarget,
         )}
       {narrow && (
-        <Sheet open={assistant} onOpenChange={setAssistant} title="AI 助手">
+        <Sheet
+          open={assistant}
+          onOpenChange={setAssistant}
+          title={t("AI 助手")}
+        >
           {assistantContent}
         </Sheet>
       )}
@@ -653,7 +662,9 @@ export default function MonacoDiffEditor({
       <Modal isOpen={candidate !== null} onClose={() => setCandidate(null)}>
         <ModalContent>
           <ModalHeader>
-            应用至对比{candidateSide === Side.left ? "左" : "右"}侧
+            {candidateSide === Side.left
+              ? t("应用至对比左侧")
+              : t("应用至对比右侧")}
           </ModalHeader>
           <ModalBody>
             <DiffPreview
@@ -665,11 +676,11 @@ export default function MonacoDiffEditor({
               modified={candidate || ""}
             />
             <p className="mt-2 text-xs text-muted-foreground">
-              结果属于本次对比请求，应用后可撤销。
+              {t("结果属于本次对比请求，应用后可撤销。")}
             </p>
           </ModalBody>
           <ModalFooter>
-            <Button onPress={() => setCandidate(null)}>取消</Button>
+            <Button onPress={() => setCandidate(null)}>{t("取消")}</Button>
             <Button
               color="primary"
               onPress={() => {
@@ -678,14 +689,14 @@ export default function MonacoDiffEditor({
                   ?.getVersionId();
                 if (current !== candidateVersion) {
                   setCandidateVersion(current || 0);
-                  toast.warning("右侧内容已变化，请重新确认");
+                  toast.warning(t("右侧内容已变化，请重新确认"));
                   return;
                 }
                 apply(candidateSide, candidate || "");
                 setCandidate(null);
               }}
             >
-              应用
+              {t("应用")}
             </Button>
           </ModalFooter>
         </ModalContent>

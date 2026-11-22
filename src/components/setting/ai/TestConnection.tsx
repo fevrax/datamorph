@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { Button } from "@/components/ui";
 import { Icon } from "@/components/ui/icon";
 
@@ -25,6 +27,7 @@ export function TestConnectionBar({
   onTest,
   children,
 }: TestConnectionBarProps) {
+  useLocale();
   return (
     <>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
@@ -44,7 +47,7 @@ export function TestConnectionBar({
           variant="flat"
           onPress={onTest}
         >
-          测试连接
+          {t("测试连接")}
         </Button>
       </div>
 

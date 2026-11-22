@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { useLocale } from "@/i18n/useLocale";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { MoreHorizontal, type LucideIcon } from "lucide-react";
 import {
@@ -24,6 +26,7 @@ export function DocumentActions({
   actions: DocumentAction[];
   endContent?: ReactNode;
 }) {
+  useLocale();
   const container = useRef<HTMLDivElement>(null);
   const measurements = useRef<HTMLDivElement>(null);
   const [visibleCount, setVisibleCount] = useState(0);
@@ -86,7 +89,7 @@ export function DocumentActions({
   return (
     <div
       role="group"
-      aria-label="文档操作"
+      aria-label={t("文档操作")}
       className={`relative flex flex-1 items-center justify-end gap-1 ${endContent ? "min-w-[68px]" : "min-w-8"}`}
     >
       <div
@@ -100,13 +103,13 @@ export function DocumentActions({
               <Button
                 size="sm"
                 variant="ghost"
-                aria-label="更多文档操作"
+                aria-label={t("更多文档操作")}
                 isIconOnly
               >
                 <MoreHorizontal />
               </Button>
             </DropdownTrigger>
-            <DropdownMenu aria-label="更多文档操作">
+            <DropdownMenu aria-label={t("更多文档操作")}>
               {hiddenActions.map((action) => (
                 <DropdownItem
                   key={action.key}

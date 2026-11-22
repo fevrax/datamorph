@@ -1,13 +1,21 @@
+import { t } from "@/i18n";
+import type { ErrorDetails } from "@/i18n/diagnostics";
 import type { FormatTaskInput } from "./formatTasks";
 import type { ConversionInput } from "./conversion";
 import type { JsonTaskInput } from "./jsonTasks";
 import type { ProtoTaskInput } from "./protoTasks";
+export type ValidationDetails = ErrorDetails & {
+  line: number;
+  column: number;
+  detail?: string;
+};
+
 export type TaskResult = {
   data?: unknown;
   matchCount?: number;
   buffer?: ArrayBuffer;
   content?: string;
-  error?: { message: string; line: number; column: number; detail?: string };
+  error?: ValidationDetails;
 };
 let nextId = 0;
 const subscribers = new Set<() => void>();
@@ -41,7 +49,7 @@ export function cancelJsonTask(scope: string) {
   const job = pending.get(scope);
   if (job) {
     job.worker.terminate();
-    job.reject(new DOMException("操作已取消", "AbortError"));
+    job.reject(new DOMException(t("操作已取消"), "AbortError"));
     pending.delete(scope);
     notifyTasks();
   }
@@ -88,7 +96,13 @@ export function runJsonTask(
       if (event.data.id !== id) return;
       cleanup();
       if (event.data.error)
-        reject(Object.assign(new Error(event.data.error), event.data.details));
+        reject(
+          Object.assign(
+            new Error(event.data.error.message),
+            event.data.error,
+            event.data.details,
+          ),
+        );
       else resolve(event.data.result);
     };
     worker.onerror = (event) => {
