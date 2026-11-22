@@ -45,6 +45,7 @@ import {
 } from "@/components/workspace/WorkspaceActions";
 export interface DynamicTabsRef {
   getPositionTop: () => number;
+  openImportDialog: (type: "url" | "base64") => void;
 }
 export interface DynamicTabsProps {
   ref?: React.Ref<DynamicTabsRef>;
@@ -86,6 +87,7 @@ function DynamicTabs({
     ref,
     () => ({
       getPositionTop: () => root.current?.getBoundingClientRect().bottom || 0,
+      openImportDialog: (type) => open(type),
     }),
     [],
   );

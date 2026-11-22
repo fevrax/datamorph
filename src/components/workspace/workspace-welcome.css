@@ -1,0 +1,415 @@
+.workspace-welcome {
+  --welcome-syn-key: #3154b8;
+  --welcome-syn-string: #1f7a5c;
+  --welcome-syn-number: var(--warning);
+  --welcome-syn-keyword: #6d46c4;
+  --welcome-syn-punct: #838e9f;
+  --welcome-syn-comment: #7c8798;
+  --welcome-hint-time: #0a78e8;
+  --welcome-glow-primary: color-mix(in srgb, var(--primary) 7.5%, transparent);
+  --welcome-glow-secondary: color-mix(in srgb, #7c56d6 4.5%, transparent);
+  --welcome-dot: color-mix(in srgb, var(--muted-foreground) 17%, transparent);
+  --welcome-card-shadow: 0 12px 32px -12px rgba(24, 27, 33, 0.1),
+    0 2px 6px rgba(24, 27, 33, 0.04);
+  --welcome-kbd-shadow: inset 0 -1px 0 var(--input);
+}
+
+.dark .workspace-welcome {
+  --welcome-syn-key: var(--editor-key);
+  --welcome-syn-string: var(--editor-string);
+  --welcome-syn-number: var(--warning);
+  --welcome-syn-keyword: var(--editor-keyword);
+  --welcome-syn-punct: var(--editor-line-number);
+  --welcome-syn-comment: var(--editor-comment);
+  --welcome-hint-time: #7eb9ff;
+  --welcome-glow-primary: color-mix(in srgb, var(--primary) 11%, transparent);
+  --welcome-glow-secondary: color-mix(
+    in srgb,
+    var(--editor-keyword) 6.5%,
+    transparent
+  );
+  --welcome-dot: color-mix(in srgb, var(--muted-foreground) 13%, transparent);
+  --welcome-card-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.28);
+  --welcome-kbd-shadow: inset 0 -1px 0 var(--input);
+}
+
+.workspace-welcome-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+      520px 280px at 50% 34%,
+      var(--welcome-glow-primary),
+      transparent 72%
+    ),
+    radial-gradient(
+      380px 220px at 56% 56%,
+      var(--welcome-glow-secondary),
+      transparent 70%
+    );
+}
+
+.workspace-welcome-dots {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(var(--welcome-dot) 1px, transparent 1px);
+  background-size: 20px 20px;
+  -webkit-mask-image: radial-gradient(
+    ellipse 64% 58% at 50% 48%,
+    #000 0%,
+    rgba(0, 0, 0, 0.35) 56%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 64% 58% at 50% 48%,
+    #000 0%,
+    rgba(0, 0, 0, 0.35) 56%,
+    transparent 100%
+  );
+}
+
+@keyframes welcomeEnter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.workspace-welcome-inner {
+  animation: welcomeEnter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.workspace-welcome-emblem {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--primary) 26%, var(--border));
+  background: linear-gradient(150deg, var(--card), var(--accent));
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.workspace-welcome-card {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: var(--welcome-card-shadow);
+  overflow: hidden;
+}
+
+.workspace-welcome-card-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.workspace-welcome-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--secondary);
+}
+
+.workspace-welcome-tab {
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.workspace-welcome-tab:hover {
+  color: var(--foreground);
+}
+
+.workspace-welcome-tab[aria-pressed="true"] {
+  background: var(--background);
+  color: var(--primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.workspace-welcome-load {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  transition:
+    background-color 140ms ease,
+    transform 140ms ease;
+}
+
+.workspace-welcome-load:hover {
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+}
+
+.workspace-welcome-load svg {
+  width: 13px;
+  height: 13px;
+  transition: transform 140ms ease;
+}
+
+.workspace-welcome-load:hover svg {
+  transform: translateX(1.5px);
+}
+
+.workspace-welcome-preview {
+  padding: 14px 16px;
+  min-height: 152px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: left;
+}
+
+.workspace-welcome-code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.72;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.workspace-welcome-code-line {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
+.workspace-welcome-ln {
+  width: 16px;
+  flex-shrink: 0;
+  text-align: right;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+  opacity: 0.55;
+}
+
+.workspace-welcome-code-text {
+  white-space: pre;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.workspace-welcome-code-text::-webkit-scrollbar {
+  display: none;
+}
+
+.welcome-syn-key {
+  color: var(--welcome-syn-key);
+}
+
+.welcome-syn-string {
+  color: var(--welcome-syn-string);
+}
+
+.welcome-syn-number {
+  color: var(--welcome-syn-number);
+}
+
+.welcome-syn-keyword {
+  color: var(--welcome-syn-keyword);
+}
+
+.welcome-syn-punct {
+  color: var(--welcome-syn-punct);
+}
+
+.welcome-syn-comment {
+  color: var(--welcome-syn-comment);
+}
+
+.welcome-syn-decoded {
+  text-decoration: underline dotted var(--success);
+  text-underline-offset: 3px;
+}
+
+.welcome-decode-pill {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 5px;
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  line-height: 1.65;
+  vertical-align: baseline;
+}
+
+.welcome-decode-pill-success {
+  background: color-mix(in srgb, var(--success) 13%, transparent);
+  color: var(--success);
+}
+
+.welcome-decode-pill-time {
+  background: color-mix(in srgb, var(--primary) 11%, transparent);
+  color: var(--welcome-hint-time);
+}
+
+.welcome-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px;
+  border-radius: 3px;
+  vertical-align: -1px;
+  background: #4f5fd5;
+  border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
+}
+
+.workspace-welcome-table {
+  width: 100%;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  font-size: 11.5px;
+}
+
+.workspace-welcome-table-row {
+  display: grid;
+  grid-template-columns: 1.05fr 0.72fr 1.15fr 1.25fr;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+}
+
+.workspace-welcome-table-head {
+  background: var(--surface);
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 500;
+  border-bottom: 1px solid var(--border);
+}
+
+.workspace-welcome-table-body + .workspace-welcome-table-body {
+  border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+}
+
+.workspace-welcome-table-body {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+.workspace-welcome-pill {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease,
+    transform 140ms ease;
+}
+
+.workspace-welcome-pill:hover {
+  border-color: color-mix(in srgb, var(--primary) 34%, var(--border));
+  background: var(--accent);
+  color: var(--primary);
+}
+
+.workspace-welcome-pill svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.workspace-welcome-pill-primary {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--primary) 42%, transparent);
+}
+
+.workspace-welcome-pill-primary:hover {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 90%, var(--foreground));
+  color: var(--primary-foreground);
+}
+
+.workspace-welcome-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--muted);
+  box-shadow: var(--welcome-kbd-shadow);
+  color: var(--muted-foreground);
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.workspace-welcome-footer-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 6px;
+  padding: 2px 5px;
+  color: var(--muted-foreground);
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.workspace-welcome-footer-action:hover {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+@media (max-width: 520px) {
+  .workspace-welcome-preview {
+    padding: 12px;
+    min-height: 140px;
+  }
+
+  .workspace-welcome-table-row {
+    grid-template-columns: 1fr 1.15fr 1.2fr;
+  }
+
+  .workspace-welcome-table-type {
+    display: none;
+  }
+}
