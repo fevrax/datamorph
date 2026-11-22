@@ -550,3 +550,56 @@ test("settings and previews remain usable on a narrow viewport", async ({
     "JSON 字符串",
   );
 });
+
+test("inline decoder badges render at line end with per-kind styles and respect decoder toggles", async ({
+  page,
+}) => {
+  await ready(page);
+  await page.evaluate(async () => {
+    const path = "/src/store/useSettingsStore.ts";
+    const { useSettingsStore } = await import(path);
+    useSettingsStore.getState().setTimestampTimeZone("UTC");
+  });
+  const source = [
+    "{",
+    '  "token": "RGF0YW1vcnBo",',
+    '  "createdAt": 1750563586000,',
+    '  "accent": "#4f5fd5",',
+    '  "city": "\\u671D\\u9633\\u533A",',
+    '  "query": "%E5%BC%A0%E4%B8%89",',
+    '  "avatar": "https://example.com/logo.png"',
+    "}",
+  ].join("\n");
+  await replace(page, source);
+
+  await expect(page.locator(".json-decoded-pill-base64")).toContainText(
+    "Base64 → Datamorph",
+  );
+  await expect(page.locator(".json-decoded-pill-timestamp")).toContainText(
+    "2025-06-22 03:39:46",
+  );
+  await expect(page.locator(".json-decoded-pill-unicode")).toContainText(
+    "Unicode → 朝阳区",
+  );
+  await expect(page.locator(".json-decoded-pill-url")).toContainText(
+    "URL → 张三",
+  );
+  await expect(page.locator(".json-decoded-pill-image")).toContainText("图片");
+  await expect(page.locator(".smart-color-swatch")).toHaveCount(1);
+
+  await expect(
+    page.locator(".view-line").filter({ hasText: "RGF0YW1vcnBo" }),
+  ).toContainText(/"RGF0YW1vcnBo",\s+Base64\s+→\s+Datamorph/);
+  await expect(
+    page.locator(".view-line").filter({ hasText: "1750563586000" }),
+  ).toContainText(/1750563586000,\s+2025-06-22\s+03:39:46/);
+
+  await page.evaluate(async () => {
+    const path = "/src/store/useSettingsStore.ts";
+    const { useSettingsStore } = await import(path);
+    useSettingsStore.getState().setBase64DecoderEnabled(false);
+  });
+  await expect(page.locator(".json-decoded-pill-base64")).toHaveCount(0);
+  await expect(page.locator(".json-decoded-pill-timestamp")).toHaveCount(1);
+  expect(await content(page)).toBe(source);
+});
