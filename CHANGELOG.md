@@ -1,3 +1,10 @@
+# [2.6.0](https://github.com/fevrax/datamorph/compare/v2.5.0...v2.6.0) (2026-11-22)
+
+
+### Features
+
+* **ai:** support a configured site model list ([07600cf](https://github.com/fevrax/datamorph/commit/07600cfed5518d56fc331211181df7b65f2a8007))
+
 # [2.5.0](https://github.com/fevrax/datamorph/compare/v2.4.0...v2.5.0) (2026-11-22)
 
 
