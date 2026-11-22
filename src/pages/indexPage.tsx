@@ -23,6 +23,7 @@ import {
   Network,
   Table2,
   Columns2,
+  Columns3,
   WandSparkles,
   Copy,
   Download,
@@ -86,6 +87,7 @@ const TreeEditor = lazy(
   () => import("@/components/vanillaJsonEditor/VanillaJsonEditor"),
 );
 const TableView = lazy(() => import("@/components/jsonTable/JsonTableView"));
+const ColumnView = lazy(() => import("@/components/workspace/JsonColumnView"));
 const Toolbox = lazy(() => import("@/pages/toolboxPage"));
 const onTabSwitch = () => {};
 const Loading = () => (
@@ -244,6 +246,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
     ["code", "编辑", Braces],
     ["tree", "树形", Network],
     ["table", "表格", Table2],
+    ["columns", "栏列", Columns3],
   ];
   const update = useCallback(
     (content: string, changes?: readonly TextChange[]) =>
@@ -334,7 +337,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
   return (
     <>
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-3 py-2">
-        <div className="flex shrink-0 items-center gap-1 rounded-md bg-secondary/60 p-0.5">
+        <div className="flex max-w-full flex-wrap items-center gap-1 rounded-md bg-secondary/60 p-0.5">
           {viewList
             .filter(([id]) => id === "code" || jsonSupported)
             .map(([id, label, Icon]) => (
@@ -387,7 +390,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
                 }
               },
             },
-            ...(view !== "diff" && formatSupported
+            ...(view !== "diff" && view !== "columns" && formatSupported
               ? [
                   {
                     key: "format",
@@ -422,18 +425,22 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
                   },
                 ]
               : []),
-            {
-              key: "clear",
-              label: "清空",
-              icon: Trash2,
-              onPress: () => {
-                if (editor.current) {
-                  editor.current.clear();
-                  editor.current.focus();
-                } else update("");
-              },
-            },
-            ...(jsonSupported
+            ...(view !== "columns"
+              ? [
+                  {
+                    key: "clear",
+                    label: "清空",
+                    icon: Trash2,
+                    onPress: () => {
+                      if (editor.current) {
+                        editor.current.clear();
+                        editor.current.focus();
+                      } else update("");
+                    },
+                  },
+                ]
+              : []),
+            ...(jsonSupported && view !== "columns"
               ? (
                   [
                     ["压缩", "compress", Minimize2],
@@ -471,12 +478,16 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
                   ),
                 ),
             },
-            {
-              key: "history",
-              label: "历史",
-              icon: History,
-              onPress: () => setHistory(true),
-            },
+            ...(view !== "columns"
+              ? [
+                  {
+                    key: "history",
+                    label: "历史",
+                    icon: History,
+                    onPress: () => setHistory(true),
+                  },
+                ]
+              : []),
           ]}
         />
       </div>
@@ -548,6 +559,14 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
               onCopy={tableCopy}
             />
           )}{" "}
+          {view === "columns" && (
+            <ColumnView
+              key={`${tab.revision}:${tab.editorSettings.language}`}
+              content={tab.content}
+              language={tab.editorSettings.language}
+              onEdit={() => store.setView(tab.key, "code")}
+            />
+          )}
           {view === "diff" && (
             <MonacoDiffEditor
               ref={diff}
@@ -649,7 +668,7 @@ function DocumentWorkspace({ tabKey }: { tabKey: string }) {
                 : `${(fileBytes / 1048576).toFixed(1)} MB`}
           </span>
           <span key={view} ref={setLanguageTarget} className="inline-flex">
-            {(view === "tree" || view === "table") && (
+            {(view === "tree" || view === "table" || view === "columns") && (
               <LanguageSelector
                 language={tab.editorSettings.language}
                 languageMode={tab.editorSettings.languageMode}
