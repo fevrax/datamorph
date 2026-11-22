@@ -19,6 +19,7 @@ import { PWAUpdateManager } from "@/components/pwa/PWAUpdateManager";
 import { TimeZoneDialog } from "@/components/setting/TimeZoneSelector";
 import { ThemeColorManager } from "@/components/ThemeColorManager";
 import { useSettingsStore } from "@/store/useSettingsStore";
+import { useOpenAIConfigStore } from "@/store/useOpenAIConfigStore";
 import { getLocale, subscribeLocale } from "@/i18n/locale";
 
 // 初始化存储系统
@@ -55,6 +56,7 @@ const initializeUtoolsListener = () => {
 async function startApp() {
   await initializeStorage();
   await useSettingsStore.getState().syncSettingsStore().catch(console.error);
+  await useOpenAIConfigStore.getState().syncConfig().catch(console.error);
   updateDocumentLanguage();
   subscribeLocale(updateDocumentLanguage);
   initializeUtoolsListener();

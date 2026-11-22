@@ -6,12 +6,22 @@ test("service uses instance model/temperature, preserves zero, and maps only sit
   const originalFetch = globalThis.fetch;
   const bodies: Record<string, unknown>[] = [];
   let unavailable = false;
+  let hangUntilAbort = false;
+  let fetchAborted = false;
 
   Object.defineProperty(globalThis, "window", {
     configurable: true,
     value: { location: { protocol: "https:", origin: "https://mock.example" } },
   });
   globalThis.fetch = async (_input, init) => {
+    if (hangUntilAbort) {
+      return await new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          fetchAborted = true;
+          reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+        });
+      });
+    }
     const body = JSON.parse(String(init?.body));
 
     bodies.push(body);
@@ -90,6 +100,25 @@ test("service uses instance model/temperature, preserves zero, and maps only sit
     );
     assert.match(errors[1].message, /站点.*未配置.*私有API/);
     assert.equal(errors.length, 2);
+
+    // Silent chat supports AbortSignal cancellation and forwards the abort to fetch.
+    unavailable = false;
+    hangUntilAbort = true;
+    service.updateConfig({
+      routeType: "custom",
+      model: "instance-model",
+      temperature: 0.2,
+    });
+    const abortController = new AbortController();
+    const pendingChat = service.chat({
+      messages: [{ role: "user", content: "name this tab" }],
+      signal: abortController.signal,
+      silent: true,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    abortController.abort();
+    await assert.rejects(pendingChat, { name: "AbortError" });
+    assert.equal(fetchAborted, true);
   } finally {
     globalThis.fetch = originalFetch;
     if (originalWindow)

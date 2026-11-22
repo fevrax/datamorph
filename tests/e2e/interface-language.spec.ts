@@ -19,7 +19,7 @@ test("a fresh Traditional Chinese browser starts in Simplified Chinese", async (
     await page.goto(baseURL!);
     await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
     await expect(
-      page.getByRole("tab", { name: "未命名", exact: true }),
+      page.getByRole("tab", { name: "New Tab 1", exact: true }),
     ).toBeVisible();
     await expect(
       page.getByRole("region", { name: "开始编辑文档" }),
@@ -35,7 +35,7 @@ test("the language switches immediately, persists on reload, and resets to the b
   await page.goto("/");
   await expect(page).toHaveTitle("Datamorph - Data workbench");
   await expect(
-    page.getByRole("tab", { name: "Untitled", exact: true }),
+    page.getByRole("tab", { name: "New Tab 1", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
   const input = page.locator(".monaco-editor textarea.inputarea").first();
   await input.focus();
@@ -55,7 +55,7 @@ test("the language switches immediately, persists on reload, and resets to the b
   );
   await page.getByRole("button", { name: "编辑器", exact: true }).click();
   await expect(
-    page.getByRole("tab", { name: "未命名", exact: true }),
+    page.getByRole("tab", { name: "New Tab 1", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".view-lines").first()).toContainText("retained");
 
@@ -127,8 +127,11 @@ test("changing locale while the editor is open keeps its instance and selection"
     await useSettingsStore.getState().setInterfaceLocale("zh-CN");
   });
   await expect(
-    page.getByRole("tab", { name: "未命名", exact: true }),
+    page.getByRole("tab", { name: "New Tab 1", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
+  await expect(
+    page.getByRole("button", { name: "选择语言", exact: true }),
+  ).toHaveText("自动 · JSON");
   expect(await initialInput!.evaluate((element) => element.isConnected)).toBe(
     true,
   );

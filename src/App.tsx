@@ -1,8 +1,9 @@
 import { t } from "@/i18n";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Route, Routes } from "react-router-dom";
 
 import IndexPage from "@/pages/indexPage";
+import { startTabAutoNaming } from "@/services/tabAutoNaming";
 const SettingsPage = lazy(() => import("@/pages/settingPage"));
 
 /** 页面级加载占位符 */
@@ -13,6 +14,8 @@ const PageLoader = () => (
 );
 
 function App() {
+  useEffect(() => startTabAutoNaming(), []);
+
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>

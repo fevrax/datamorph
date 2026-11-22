@@ -1211,4 +1211,9 @@ export const messages = {
   内容不是转义字符串: "The content is not an escaped string",
   "重新排序编号仅支持 Protobuf": "Renumbering is only supported for Protobuf",
   "JSON 字符串": "JSON string",
+  "AI 功能": "AI features",
+  "AI 自动命名标签": "AI auto-name tabs",
+  "开启后，输入或粘贴内容时使用当前 AI 线路自动为默认标签页生成名称":
+    "Automatically name default tabs from their content using the active AI route",
+  "AI 自动命名标签已{0}": "AI auto-name tabs {0}",
 } as const satisfies Record<string, string>;

@@ -1,7 +1,7 @@
 import { errorText } from "@/i18n/diagnostics";
 import { t } from "@/i18n";
 import { useLocale } from "@/i18n/useLocale";
-import { useTabMetadata } from "@/store/useTabMetadata";
+import { getTabDisplayTitle, useTabMetadata } from "@/store/useTabMetadata";
 import { memo, useEffect, useRef, useState, useImperativeHandle } from "react";
 import { ContextMenu } from "radix-ui";
 import {
@@ -15,6 +15,7 @@ import {
   Binary,
   FilePlus,
   RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import {
   Button,
@@ -37,6 +38,7 @@ import { validateAndDecodeBase64 } from "@/utils/base64";
 import { JsonSample } from "@/utils/jsonSample";
 import toast from "@/utils/toast";
 import { DATA_FILE_ACCEPT } from "@/utils/dataFormats";
+import { useNamingTabKeys } from "@/services/tabAutoNaming";
 import {
   WorkspaceNavigationTrigger,
   WorkspaceSearchTrigger,
@@ -67,6 +69,7 @@ function DynamicTabs({
 }: DynamicTabsProps) {
   useLocale();
   const tabs = useTabMetadata();
+  const namingTabs = useNamingTabKeys();
   const active = useTabStore((s) => s.activeTabKey);
   const { newTabShortcut, closeTabShortcut } = useSettingsStore();
   const root = useRef<HTMLDivElement>(null);
@@ -126,11 +129,14 @@ function DynamicTabs({
   useEffect(() => () => request.current?.abort(), []);
   const open = (type: typeof dialog, key = "") => {
     setTarget(key);
+    const targetTab = store.getTabByKey(key);
     setInput(
       type === "rename"
-        ? store.getTabByKey(key)?.title || ""
+        ? targetTab
+          ? getTabDisplayTitle(targetTab)
+          : ""
         : type === "refresh"
-          ? String(store.getTabByKey(key)?.extraData?.url || "")
+          ? String(targetTab?.extraData?.url || "")
           : "",
     );
     setDialog(type);
@@ -226,9 +232,19 @@ function DynamicTabs({
                   className="flex min-w-0 flex-1 items-center gap-2 py-2.5"
                 >
                   {tab.kind === "document" ? (
-                    <Braces className="size-3.5 shrink-0 text-primary" />
+                    namingTabs.has(tab.key) ? (
+                      <Sparkles
+                        aria-hidden="true"
+                        className="size-3.5 shrink-0 animate-pulse text-primary"
+                      />
+                    ) : (
+                      <Braces
+                        aria-hidden="true"
+                        className="size-3.5 shrink-0 text-primary"
+                      />
+                    )
                   ) : (
-                    <Blocks className="size-3.5 shrink-0" />
+                    <Blocks aria-hidden="true" className="size-3.5 shrink-0" />
                   )}
                   <span className="truncate">{tab.title}</span>
                 </button>

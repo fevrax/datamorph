@@ -108,10 +108,7 @@ test("incomplete edits retain their language, clearing and unrelated text reset 
   assert.equal(detectDataFormat("{name:", undefined, "json5"), "json5");
   assert.equal(detectDataFormat("<root>", undefined, "xml"), "xml");
   assert.equal(detectDataFormat("", undefined, "yaml"), "json");
-  assert.equal(
-    detectDataFormat("plain words", undefined, "yaml"),
-    "plaintext",
-  );
+  assert.equal(detectDataFormat("plain words", undefined, "yaml"), "plaintext");
 });
 
 test("MySQL vertical results are plain text even after editing YAML", () => {
@@ -143,10 +140,21 @@ test("Protobuf headers and definitions do not fall through to TOML, JavaScript o
   assert.equal(detectDataFormat('import "module.js";'), "javascript");
 });
 test("download preserves supplied names and uses detected format for untitled documents", () => {
-  assert.equal(documentDownloadName("未命名", "plaintext"), "未命名.txt");
-  assert.equal(documentDownloadName("未命名", "yaml"), "未命名.yaml");
-  assert.equal(documentDownloadName("未命名.json", "yaml"), "未命名.yaml");
+  assert.equal(documentDownloadName("New Tab 1", "plaintext"), "New Tab 1.txt");
+  assert.equal(documentDownloadName("New Tab 2", "yaml"), "New Tab 2.yaml");
+  assert.equal(documentDownloadName("未命名", "plaintext"), "New Tab 1.txt");
+  assert.equal(documentDownloadName("未命名", "yaml"), "New Tab 1.yaml");
+  assert.equal(documentDownloadName("未命名.json", "yaml"), "New Tab 1.yaml");
   assert.equal(documentDownloadName("未命名", "json", "未命名"), "未命名");
+  assert.equal(
+    documentDownloadName("New Tab 1", "json", "New Tab 1"),
+    "New Tab 1",
+  );
+  assert.equal(
+    documentDownloadName("User Profile", "yaml"),
+    "User Profile.yaml",
+  );
+  assert.equal(documentDownloadName("config.yaml", "yaml"), "config.yaml");
   assert.equal(
     documentDownloadName("data.json", "yaml", "data.json"),
     "data.json",

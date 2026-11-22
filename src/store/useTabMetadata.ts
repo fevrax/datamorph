@@ -3,7 +3,11 @@ import { useShallow } from "zustand/react/shallow";
 import { useTabStore, type TabItem } from "./useTabStore";
 import { t } from "@/i18n";
 import { useLocale } from "@/i18n/useLocale";
-import { isDefaultDocumentName } from "@/utils/dataFormats";
+import {
+  formatDefaultTabName,
+  isDefaultDocumentName,
+  parseDefaultTabNumber,
+} from "@/utils/dataFormats";
 import { useToolboxStore } from "./useToolboxStore";
 
 export function getTabDisplayTitle(tab: TabItem): string {
@@ -15,7 +19,9 @@ export function getTabDisplayTitle(tab: TabItem): string {
     return tool ? t(tool.name) : tab.title;
   }
   if (!tab.editorSettings.filename && isDefaultDocumentName(tab.title))
-    return t("未命名");
+    return parseDefaultTabNumber(tab.title) !== null
+      ? tab.title.trim()
+      : formatDefaultTabName(1);
   return tab.title;
 }
 
