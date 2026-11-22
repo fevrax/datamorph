@@ -331,9 +331,8 @@ export const messages = {
     " · [Open link](command:datamorph.openLink?{0})",
   "预览已截断，复制或新标签打开可查看完整内容。":
     "Preview truncated. Copy or open in a new tab to see the full content.",
-  "[复制{0}](command:datamorph.smartCopy?{1}){2}":
-    "[Copy {0}](command:datamorph.smartCopy?{1}){2}",
-  内容: "content",
+  "复制 JSON": "Copy JSON",
+  复制内容: "Copy content",
   " · [新标签打开](command:datamorph.smartOpen?{0})":
     " · [Open in new tab](command:datamorph.smartOpen?{0})",
   "{0} 的格式化服务尚未就绪，请重试":

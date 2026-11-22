@@ -339,17 +339,16 @@ export function attachSmartDisplay(
           const args = encodeURIComponent(
             JSON.stringify([editor.getId(), id, index]),
           );
+          const copyLabel =
+            hint.kind === "embeddedJson" ? t("复制 JSON") : t("复制内容");
+          const openLink =
+            hint.kind === "color"
+              ? ""
+              : t(" · [新标签打开](command:datamorph.smartOpen?{0})", {
+                  0: args,
+                });
           contents.push({
-            value: t("[复制{0}](command:datamorph.smartCopy?{1}){2}", {
-              0: hint.kind === "embeddedJson" ? "JSON" : t("内容"),
-              1: args,
-              2:
-                hint.kind === "color"
-                  ? ""
-                  : t(" · [新标签打开](command:datamorph.smartOpen?{0})", {
-                      0: args,
-                    }),
-            }),
+            value: `[${copyLabel}](command:datamorph.smartCopy?${args})${openLink}`,
             isTrusted: {
               enabledCommands: ["datamorph.smartCopy", "datamorph.smartOpen"],
             },
