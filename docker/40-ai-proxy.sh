@@ -106,6 +106,7 @@ NGINX
     proxy_ssl_server_name on;
     proxy_ssl_name "$upstream_host";
     proxy_ssl_verify on;
+    proxy_ssl_verify_depth 5;
     proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
     proxy_connect_timeout 15s;
     proxy_read_timeout 120s;

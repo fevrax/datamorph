@@ -55,6 +55,7 @@ test("only chat and models are proxied with server credentials and limits", () =
     assert.match(config, /limit_req zone=ai_requests/);
     assert.match(config, /limit_conn ai_connections 2/);
     assert.match(config, /proxy_ssl_verify on/);
+    assert.match(config, /proxy_ssl_verify_depth 5/);
     assert.match(config, /proxy_buffering off/);
     assert.match(config, /proxy_ignore_client_abort off/);
     assert.match(config, /\$request_method != POST/);
