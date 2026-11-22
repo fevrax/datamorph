@@ -1,3 +1,10 @@
+# [2.8.0](https://github.com/fevrax/datamorph/compare/v2.7.0...v2.8.0) (2026-11-22)
+
+
+### Features
+
+* **workspace:** redesign editor welcome page with interactive morph preview ([6006365](https://github.com/fevrax/datamorph/commit/600636562dfd8a901cd2f2c82bb14847c9c04314))
+
 # [2.7.0](https://github.com/fevrax/datamorph/compare/v2.6.0...v2.7.0) (2026-11-22)
 
 
