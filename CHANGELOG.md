@@ -1,3 +1,10 @@
+## [2.9.2](https://github.com/fevrax/datamorph/compare/v2.9.1...v2.9.2) (2026-11-23)
+
+
+### Bug Fixes
+
+* **tabs:** support Chinese IME composition when renaming tabs ([02fffc8](https://github.com/fevrax/datamorph/commit/02fffc84be6222a3146269e9ccfa7425e53d5b71)), closes [#35](https://github.com/fevrax/datamorph/issues/35)
+
 ## [2.9.1](https://github.com/fevrax/datamorph/compare/v2.9.0...v2.9.1) (2026-11-22)
 
 
