@@ -34,6 +34,7 @@ import {
 import { useTabStore } from "@/store/useTabStore";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { globalShortcutListener } from "@/utils/shortcut";
+import { isImeComposing } from "@/utils/ime";
 import { validateAndDecodeBase64 } from "@/utils/base64";
 import { JsonSample } from "@/utils/jsonSample";
 import toast from "@/utils/toast";
@@ -75,6 +76,9 @@ function DynamicTabs({
   const { newTabShortcut, closeTabShortcut } = useSettingsStore();
   const root = useRef<HTMLDivElement>(null);
   const file = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const composingRef = useRef(false);
+  const openingDialogRef = useRef(false);
   const [dialog, setDialog] = useState<
     "url" | "base64" | "rename" | "refresh" | null
   >(null);
@@ -129,7 +133,14 @@ function DynamicTabs({
     };
   }, [newTabShortcut, closeTabShortcut]);
   useEffect(() => () => request.current?.abort(), []);
+  const closeDialog = () => {
+    request.current?.abort();
+    composingRef.current = false;
+    setDialog(null);
+  };
   const open = (type: typeof dialog, key = "") => {
+    composingRef.current = false;
+    openingDialogRef.current = Boolean(type);
     setTarget(key);
     const targetTab = store.getTabByKey(key);
     setInput(
@@ -146,7 +157,10 @@ function DynamicTabs({
   async function submit() {
     try {
       if (dialog === "rename") {
-        store.renameTab(target, input);
+        const nextTitle = (inputRef.current?.value ?? input).trim();
+        if (!nextTitle) return;
+        store.renameTab(target, nextTitle);
+        composingRef.current = false;
         setDialog(null);
         return;
       }
@@ -272,7 +286,15 @@ function DynamicTabs({
               </div>
             </ContextMenu.Trigger>
             <ContextMenu.Portal>
-              <ContextMenu.Content className="z-50 min-w-40 rounded-lg border bg-popover p-1 text-[13px] shadow-lg">
+              <ContextMenu.Content
+                onCloseAutoFocus={(event) => {
+                  if (openingDialogRef.current) {
+                    event.preventDefault();
+                    openingDialogRef.current = false;
+                  }
+                }}
+                className="z-50 min-w-40 rounded-lg border bg-popover p-1 text-[13px] shadow-lg"
+              >
                 {[
                   [t("重命名"), () => open("rename", tab.key)],
                   [
@@ -372,14 +394,14 @@ function DynamicTabs({
           </DropdownMenu>
         </Dropdown>
       </div>
-      <Modal
-        isOpen={!!dialog}
-        onClose={() => {
-          request.current?.abort();
-          setDialog(null);
-        }}
-      >
-        <ModalContent>
+      <Modal isOpen={!!dialog} onClose={closeDialog}>
+        <ModalContent
+          onEscapeKeyDown={(event) => {
+            if (composingRef.current) {
+              event.preventDefault();
+            }
+          }}
+        >
           <ModalHeader>
             {dialog === "rename"
               ? t("重命名文件")
@@ -404,6 +426,7 @@ function DynamicTabs({
               />
             ) : (
               <Input
+                ref={inputRef}
                 aria-label={dialog === "rename" ? t("文件名称") : t("URL 地址")}
                 placeholder={
                   dialog === "rename"
@@ -412,20 +435,29 @@ function DynamicTabs({
                 }
                 value={input}
                 onValueChange={setInput}
+                onCompositionStart={() => {
+                  composingRef.current = true;
+                }}
+                onCompositionEnd={(e) => {
+                  composingRef.current = false;
+                  setInput(e.currentTarget.value);
+                }}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !busy) void submit();
+                  if (isImeComposing(e, composingRef.current)) return;
+                  if (
+                    e.key === "Enter" &&
+                    !busy &&
+                    (inputRef.current?.value ?? input).trim()
+                  ) {
+                    e.preventDefault();
+                    void submit();
+                  }
                 }}
               />
             )}
           </ModalBody>
           <ModalFooter>
-            <Button
-              variant="ghost"
-              onPress={() => {
-                request.current?.abort();
-                setDialog(null);
-              }}
-            >
+            <Button variant="ghost" onPress={closeDialog}>
               {t("取消")}
             </Button>
             <Button

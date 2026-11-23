@@ -21,6 +21,7 @@ import {
 } from "radix-ui";
 import { Check, ChevronDown, LoaderCircle, X } from "lucide-react";
 import { cva } from "class-variance-authority";
+import { isImeComposing } from "@/utils/ime";
 import { cn } from "./utils";
 export { cn } from "./utils";
 
@@ -568,9 +569,11 @@ export function Modal({
 export function ModalContent({
   children,
   className,
+  onEscapeKeyDown,
   ...props
 }: Omit<React.HTMLAttributes<HTMLDivElement>, "children"> & {
   children?: React.ReactNode | ((close: () => void) => React.ReactNode);
+  onEscapeKeyDown?: (event: KeyboardEvent) => void;
 }) {
   useLocale();
   const modal = useContext(ModalContext);
@@ -581,6 +584,13 @@ export function ModalContent({
         {...props}
         aria-labelledby={modal.titleId}
         aria-describedby={undefined}
+        onEscapeKeyDown={(event) => {
+          if (isImeComposing(event)) {
+            event.preventDefault();
+            return;
+          }
+          onEscapeKeyDown?.(event);
+        }}
         className={cn(
           "fixed left-1/2 top-1/2 z-[101] flex max-h-[88dvh] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-xl",
           modal.size === "5xl"

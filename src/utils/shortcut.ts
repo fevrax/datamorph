@@ -2,6 +2,7 @@
  * 快捷键工具类
  * 用于处理键盘快捷键的解析和监听
  */
+import { isImeComposing } from "@/utils/ime";
 import { parseJson, stringifyJson } from "@/utils/json";
 
 export interface ShortcutConfig {
@@ -170,7 +171,7 @@ export class ShortcutListener {
    * 处理键盘事件
    */
   handleEvent(event: KeyboardEvent): void {
-    if (!this.enabled) return;
+    if (!this.enabled || isImeComposing(event)) return;
 
     // 遍历所有监听器，检查是否匹配
     for (const [key, callbacks] of this.listeners) {
